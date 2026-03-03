@@ -1,20 +1,15 @@
-
 msgid ""
 msgstr ""
-"Project-Id-Version: org.dany.nhlscores
-"
-"POT-Creation-Date: 2026-03-03
-"
-"PO-Revision-Date: 2026-03-03
-"
-"Language: fr
-"
-"MIME-Version: 1.0
-"
-"Content-Type: text/plain; charset=UTF-8
-"
-"Content-Transfer-Encoding: 8bit
-"
+"Project-Id-Version: org.dany.nhlscores\n"
+"POT-Creation-Date: 2026-03-03 00:00+0000\n"
+"PO-Revision-Date: 2026-03-03 00:00+0000\n"
+"Last-Translator: Dany Martineau <dany@example.com>\n"
+"Language-Team: French\n"
+"Language: fr\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
 
 #: contents/ui/main.qml
 msgid "NHL Scores"
