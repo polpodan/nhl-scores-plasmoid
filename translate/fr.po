@@ -1,0 +1,113 @@
+
+msgid ""
+msgstr ""
+"Project-Id-Version: org.dany.nhlscores
+"
+"POT-Creation-Date: 2026-03-03
+"
+"PO-Revision-Date: 2026-03-03
+"
+"Language: fr
+"
+"MIME-Version: 1.0
+"
+"Content-Type: text/plain; charset=UTF-8
+"
+"Content-Transfer-Encoding: 8bit
+"
+
+#: contents/ui/main.qml
+msgid "NHL Scores"
+msgstr "Scores LNH"
+
+#: contents/ui/main.qml
+msgid "Final"
+msgstr "Final"
+
+#: contents/ui/main.qml
+msgid "Upcoming"
+msgstr "À venir"
+
+#: contents/ui/main.qml
+msgid "No games"
+msgstr "Aucun match"
+
+#: contents/ui/main.qml
+msgid "All"
+msgstr "Tout"
+
+#: contents/ui/main.qml
+msgid "Today only"
+msgstr "Aujourd’hui seulement"
+
+#: contents/ui/main.qml
+msgid "OT/SO suffix"
+msgstr "Suffixe OT/SO"
+
+#: contents/ui/main.qml
+msgid "Score below (column)"
+msgstr "Score dessous (colonne)"
+
+#: contents/ui/main.qml
+msgid "Score next to name (row)"
+msgstr "Score à côté (ligne)"
+
+#: contents/ui/main.qml
+msgid "Configure NHL Scores…"
+msgstr "Configurer Scores LNH…"
+
+#: contents/ui/main.qml
+msgid "Updated: %1"
+msgstr "MAJ : %1"
+
+#: contents/ui/main.qml
+msgid "Refresh now"
+msgstr "Actualiser maintenant"
+
+#: contents/config/config.qml
+msgid "General"
+msgstr "Général"
+
+#: contents/config/config.qml
+msgid "Display"
+msgstr "Affichage"
+
+#: contents/ui/configGeneral.qml
+msgid "Favorite teams:"
+msgstr "Équipes favorites :"
+
+#: contents/ui/configGeneral.qml
+msgid "Show all games"
+msgstr "Afficher tous les matchs"
+
+#: contents/ui/configGeneral.qml
+msgid "Today only (for ‘All’) "
+msgstr "Aujourd’hui seulement (pour ‘Tout’)"
+
+#: contents/ui/configGeneral.qml
+msgid "Games in compact view:"
+msgstr "Matchs en compact :"
+
+#: contents/ui/configGeneral.qml
+msgid "Cap for ‘All’ view:"
+msgstr "Cap total pour ‘Tout’ :"
+
+#: contents/ui/configDisplay.qml
+msgid "LIVE color:"
+msgstr "Couleur LIVE :"
+
+#: contents/ui/configDisplay.qml
+msgid "Upcoming color:"
+msgstr "Couleur À venir :"
+
+#: contents/ui/configDisplay.qml
+msgid "Final color:"
+msgstr "Couleur Final :"
+
+#: contents/ui/configDisplay.qml
+msgid "Show OT/SO suffix in badge"
+msgstr "Afficher suffixe OT/SO dans la pastille"
+
+#: contents/ui/configDisplay.qml
+msgid "Score layout:"
+msgstr "Disposition du score :"

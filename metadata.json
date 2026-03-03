@@ -1,0 +1,19 @@
+{
+  "KPlugin": {
+    "Id": "org.dany.nhlscores",
+    "Name": "NHL Scores",
+    "Name[fr]": "Scores LNH",
+    "Description": "Live NHL scores for Plasma 6",
+    "Description[fr]": "Scores de la LNH en direct pour Plasma 6",
+    "Icon": "sports-hockey",
+    "Version": "1.5.0",
+    "Authors": [
+      {
+        "Name": "Dany Martineau"
+      }
+    ],
+    "License": "GPL-3.0-or-later"
+  },
+  "KPackageStructure": "Plasma/Applet",
+  "X-Plasma-API-Minimum-Version": "6.0"
+}
