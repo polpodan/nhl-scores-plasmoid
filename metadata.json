@@ -6,7 +6,7 @@
     "Description": "Live NHL scores for Plasma 6",
     "Description[fr]": "Scores de la LNH en direct pour Plasma 6",
     "Icon": "sports-hockey",
-    "Version": "1.5.0",
+    "Version": "1.5.1",
     "Authors": [
       {
         "Name": "Dany Martineau"
