@@ -1,14 +1,19 @@
-<kcfg xmlns="http://www.kde.org/standards/kcfg/1.0"><kcfgfile name=""/>
-<group name="General">
-  <entry name="favorites" type="String"><default>VAN,TOR</default></entry>
-  <entry name="showAll" type="Bool"><default>false</default></entry>
-  <entry name="showAllAggressive" type="Bool"><default>false</default></entry>
-  <entry name="todayOnly" type="Bool"><default>true</default></entry>
-  <entry name="compactMaxGames" type="Int"><default>2</default></entry>
-  <entry name="maxTotalGames" type="Int"><default>20</default></entry>
-  <entry name="liveColor" type="String"><default>#d90429</default></entry>
-  <entry name="upcomingColor" type="String"><default>#2b6cb0</default></entry>
-  <entry name="finalColor" type="String"><default>#6c757d</default></entry>
-  <entry name="showOvertimeSuffix" type="Bool"><default>true</default></entry>
-  <entry name="scoreLayout" type="String"><default>stack</default></entry>
-</group></kcfg>
+
+<kcfg xmlns="http://www.kde.org/standards/kcfg/1.0">
+  <kcfgfile name=""/>
+  <group name="General">
+    <entry name="favorites" type="String"><default>VAN,TOR</default></entry>
+    <entry name="showAll" type="Bool"><default>false</default></entry>
+    <entry name="todayOnly" type="Bool"><default>true</default></entry>
+    <entry name="compactMaxGames" type="Int"><default>2</default></entry>
+    <entry name="maxTotalGames" type="Int"><default>20</default></entry>
+    <entry name="lookaheadDays" type="Int"><default>2</default></entry>
+    <entry name="liveColor" type="String"><default>#d90429</default></entry>
+    <entry name="upcomingColor" type="String"><default>#2b6cb0</default></entry>
+    <entry name="finalColor" type="String"><default>#6c757d</default></entry>
+    <entry name="showOvertimeSuffix" type="Bool"><default>true</default></entry>
+    <entry name="scoreLayout" type="String"><default>stack</default></entry>
+    <entry name="showUpcomingTime" type="Bool"><default>true</default></entry>
+    <entry name="dateMode" type="String"><default>local</default></entry>
+  </group>
+</kcfg>

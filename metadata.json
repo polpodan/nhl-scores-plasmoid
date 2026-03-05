@@ -6,13 +6,15 @@
     "Description": "Live NHL scores for Plasma 6",
     "Description[fr]": "Scores de la LNH en direct pour Plasma 6",
     "Icon": "sports-hockey",
-    "Version": "1.5.6",
+    "Version": "1.7.1",
     "Authors": [
       {
-        "Name": "Dany Martineau"
+        "Name": "Dany Martineau",
+        "Email": "dany.luc.martineau@gmail.com"
       }
     ],
-    "License": "GPL-3.0-or-later"
+    "License": "GPL-3.0-or-later",
+    "Website": "https://github.com/polpodan/nhl-scores-plasmoid"
   },
   "KPackageStructure": "Plasma/Applet",
   "X-Plasma-API-Minimum-Version": "6.0"

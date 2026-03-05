@@ -1,83 +1,116 @@
-
 msgid ""
 msgstr ""
-
-"Project-Id-Version: org.dany.nhlscores\n"
-"POT-Creation-Date: 2026-03-03 00:00+0000\n"
-"PO-Revision-Date: 2026-03-03 00:00+0000\n"
-"Last-Translator: Dany Martineau <dany.luc.martineau@gmail.com>\n"
-"Language-Team: French\n"
+"Project-Id-Version: org.dany.nhlscores 1.7.1\n"
+"Report-Msgid-Bugs-To: "
+"POT-Creation-Date: 2026-03-05 23:01+0000\n"
+"PO-Revision-Date: 2026-03-05 23:01+0000\n"
+"Last-Translator: Dany Martineau <dany@example.com>\n"
+"Language-Team: French <fr@li.org>\n"
 "Language: fr\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n > 1);\n"
-msgid "NHL Scores"
-msgstr "Scores LNH"
 
-msgid "Live NHL scores for Plasma 6"
-msgstr "Scores de la LNH en direct pour Plasma 6"
-
+# ---- Categories / Pages ----
 msgid "General"
 msgstr "Général"
 
 msgid "Display"
 msgstr "Affichage"
 
+# ---- Config: Display ----
 msgid "LIVE color:"
-msgstr "Couleur LIVE :"
+msgstr "Couleur LIVE :"
 
 msgid "Upcoming color:"
-msgstr "Couleur à venir :"
+msgstr "Couleur À venir :"
 
 msgid "Final color:"
-msgstr "Couleur final :"
+msgstr "Couleur Final :"
 
 msgid "Show OT/SO suffix in badge"
-msgstr "Afficher le suffixe PROL/TB dans l'onglet"
+msgstr "Afficher le suffixe OT/SO sur l’étiquette"
+
+msgid "Show upcoming game time under badge"
+msgstr "Afficher l’heure du prochain match sous l’étiquette"
 
 msgid "Score layout:"
-msgstr "Disposition du score :"
+msgstr "Disposition du score :"
 
 msgid "Score below (column)"
-msgstr "Score dessous (colonne)"
+msgstr "Score en dessous (colonne)"
 
 msgid "Score next to name (row)"
 msgstr "Score à côté du nom (ligne)"
 
+msgid "Date mode:"
+msgstr "Mode de date :"
+
+msgid "Local timezone (computer)"
+msgstr "Fuseau horaire local (ordinateur)"
+
+msgid "Venue timezone (arena)"
+msgstr "Fuseau horaire du lieu (aréna)"
+
+# ---- Config: General (favorites grid) ----
 msgid "Favorite teams by division:"
-msgstr "Équipes favorites par division :"
+msgstr "Équipes favorites par division :"
+
+msgid "── Atlantic ──"
+msgstr "── Atlantique ──"
+
+msgid "── Metropolitan ──"
+msgstr "── Métropolitaine ──"
+
+msgid "── Central ──"
+msgstr "── Centrale ──"
+
+msgid "── Pacific ──"
+msgstr "── Pacifique ──"
 
 msgid "Show all games"
-msgstr "Afficher toutes les parties"
+msgstr "Afficher tous les matchs"
 
-msgid "Today only (for “All”)"
-msgstr "Aujourd’hui seulement (pour ‘Toutes’)"
+msgid "Today only (for All)"
+msgstr "Aujourd’hui seulement (pour Tous)"
+
+msgid "Days ahead:"
+msgstr "Jours à venir :"
 
 msgid "Games in compact view:"
-msgstr "Parties en vue compacte :"
+msgstr "Matchs en vue compacte :"
 
-msgid "Cap for “All” view:"
-msgstr "Plafond pour la vue ‘Toutes’ :"
+msgid "Cap for All view:"
+msgstr "Plafond pour la vue Tous :"
+
+# ---- Applet UI ----
+msgid "NHL Scores"
+msgstr "Scores LNH"
+
+msgid "Final"
+msgstr "Final"
+
+msgid "Upcoming"
+msgstr "À venir"
+
+msgid "No games"
+msgstr "Aucun match"
+
+msgid "Updated: %1"
+msgstr "Mise à jour : %1"
 
 msgid "All"
-msgstr "Toutes"
+msgstr "Tous"
 
 msgid "Today only"
 msgstr "Aujourd’hui seulement"
 
 msgid "OT/SO suffix"
-msgstr "Suffixe PROL/TB"
+msgstr "Suffixe OT/SO"
 
 msgid "Configure NHL Scores…"
 msgstr "Configurer Scores LNH…"
 
-msgid "Updated: %1"
-msgstr "Mis à jour : %1"
-
 msgid "Refresh now"
 msgstr "Actualiser maintenant"
-
-msgid "No games"
-msgstr "Aucune partie"
-
