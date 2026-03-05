@@ -16,7 +16,7 @@ We use **KI18n** in QML via `i18n()` and ship a `translate/` helper. Build the F
 cd translate
 ./build.sh
 ```
-This will produce and install `~/.local/share/locale/fr/LC_MESSAGES/org.dany.nhlscores.mo`.
+This will produce and install `~/.local/share/locale/fr/LC_MESSAGES/plasma_applet_org.dany.nhlscores.mo`.
 
 See KDE developer docs: i18n in Plasma widgets.\[1]
 
