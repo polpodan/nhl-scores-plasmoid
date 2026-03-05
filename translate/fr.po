@@ -1,108 +1,83 @@
+
 msgid ""
 msgstr ""
+
 "Project-Id-Version: org.dany.nhlscores\n"
 "POT-Creation-Date: 2026-03-03 00:00+0000\n"
 "PO-Revision-Date: 2026-03-03 00:00+0000\n"
-"Last-Translator: Dany Martineau <dany@example.com>\n"
+"Last-Translator: Dany Martineau <dany.luc.martineau@gmail.com>\n"
 "Language-Team: French\n"
 "Language: fr\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n > 1);\n"
-
-#: contents/ui/main.qml
 msgid "NHL Scores"
 msgstr "Scores LNH"
 
-#: contents/ui/main.qml
-msgid "Final"
-msgstr "Final"
+msgid "Live NHL scores for Plasma 6"
+msgstr "Scores de la LNH en direct pour Plasma 6"
 
-#: contents/ui/main.qml
-msgid "Upcoming"
-msgstr "À venir"
-
-#: contents/ui/main.qml
-msgid "No games"
-msgstr "Aucun match"
-
-#: contents/ui/main.qml
-msgid "All"
-msgstr "Tout"
-
-#: contents/ui/main.qml
-msgid "Today only"
-msgstr "Aujourd’hui seulement"
-
-#: contents/ui/main.qml
-msgid "OT/SO suffix"
-msgstr "Suffixe OT/SO"
-
-#: contents/ui/main.qml
-msgid "Score below (column)"
-msgstr "Score dessous (colonne)"
-
-#: contents/ui/main.qml
-msgid "Score next to name (row)"
-msgstr "Score à côté (ligne)"
-
-#: contents/ui/main.qml
-msgid "Configure NHL Scores…"
-msgstr "Configurer Scores LNH…"
-
-#: contents/ui/main.qml
-msgid "Updated: %1"
-msgstr "MAJ : %1"
-
-#: contents/ui/main.qml
-msgid "Refresh now"
-msgstr "Actualiser maintenant"
-
-#: contents/config/config.qml
 msgid "General"
 msgstr "Général"
 
-#: contents/config/config.qml
 msgid "Display"
 msgstr "Affichage"
 
-#: contents/ui/configGeneral.qml
-msgid "Favorite teams:"
-msgstr "Équipes favorites :"
-
-#: contents/ui/configGeneral.qml
-msgid "Show all games"
-msgstr "Afficher tous les matchs"
-
-#: contents/ui/configGeneral.qml
-msgid "Today only (for ‘All’) "
-msgstr "Aujourd’hui seulement (pour ‘Tout’)"
-
-#: contents/ui/configGeneral.qml
-msgid "Games in compact view:"
-msgstr "Matchs en compact :"
-
-#: contents/ui/configGeneral.qml
-msgid "Cap for ‘All’ view:"
-msgstr "Cap total pour ‘Tout’ :"
-
-#: contents/ui/configDisplay.qml
 msgid "LIVE color:"
-msgstr "Couleur LIVE :"
+msgstr "Couleur LIVE :"
 
-#: contents/ui/configDisplay.qml
 msgid "Upcoming color:"
-msgstr "Couleur À venir :"
+msgstr "Couleur à venir :"
 
-#: contents/ui/configDisplay.qml
 msgid "Final color:"
-msgstr "Couleur Final :"
+msgstr "Couleur final :"
 
-#: contents/ui/configDisplay.qml
 msgid "Show OT/SO suffix in badge"
-msgstr "Afficher suffixe OT/SO dans la pastille"
+msgstr "Afficher le suffixe PROL/TB dans l'onglet"
 
-#: contents/ui/configDisplay.qml
 msgid "Score layout:"
-msgstr "Disposition du score :"
+msgstr "Disposition du score :"
+
+msgid "Score below (column)"
+msgstr "Score dessous (colonne)"
+
+msgid "Score next to name (row)"
+msgstr "Score à côté du nom (ligne)"
+
+msgid "Favorite teams by division:"
+msgstr "Équipes favorites par division :"
+
+msgid "Show all games"
+msgstr "Afficher toutes les parties"
+
+msgid "Today only (for “All”)"
+msgstr "Aujourd’hui seulement (pour ‘Toutes’)"
+
+msgid "Games in compact view:"
+msgstr "Parties en vue compacte :"
+
+msgid "Cap for “All” view:"
+msgstr "Plafond pour la vue ‘Toutes’ :"
+
+msgid "All"
+msgstr "Toutes"
+
+msgid "Today only"
+msgstr "Aujourd’hui seulement"
+
+msgid "OT/SO suffix"
+msgstr "Suffixe PROL/TB"
+
+msgid "Configure NHL Scores…"
+msgstr "Configurer Scores LNH…"
+
+msgid "Updated: %1"
+msgstr "Mis à jour : %1"
+
+msgid "Refresh now"
+msgstr "Actualiser maintenant"
+
+msgid "No games"
+msgstr "Aucune partie"
+
