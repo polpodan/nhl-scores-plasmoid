@@ -10,6 +10,5 @@
   <entry name="upcomingColor" type="String"><default>#2b6cb0</default></entry>
   <entry name="finalColor" type="String"><default>#6c757d</default></entry>
   <entry name="showOvertimeSuffix" type="Bool"><default>true</default></entry>
-  <!-- IMPORTANT: store a STRING 'stack' or 'inline' -->
   <entry name="scoreLayout" type="String"><default>stack</default></entry>
 </group></kcfg>

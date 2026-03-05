@@ -1,11 +1,10 @@
-import QtQuick
-import QtQuick.Layouts
-import QtQuick.Controls as QQC2
-import org.kde.kirigami as Kirigami
+import QtQuick 2.15
+import QtQuick.Layouts 1.15
+import QtQuick.Controls 2.15 as QQC2
+import org.kde.kirigami 2.20 as Kirigami
 
 Item {
   id: page
-  // Bind KConfig STRING directly
   property string cfg_scoreLayout: plasmoid.configuration.scoreLayout // 'stack' or 'inline'
   property alias  cfg_liveColor: liveColorField.text
   property alias  cfg_upcomingColor: upcomingColorField.text
@@ -29,7 +28,6 @@ Item {
         currentIndex: indexFromValue(page.cfg_scoreLayout)
         onActivated: page.cfg_scoreLayout = valueFromIndex(currentIndex)
       }
-      // Small helper label to show stored value
       QQC2.Label { text: page.cfg_scoreLayout; opacity: 0.5 }
     }
   }
