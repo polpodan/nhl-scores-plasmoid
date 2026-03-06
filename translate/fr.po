@@ -84,6 +84,12 @@ msgstr "Matchs en vue compacte :"
 msgid "Cap for All view:"
 msgstr "Plafond pour la vue Tous :"
 
+msgid "Show games from yesterday."
+msgstr "Voir les parties d'hier"
+
+msgid "Show games from the day before yesterday."
+msgstr "Voir les parties d'avant-hier"
+
 # ---- Applet UI ----
 msgid "NHL Scores"
 msgstr "Scores LNH"
