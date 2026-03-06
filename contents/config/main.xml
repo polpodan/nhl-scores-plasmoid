@@ -15,5 +15,8 @@
     <entry name="scoreLayout" type="String"><default>stack</default></entry>
     <entry name="showUpcomingTime" type="Bool"><default>true</default></entry>
     <entry name="dateMode" type="String"><default>local</default></entry>
+    <entry name="showYesterday" type="Bool"><default>false</default></entry>
+    <entry name="showTwoDaysAgo" type="Bool"><default>false</default>
+    </entry>
   </group>
 </kcfg>

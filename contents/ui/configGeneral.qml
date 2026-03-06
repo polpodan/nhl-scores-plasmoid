@@ -34,6 +34,11 @@ Item {
   property bool   cfg_showOvertimeSuffixDefault
   property string cfg_scoreLayoutDefault
   property bool   cfg_showUpcomingTimeDefault
+  property bool cfg_showYesterday
+  property bool cfg_showTwoDaysAgo
+  property bool cfg_showYesterdayDefault
+  property bool cfg_showTwoDaysAgoDefault
+
 
   // Variables de travail
   property string favString: cfg_favorites || "VAN,TOR"
@@ -50,10 +55,10 @@ Item {
   })
 
   readonly property var divisions: [
-    { title: "── Atlantic ──",     teams: ["BOS","BUF","DET","FLA","MTL","OTT","TBL","TOR"] },
-    { title: "── Metropolitan ──", teams: ["CAR","CBJ","NJD","NYI","NYR","PHI","PIT","WSH"] },
-    { title: "── Central ──",      teams: ["ARI","CHI","COL","DAL","MIN","NSH","STL","WPG"] },
-    { title: "── Pacific ──",      teams: ["ANA","CGY","EDM","LAK","SJS","SEA","VAN","VGK"] }
+    { title: i18n("── Atlantic ──"),     teams: ["BOS","BUF","DET","FLA","MTL","OTT","TBL","TOR"] },
+    { title: i18n("── Metropolitan ──"), teams: ["CAR","CBJ","NJD","NYI","NYR","PHI","PIT","WSH"] },
+    { title: i18n("── Central ──"),      teams: ["ARI","CHI","COL","DAL","MIN","NSH","STL","WPG"] },
+    { title: i18n("── Pacific ──"),      teams: ["ANA","CGY","EDM","LAK","SJS","SEA","VAN","VGK"] }
   ]
 
   function trim(s) { return String(s).replace(/^\s+|\s+$/g, "") }
@@ -194,6 +199,18 @@ Item {
       text: i18n("Today only (for All)")
       checked: cfg_todayOnly
       onToggled: cfg_todayOnly = checked
+    }
+
+    QQC2.CheckBox {
+      text: i18n("Show games from yesterday.")
+      checked: cfg_showYesterday
+      onToggled: cfg_showYesterday = checked
+    }
+
+    QQC2.CheckBox {
+      text: i18n("Show games from the day before yesterday.")
+      checked: cfg_showTwoDaysAgo
+      onToggled: cfg_showTwoDaysAgo = checked
     }
 
     QQC2.SpinBox {

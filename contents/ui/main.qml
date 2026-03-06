@@ -24,6 +24,9 @@ PlasmoidItem {
     property string scoreLayout: Plasmoid.configuration.scoreLayout || 'stack'
     property bool showUpcomingTime: (Plasmoid.configuration.showUpcomingTime !== false)
     property string dateMode: Plasmoid.configuration.dateMode || 'local'
+    property bool showYesterday: Plasmoid.configuration.showYesterday
+    property bool showTwoDaysAgo: Plasmoid.configuration.showTwoDaysAgo
+
 
     ListModel { id: todayGames }
     property date lastUpdated
@@ -37,7 +40,22 @@ PlasmoidItem {
         triggeredOnStart: true
         onTriggered: refresh()
     }
-
+    Timer {
+        id: midnightKick
+        interval: 60000   // vérifie chaque minute
+        running: true
+        repeat: true
+        onTriggered: {
+            let now = new Date()
+            // entre 00:00 et 00:01
+            if (now.getHours() === 0 && now.getMinutes() < 2) {
+                // relancer le polling pour la nouvelle journée
+                pollTimer.running = true
+                // recharger les matchs
+                refresh()
+            }
+        }
+    }
     readonly property var teamColors: ({ 'ANA':'#F47A38','ARI':'#8C2633','UTA':'#6E2B62','BOS':'#FFB81C','BUF':'#003087','CAR':'#CC0000','CBJ':'#002654','CGY':'#C8102E','CHI':'#CF0A2C','COL':'#6F263D','DAL':'#006847','DET':'#CE1126','EDM':'#FF4C00','FLA':'#C8102E','LAK':'#111111','MIN':'#154734','MTL':'#AF1E2D','NJD':'#CE1126','NSH':'#FFB81C','NYI':'#00539B','NYR':'#0038A8','OTT':'#C52032','PHI':'#F74902','PIT':'#FFB81C','SEA':'#99D9D9','SJS':'#006D75','STL':'#002F87','TBL':'#002868','TOR':'#00205B','VAN':'#00205B','VGK':'#B4975A','WPG':'#041E42','WSH':'#C8102E' })
 
     function teamColor(code) {
@@ -177,18 +195,40 @@ PlasmoidItem {
     }
 
     function refresh(){
-        const days = todayOnly ? [ new Date() ] : makeForwardDaysArray(lookaheadDays)
-        fetchLeagueByDates(days, function(leagueGames, leagueErrs){
-            if (leagueGames && leagueGames.length){
-                buildFromRawGames(leagueGames, leagueErrs)
-            } else {
-                const pool = showAll ? allTeams : favoriteTeams
-                fetchTeamNow(pool, function(teamGames, teamErrs){
-                    buildFromRawGames(teamGames || [], (leagueErrs||[]).concat(teamErrs||[]))
-                    debugMsg = (debugMsg ? debugMsg + ' · ' : '') + 'fallback: team scan'
+
+        let days = []
+
+        let base = new Date()
+        base.setHours(0,0,0,0)
+
+        // passé
+        if (showTwoDaysAgo)
+            days.push(new Date(base.getTime() - 2*24*3600*1000))
+
+            if (showYesterday)
+                days.push(new Date(base.getTime() - 1*24*3600*1000))
+
+                // aujourd'hui
+                days.push(new Date(base))
+
+                // futur si todayOnly = false
+                if (!todayOnly){
+                    for(let i=1;i<=lookaheadDays;i++){
+                        days.push(new Date(base.getTime()+i*24*3600*1000))
+                    }
+                }
+
+                fetchLeagueByDates(days, function(leagueGames, leagueErrs){
+                    if (leagueGames && leagueGames.length){
+                        buildFromRawGames(leagueGames, leagueErrs)
+                    } else {
+                        const pool = showAll ? allTeams : favoriteTeams
+                        fetchTeamNow(pool, function(teamGames, teamErrs){
+                            buildFromRawGames(teamGames || [],
+                                              (leagueErrs||[]).concat(teamErrs||[]))
+                        })
+                    }
                 })
-            }
-        })
     }
 
     function isScoreSet(g){ return g && g.homeTeam && g.awayTeam && g.homeTeam.score !== undefined && g.awayTeam.score !== undefined }
@@ -235,11 +275,33 @@ PlasmoidItem {
         var da = pad2(d.getDate())
         return 'https://www.nhl.com/gamecenter/' + String(away||'').toLowerCase() + '-vs-' + String(home||'').toLowerCase() + '/' + y + '/' + m + '/' + da + '/' + String(gameId||'')
     }
+    function hasActiveGames(){
 
+        let now = new Date()
+        for (let i = 0; i < todayGames.count; i++) {
+            let g = todayGames.get(i)
+            if (g.statusRole === 'LIVE')
+                return true
+                if (g.statusRole === 'UPCOMING') {
+                    let d = new Date(g.start)
+                    if (isSameDay(d, now))
+                        return true
+                }
+        }
+        return false
+    }
     function buildFromRawGames(games, errors){
         games = games || []
         const now = new Date()
-        const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+        let pastDays = 0
+        if (showYesterday) pastDays = 1
+            if (showTwoDaysAgo) pastDays = 2
+
+                const startOfToday = new Date(
+                    now.getFullYear(),
+                                              now.getMonth(),
+                                              now.getDate() - pastDays
+                )
         const endWin = new Date(now.getFullYear(), now.getMonth(), now.getDate() + (todayOnly ? 0 : lookaheadDays), 23, 59, 59, 999)
         function inWindow(g){ const t = new Date(g.startTimeUTC || now); return t >= startOfToday && t <= endWin }
         let filtered = games.filter(function(g){ return inWindow(g) })
@@ -274,6 +336,7 @@ PlasmoidItem {
         for (let i=0;i<uniq.length;i++) { todayGames.append(uniq[i]) }
         lastUpdated = new Date()
         debugMsg = (errors && errors.length ? (errors.join(' | ') + ' · ') : '') + 'loaded ' + todayGames.count + ' game(s)'
+        pollTimer.running = hasActiveGames()
     }
 
     Connections {
@@ -281,6 +344,8 @@ PlasmoidItem {
         function onFavoritesChanged(){ root.favoriteTeams = (Plasmoid.configuration.favorites||'').split(/\s*,\s*/).filter(function(s){return s.length>0}); refresh() }
         function onShowAllChanged(){ refresh() }
         function onTodayOnlyChanged(){ refresh() }
+        function onShowYesterdayChanged(){ refresh() }
+        function onShowTwoDaysAgoChanged(){ refresh() }
         function onLookaheadDaysChanged(){ refresh() }
         function onScoreLayoutChanged(){ root.scoreLayout = Plasmoid.configuration.scoreLayout || 'stack' }
         function onShowUpcomingTimeChanged(){ }
@@ -376,6 +441,19 @@ PlasmoidItem {
         return localDateStr(startMs)
     }
 
+    function finalWhenText(startMs, statusRole, homeTeam){
+
+        if (statusRole !== 'FINAL')
+            return ''
+
+            let d = new Date(startMs)
+
+            if (dateMode === 'venue')
+                return venueDateStrUTC(startMs, homeTeam)
+
+                return localDateStr(startMs)
+    }
+
     compactRepresentation: Item {
         id: compactRoot
         readonly property int pad: 6
@@ -398,6 +476,7 @@ PlasmoidItem {
             Repeater {
                 model: todayGames
                 delegate: Row {
+                    opacity: statusRole === 'FINAL' ? 0.5 : 1.0
                     visible: index < compactMaxGames
                     spacing: 6
                     Loader {
@@ -419,8 +498,14 @@ PlasmoidItem {
                             onLoaded: { item.gameStatus = statusRole; item.suffix = statusSuffix(rawState, periodType) }
                         }
                         Label {
-                            visible: statusRole === 'UPCOMING' && showUpcomingTime
-                            text: upcomingWhenText(start, statusRole, home)
+
+                            visible: (statusRole === 'UPCOMING' && showUpcomingTime)
+                            || statusRole === 'FINAL'
+
+                            text: statusRole === 'FINAL'
+                            ? finalWhenText(start, statusRole, home)
+                            : upcomingWhenText(start, statusRole, home)
+
                             color: Kirigami.Theme.disabledTextColor
                             font.pixelSize: 10
                             horizontalAlignment: Text.AlignHCenter
@@ -469,6 +554,7 @@ PlasmoidItem {
                 Layout.fillHeight: true
                 model: todayGames
                 delegate: ItemDelegate {
+                    opacity: statusRole === 'FINAL' ? 0.5 : 1.0
                     width: ListView.view.width
                     contentItem: RowLayout {
                         anchors.horizontalCenter: parent.horizontalCenter
@@ -493,8 +579,14 @@ PlasmoidItem {
                                 Layout.alignment: Qt.AlignHCenter
                             }
                             Label {
-                                visible: statusRole === 'UPCOMING' && showUpcomingTime
-                                text: upcomingWhenText(start, statusRole, home)
+
+                                visible: (statusRole === 'UPCOMING' && showUpcomingTime)
+                                || statusRole === 'FINAL'
+
+                                text: statusRole === 'FINAL'
+                                ? finalWhenText(start, statusRole, home)
+                                : upcomingWhenText(start, statusRole, home)
+
                                 color: Kirigami.Theme.disabledTextColor
                                 font.pixelSize: 11
                                 Layout.alignment: Qt.AlignHCenter
