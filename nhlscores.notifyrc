@@ -1,0 +1,9 @@
+[Global]
+IconName=org.dany.nhlscores
+Comment=NHL Scores
+
+[Event/goal]
+Name=Goal scored
+Comment=A goal was scored in a live game
+Action=Popup
+Urgency=Normal

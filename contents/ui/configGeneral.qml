@@ -14,6 +14,7 @@ Item {
   property int    cfg_lookaheadDays
   property bool   cfg_showYesterday
   property bool   cfg_showTwoDaysAgo
+  property bool   cfg_goalNotifications
 
   // Defaults
   property string cfg_favoritesDefault
@@ -22,6 +23,7 @@ Item {
   property int    cfg_lookaheadDaysDefault
   property bool   cfg_showYesterdayDefault
   property bool   cfg_showTwoDaysAgoDefault
+  property bool   cfg_goalNotificationsDefault
 
   // --- WORK VARS ---
   property string favString: cfg_favorites || "VAN,TOR"
@@ -216,6 +218,17 @@ Item {
       text: i18n("Show games from two days ago.")
       checked: cfg_showTwoDaysAgo
       onToggled: cfg_showTwoDaysAgo = checked
+    }
+
+    Kirigami.Separator {
+      Kirigami.FormData.isSection: true
+      Kirigami.FormData.label: i18n("Notifications")
+    }
+
+    QQC2.CheckBox {
+      text: i18n("Notify on goals (requires notify-send)")
+      checked: cfg_goalNotifications
+      onToggled: cfg_goalNotifications = checked
     }
   }
 }

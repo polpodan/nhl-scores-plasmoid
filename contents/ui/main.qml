@@ -3,8 +3,8 @@ import QtQuick 2.15
 import QtQuick.Layouts 1.15
 import QtQuick.Controls 2.15
 import org.kde.plasma.plasmoid 2.0
-import org.kde.plasma.core 2.1 as PlasmaCore
 import org.kde.kirigami 2.20 as Kirigami
+import org.kde.notification
 
 PlasmoidItem {
     id: root
@@ -32,6 +32,11 @@ PlasmoidItem {
 
     Component.onCompleted: {
         updateFavoriteTeams()
+        Plasmoid.setAction("refreshNow", i18n("Refresh now"), "view-refresh")
+        refresh()
+    }
+
+    function action_refreshNow() {
         refresh()
     }
 
@@ -40,10 +45,51 @@ PlasmoidItem {
     }
     property date lastUpdated
     property string debugMsg: ""
+    property bool initialLoading: true
+
+    // ── Notifications de buts ────────────────────────────────────────────
+    property bool goalNotificationsEnabled: Plasmoid.configuration.goalNotifications !== false
+    // Snapshot des scores avant chaque refresh : { gameId -> { ag, hg } }
+    property var prevScores: ({})
+
+    // Composant réutilisable — une instance par notification (autoDelete: true)
+    Component {
+        id: goalNotifComponent
+        Notification {
+            componentName: "nhlscores"
+            eventId:       "goal"
+            iconName:      "org.dany.nhlscores"
+            urgency:       Notification.NormalUrgency
+            autoDelete:    true
+        }
+    }
+
+    function sendGoalNotification(away, home, ag, hg, prevAg, prevHg) {
+        if (!goalNotificationsEnabled) return
+        let lines = []
+        if (ag > prevAg) lines.push(away + "  " + ag + "–" + hg)
+        if (hg > prevHg) lines.push(home + "  " + hg + "–" + ag)
+        if (lines.length === 0) return
+        let notif = goalNotifComponent.createObject(root)
+        notif.title = i18n("NHL Goal!")
+        notif.text  = lines.join("\n")
+        notif.sendEvent()
+    }
+
+    // Retourne true s'il y a des matchs LIVE ou à venir aujourd'hui
+    function hasActiveGames() {
+        let now = new Date()
+        for (let i = 0; i < todayGames.count; i++) {
+            let g = todayGames.get(i)
+            if (g.statusRole === 'LIVE') return true
+            if (g.statusRole === 'UPCOMING' && isSameDay(new Date(g.start), now)) return true
+        }
+        return false
+    }
 
     Timer {
         id: pollTimer
-        interval: 30000
+        interval: hasActiveGames() ? 30000 : 300000  // 30s si actif, 5min sinon
         running: true
         repeat: true
         triggeredOnStart: true
@@ -56,42 +102,19 @@ PlasmoidItem {
         repeat: true
         onTriggered: {
             let now = new Date()
-            // entre 00:00 et 00:01
-            if (now.getHours() === 0 && now.getMinutes() < 2) {
-                // relancer le polling pour la nouvelle journée
+            // Minuit (nouvelle journée) ou 4h AM (tous les matchs NHL sont terminés)
+            if ((now.getHours() === 0 || now.getHours() === 4) && now.getMinutes() < 2) {
                 pollTimer.running = true
-                // recharger les matchs
                 refresh()
             }
         }
     }
-    readonly property var teamColors: ({ 'ANA':'#F47A38','ARI':'#8C2633','UTA':'#6E2B62','BOS':'#FFB81C','BUF':'#003087','CAR':'#CC0000','CBJ':'#002654','CGY':'#C8102E','CHI':'#CF0A2C','COL':'#6F263D','DAL':'#006847','DET':'#CE1126','EDM':'#FF4C00','FLA':'#C8102E','LAK':'#111111','MIN':'#154734','MTL':'#AF1E2D','NJD':'#CE1126','NSH':'#FFB81C','NYI':'#00539B','NYR':'#0038A8','OTT':'#C52032','PHI':'#F74902','PIT':'#FFB81C','SEA':'#99D9D9','SJS':'#006D75','STL':'#002F87','TBL':'#002868','TOR':'#00205B','VAN':'#00205B','VGK':'#B4975A','WPG':'#041E42','WSH':'#C8102E' })
+    readonly property var teamColors: ({ 'ANA':'#F47A38','UTA':'#6E2B62','BOS':'#FFB81C','BUF':'#003087','CAR':'#CC0000','CBJ':'#002654','CGY':'#C8102E','CHI':'#CF0A2C','COL':'#6F263D','DAL':'#006847','DET':'#CE1126','EDM':'#FF4C00','FLA':'#C8102E','LAK':'#111111','MIN':'#154734','MTL':'#AF1E2D','NJD':'#CE1126','NSH':'#FFB81C','NYI':'#00539B','NYR':'#0038A8','OTT':'#C52032','PHI':'#F74902','PIT':'#FFB81C','SEA':'#99D9D9','SJS':'#006D75','STL':'#002F87','TBL':'#002868','TOR':'#00205B','VAN':'#00205B','VGK':'#B4975A','WPG':'#041E42','WSH':'#C8102E' })
 
     function teamColor(code) {
         var c = teamColors[String(code||'').toUpperCase()]
         return c ? c : Kirigami.Theme.positiveBackgroundColor
     }
-    function computeLiveClock(remain, wall, running) {
-
-        if (!running || !remain || !wall)
-            return remain
-
-            let parts = remain.split(":")
-            let total = parseInt(parts[0])*60 + parseInt(parts[1])
-
-            let start = new Date(wall).getTime()
-            let now = Date.now()
-
-            let elapsed = Math.floor((now - start)/1000)
-
-            let left = Math.max(total - elapsed, 0)
-
-            let m = Math.floor(left/60)
-            let s = left % 60
-
-            return m + ":" + (s<10?"0":"") + s
-    }
-
     function pad2(n) { return (n < 10 ? "0" : "") + n }
     function dateISO(d) { return d.getFullYear() + "-" + pad2(d.getMonth() + 1) + "-" + pad2(d.getDate()) }
 
@@ -108,8 +131,6 @@ PlasmoidItem {
             return 'CT'
         case 'COL': case 'CGY': case 'EDM': case 'UTA':
             return 'MT'
-        case 'ARI':
-            return 'MST'
         case 'ANA': case 'LAK': case 'SEA': case 'SJS': case 'VAN': case 'VGK':
             return 'PT'
         default:
@@ -120,11 +141,10 @@ PlasmoidItem {
         if(zone==='ET') return -5
         if(zone==='CT') return -6
         if(zone==='MT') return -7
-        if(zone==='MST') return -7
         if(zone==='PT') return -8
         return -5
     }
-    function zoneHasDst(zone){ return zone!=='MST' }
+    function zoneHasDst(zone){ return true }
     function nthSundayOfMonth(year, month0, n){
         var d = new Date(Date.UTC(year, month0, 1))
         var dow = d.getUTCDay()
@@ -174,37 +194,14 @@ PlasmoidItem {
         xhr.send()
     }
 
-    function makeForwardDaysArray(n){
-        const days=[]
-        const base=new Date()
-        base.setHours(0,0,0,0)
-        for(let i=0;i<=Math.max(0,n);i++){
-            days.push(new Date(base.getTime()+i*24*3600*1000))
-        }
-        return days
-    }
-
     function liveClockText(periodType, period, timeRemaining) {
-
-        if (!timeRemaining)
-            return ""
-
-            if (periodType === "OT")
-                return "OT " + timeRemaining
-
-                if (periodType === "SO")
-                    return "SO"
-
-                    if (period === 1)
-                        return "1st " + timeRemaining
-
-                        if (period === 2)
-                            return "2nd " + timeRemaining
-
-                            if (period === 3)
-                                return "3rd " + timeRemaining
-
-                                return ""
+        if (!timeRemaining) { return "" }
+        if (periodType === "OT") { return "OT " + timeRemaining }
+        if (periodType === "SO") { return "SO" }
+        if (period === 1) { return "1st " + timeRemaining }
+        if (period === 2) { return "2nd " + timeRemaining }
+        if (period === 3) { return "3rd " + timeRemaining }
+        return ""
     }
 
     function fetchLeagueByDates(days, cb){
@@ -223,7 +220,7 @@ PlasmoidItem {
         })
     }
 
-    readonly property var allTeams: ['ANA','ARI','UTA','BOS','BUF','CAR','CBJ','CGY','CHI','COL','DAL','DET','EDM','FLA','LAK','MIN','MTL','NJD','NSH','NYI','NYR','OTT','PHI','PIT','SEA','SJS','STL','TBL','TOR','VAN','VGK','WPG','WSH']
+    readonly property var allTeams: ['ANA','UTA','BOS','BUF','CAR','CBJ','CGY','CHI','COL','DAL','DET','EDM','FLA','LAK','MIN','MTL','NJD','NSH','NYI','NYR','OTT','PHI','PIT','SEA','SJS','STL','TBL','TOR','VAN','VGK','WPG','WSH']
 
     function fetchTeamNow(teamCodes, cb){
         let acc=[]
@@ -246,39 +243,46 @@ PlasmoidItem {
         })
     }
 
-    function refresh(){
+    // Génération de rafraîchissement — permet d'ignorer les callbacks obsolètes
+    property int refreshGen: 0
+
+    function refresh() {
+        refreshGen++
+        const myGen = refreshGen
 
         let days = []
-
         let base = new Date()
-        base.setHours(0,0,0,0)
+        base.setHours(0, 0, 0, 0)
 
         // passé
-        if (showTwoDaysAgo)
+        if (showTwoDaysAgo) {
             days.push(new Date(base.getTime() - 2*24*3600*1000))
+        }
+        if (showYesterday) {
+            days.push(new Date(base.getTime() - 1*24*3600*1000))
+        }
 
-            if (showYesterday)
-                days.push(new Date(base.getTime() - 1*24*3600*1000))
+        // aujourd'hui
+        days.push(new Date(base))
 
-                // aujourd'hui
-                days.push(new Date(base))
+        // futur
+        for (let i = 1; i <= lookaheadDays; i++) {
+            days.push(new Date(base.getTime() + i*24*3600*1000))
+        }
 
-                // futur si todayOnly = false
-                for(let i=1;i<=lookaheadDays;i++){
-                    days.push(new Date(base.getTime()+i*24*3600*1000))
-                }
-
-                fetchLeagueByDates(days, function(leagueGames, leagueErrs){
-                    if (leagueGames && leagueGames.length){
-                        buildFromRawGames(leagueGames, leagueErrs)
-                    } else {
-                        const pool = showAllTeams ? allTeams : favoriteTeams
-                        fetchTeamNow(pool, function(teamGames, teamErrs){
-                            buildFromRawGames(teamGames || [],
-                                              (leagueErrs||[]).concat(teamErrs||[]))
-                        })
-                    }
+        fetchLeagueByDates(days, function(leagueGames, leagueErrs) {
+            if (myGen !== refreshGen) return  // requête obsolète, on abandonne
+            if (leagueGames && leagueGames.length) {
+                buildFromRawGames(leagueGames, leagueErrs)
+            } else {
+                const pool = showAllTeams ? allTeams : favoriteTeams
+                fetchTeamNow(pool, function(teamGames, teamErrs) {
+                    if (myGen !== refreshGen) return
+                    buildFromRawGames(teamGames || [],
+                                      (leagueErrs||[]).concat(teamErrs||[]))
                 })
+            }
+        })
     }
 
     function isScoreSet(g){ return g && g.homeTeam && g.awayTeam && g.homeTeam.score !== undefined && g.awayTeam.score !== undefined }
@@ -319,46 +323,22 @@ PlasmoidItem {
     function statusColor(st){ return st==='LIVE' ? liveColor : (st==='FINAL' ? finalColor : upcomingColor) }
 
     function fetchClock(gameId, modelIndex) {
-
         let xhr = new XMLHttpRequest()
-
-        xhr.open(
-            "GET",
-            "https://api-web.nhle.com/v1/gamecenter/" +
-            gameId +
-            "/play-by-play"
-        )
-
+        xhr.open("GET", "https://api-web.nhle.com/v1/gamecenter/" + gameId + "/play-by-play")
         xhr.onreadystatechange = function() {
-
-            if (xhr.readyState === XMLHttpRequest.DONE &&
-                xhr.status === 200) {
-
+            if (xhr.readyState !== XMLHttpRequest.DONE || xhr.status !== 200) return
+            try {
                 let data = JSON.parse(xhr.responseText)
-
-                if (data.clock) {
-
-                    todayGames.setProperty(
-                        modelIndex,
-                        "clockStartRemain",
-                        data.clock.timeRemaining
-                    )
-
-                    todayGames.setProperty(
-                        modelIndex,
-                        "clockRunning",
-                        data.clock.running
-                    )
-
-                    todayGames.setProperty(
-                        modelIndex,
-                        "pbpPeriod",
-                        data.displayPeriod
-                    )
+                if (data && data.clock) {
+                    todayGames.setProperty(modelIndex, "liveRemain", data.clock.timeRemaining || "")
                 }
+                if (data && data.displayPeriod) {
+                    todayGames.setProperty(modelIndex, "period", data.displayPeriod)
                 }
+            } catch(e) {
+                console.warn("fetchClock parse error for game", gameId, e)
+            }
         }
-
         xhr.send()
     }
 
@@ -369,39 +349,18 @@ PlasmoidItem {
         var da = pad2(d.getDate())
         return 'https://www.nhl.com/gamecenter/' + String(away||'').toLowerCase() + '-vs-' + String(home||'').toLowerCase() + '/' + y + '/' + m + '/' + da + '/' + String(gameId||'')
     }
-    function hasActiveGames(){
-
-        let now = new Date()
-        for (let i = 0; i < todayGames.count; i++) {
-            let g = todayGames.get(i)
-            if (g.statusRole === 'LIVE')
-                return true
-                if (g.statusRole === 'UPCOMING') {
-                    let d = new Date(g.start)
-                    if (isSameDay(d, now))
-                        return true
-                }
-        }
-        return false
-    }
     function buildFromRawGames(games, errors){
         games = games || []
         const now = new Date()
         let pastDays = 0
-        if (showYesterday) pastDays = 1
-            if (showTwoDaysAgo) pastDays = 2
+        if (showTwoDaysAgo) {
+            pastDays = 2
+        } else if (showYesterday) {
+            pastDays = 1
+        }
 
-                const startOfToday = new Date(
-                    now.getFullYear(),
-                                              now.getMonth(),
-                                              now.getDate() - pastDays
-                )
-                const endWin = new Date(
-                    now.getFullYear(),
-                                        now.getMonth(),
-                                        now.getDate() + lookaheadDays,
-                                        23, 59, 59, 999
-                )
+        const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - pastDays)
+        const endWin = new Date(now.getFullYear(), now.getMonth(), now.getDate() + lookaheadDays, 23, 59, 59, 999)
         function inWindow(g){ const t = new Date(g.startTimeUTC || now); return t >= startOfToday && t <= endWin }
         let filtered = games.filter(function(g){ return inWindow(g) })
 
@@ -444,6 +403,14 @@ PlasmoidItem {
         .sort(function(a,b){ return a.start - b.start })
 
         uniq = uniq.slice(0, maxGames)
+        // Sauvegarder les scores précédents avant de vider le modèle
+        let snapshot = {}
+        for (let si = 0; si < todayGames.count; si++) {
+            let sg = todayGames.get(si)
+            snapshot[sg.gameId] = { ag: sg.ag, hg: sg.hg, status: sg.statusRole }
+        }
+        prevScores = snapshot
+
         todayGames.clear()
         for (let i=0;i<uniq.length;i++) {
 
@@ -476,9 +443,30 @@ PlasmoidItem {
             })
         }
 
+        // Détecter les nouveaux buts et envoyer les notifications
+        if (!initialLoading) {
+            for (let ni = 0; ni < todayGames.count; ni++) {
+                let ng = todayGames.get(ni)
+                let prev = prevScores[ng.gameId]
+                if (prev && ng.statusRole === 'LIVE') {
+                    if (ng.ag > prev.ag || ng.hg > prev.hg) {
+                        sendGoalNotification(ng.away, ng.home, ng.ag, ng.hg, prev.ag, prev.hg)
+                    }
+                }
+            }
+        }
+
+        initialLoading = false
         lastUpdated = new Date()
-        debugMsg = (errors && errors.length ? (errors.join(' | ') + ' · ') : '') + 'loaded ' + todayGames.count + ' game(s)'
+        debugMsg = (errors && errors.length ? errors.join(' | ') : '')
         pollTimer.running = true
+
+        // Récupérer l'horloge play-by-play pour les matchs en direct
+        for (let ci = 0; ci < todayGames.count; ci++) {
+            if (todayGames.get(ci).statusRole === "LIVE") {
+                fetchClock(todayGames.get(ci).gameId, ci)
+            }
+        }
     }
 
     Connections {
@@ -492,6 +480,7 @@ PlasmoidItem {
         function onScoreLayoutChanged(){ root.scoreLayout = Plasmoid.configuration.scoreLayout || 'stack' }
         function onShowUpcomingTimeChanged(){ }
         function onDateModeChanged(){ }
+        function onGoalNotificationsChanged(){ root.goalNotificationsEnabled = Plasmoid.configuration.goalNotifications !== false }
     }
 
     Component { id: statusBadge
@@ -583,35 +572,43 @@ PlasmoidItem {
         return localDateStr(startMs)
     }
 
-    function finalWhenText(startMs, statusRole, homeTeam){
-
-        if (statusRole !== 'FINAL')
-            return ''
-
-            let d = new Date(startMs)
-
-            if (dateMode === 'venue')
-                return venueDateStrUTC(startMs, homeTeam)
-
-                return localDateStr(startMs)
+    function finalWhenText(startMs, statusRole, homeTeam) {
+        if (statusRole !== 'FINAL') { return '' }
+        if (dateMode === 'venue') { return venueDateStrUTC(startMs, homeTeam) }
+        return localDateStr(startMs)
     }
 
     compactRepresentation: Item {
         id: compactRoot
         readonly property int pad: 6
+        ToolTip.visible: compactHover.containsMouse
+        ToolTip.text: {
+            if (todayGames.count === 0) return i18n("NHL Scores – No games")
+            let live = 0, upcoming = 0, ended = 0
+            for (let i = 0; i < todayGames.count; i++) {
+                let s = todayGames.get(i).statusRole
+                if (s === 'LIVE') live++
+                else if (s === 'UPCOMING') upcoming++
+                else ended++
+            }
+            let parts = []
+            if (live > 0)     parts.push(live + " " + i18n("live"))
+            if (upcoming > 0) parts.push(upcoming + " " + i18n("upcoming"))
+            if (ended > 0)    parts.push(ended + " " + i18n("final"))
+            return i18n("NHL Scores") + " – " + parts.join(", ")
+        }
+        ToolTip.delay: 800
+        HoverHandler { id: compactHover }
         implicitWidth: Math.max(row.implicitWidth + pad, emptyMsg.implicitWidth + pad)
         implicitHeight: Math.max(row.implicitHeight + 2, emptyMsg.implicitHeight + 2)
-        width: implicitWidth
-        height: implicitHeight
         Layout.preferredWidth: implicitWidth
         Layout.minimumWidth: implicitWidth
-        Layout.maximumWidth: implicitWidth
         Layout.preferredHeight: implicitHeight
         Layout.minimumHeight: implicitHeight
-        Layout.maximumHeight: implicitHeight
 
         Row {
             id: row
+            anchors.horizontalCenter: parent.horizontalCenter
             anchors.verticalCenter: parent.verticalCenter
             spacing: 6
             visible: todayGames.count > 0
@@ -673,7 +670,6 @@ PlasmoidItem {
                             color: Kirigami.Theme.disabledTextColor
                             font.pixelSize: 10
                             horizontalAlignment: Text.AlignHCenter
-                            anchors.horizontalCenter: parent.horizontalCenter
                         }
                         Label {
 
@@ -689,16 +685,15 @@ PlasmoidItem {
                             color: Kirigami.Theme.disabledTextColor
                             font.pixelSize: 10
                             horizontalAlignment: Text.AlignHCenter
-                            anchors.horizontalCenter: parent.horizontalCenter
                         }
                     }
 
                     TapHandler {
                         acceptedButtons: Qt.LeftButton
                         gesturePolicy: TapHandler.ReleaseWithinBounds
-                        onTapped: Qt.openUrlExternally(
-                            gameCenterUrl(away, home, start, gameId)
-                        )
+                        onTapped: {
+                            root.openDetail(gameId, away, home, ag, hg, statusRole, periodType, period, liveRemain, start)
+                        }
                         cursorShape: Qt.PointingHandCursor
                     }
                 }
@@ -708,89 +703,577 @@ PlasmoidItem {
             id: emptyMsg
             anchors.centerIn: parent
             visible: todayGames.count === 0
-            text: i18n('No games')
-            color: Kirigami.Theme.textColor
+            text: root.initialLoading ? i18n('Loading…') : i18n('No games')
+            color: root.initialLoading ? Kirigami.Theme.disabledTextColor : Kirigami.Theme.textColor
+            font.italic: root.initialLoading
         }
     }
 
-    fullRepresentation: ScrollView {
-        implicitWidth: 420
-        implicitHeight: 480
-        ColumnLayout {
-            spacing: 8
-            RowLayout {
-                Layout.fillWidth: true
-                CheckBox { text: i18n('OT/SO suffix'); checked: showOvertimeSuffix; onToggled: Plasmoid.configuration.showOvertimeSuffix = checked }
-                ComboBox {
-                    id: layoutCombo
-                    model: [ i18n('Score below (column)'), i18n('Score next to name (row)') ]
-                    currentIndex: (scoreLayout==='stack'?0:1)
-                    onActivated: Plasmoid.configuration.scoreLayout = (currentIndex===0?'stack':'inline')
-                    Layout.alignment: Qt.AlignRight
-                }
-                Button { text: i18n('Configure NHL Scores…'); icon.name: 'settings-configure'; onClicked: plasmoid.action('configure').trigger() }
+
+    // ── État du détail de match (au niveau root) ─────────────────────────
+    property int  detailGameId:   0
+    property string detailAway:   ''
+    property string detailHome:   ''
+    property int  detailAg:       0
+    property int  detailHg:       0
+    property string detailStatus: ''
+    property string detailPType:  ''
+    property int  detailPeriod:   0
+    property string detailRemain: ''
+    property var  detailStart:    0
+    property var  detailGoals:    []
+    property var  detailStats:    ({})
+    property bool detailLoading:  false
+    property string detailError:  ''
+    property bool detailOpen:     false
+
+    function openDetail(gid, away, home, ag, hg, status, ptype, period, remain, start) {
+        detailGameId  = gid
+        detailAway    = away
+        detailHome    = home
+        detailAg      = ag
+        detailHg      = hg
+        detailStatus  = status
+        detailPType   = ptype
+        detailPeriod  = period
+        detailRemain  = remain
+        detailStart   = start
+        detailGoals   = []
+        detailStats   = ({})
+        detailError   = ''
+        detailOpen    = true
+        fetchDetail(gid)
+        // Ouvrir le fullRepresentation (popup natif Plasma)
+        expanded = true
+    }
+
+    function fetchDetail(gid) {
+        detailLoading = true
+        let done = 0
+        function tryDone() { done++; if (done >= 2) detailLoading = false }
+
+        // landing → buts
+        let xhrL = new XMLHttpRequest()
+        xhrL.open("GET", "https://api-web.nhle.com/v1/gamecenter/" + gid + "/landing")
+        xhrL.onreadystatechange = function() {
+            if (xhrL.readyState !== XMLHttpRequest.DONE) return
+            if (xhrL.status === 200) {
+                try {
+                    let d = JSON.parse(xhrL.responseText)
+                    let g = []
+                    let periods = (d.summary && d.summary.scoring) ? d.summary.scoring : []
+                    for (let p = 0; p < periods.length; p++) {
+                        let ps = periods[p]
+                        let pname = ps.periodDescriptor
+                            ? (ps.periodDescriptor.periodType === 'OT' ? 'OT'
+                               : ps.periodDescriptor.periodType === 'SO' ? 'SO'
+                               : ps.periodDescriptor.number + '')
+                            : (p+1) + ''
+                        let gs = ps.goals || []
+                        for (let gi = 0; gi < gs.length; gi++) {
+                            let gl = gs[gi]
+                            let scorer = gl.firstName
+                                ? (gl.firstName.default || '') + ' ' + (gl.lastName.default || '')
+                                : (gl.name && gl.name.default ? gl.name.default : '?')
+                            let assists = []
+                            if (gl.assists) {
+                                for (let ai = 0; ai < gl.assists.length; ai++) {
+                                    let a = gl.assists[ai]
+                                    assists.push(a.firstName
+                                        ? (a.firstName.default || '') + ' ' + (a.lastName.default || '')
+                                        : (a.name && a.name.default ? a.name.default : '?'))
+                                }
+                            }
+                            g.push({
+                                period:  pname,
+                                time:    gl.timeInPeriod || '',
+                                team:    gl.teamAbbrev ? (gl.teamAbbrev.default || gl.teamAbbrev) : '',
+                                scorer:  scorer,
+                                assists: assists,
+                                ppg:     gl.strength === 'pp',
+                                shg:     gl.strength === 'sh',
+                                en:      gl.goalModifier === 'empty-net' || gl.emptyNet === true
+                            })
+                        }
+                    }
+                    detailGoals = g
+                } catch(e) { detailError = 'landing: ' + e }
+            } else {
+                detailError = 'HTTP ' + xhrL.status + ' (landing)'
             }
-            ListView {
-                Layout.fillWidth: true
-                Layout.fillHeight: true
-                model: todayGames
-                delegate: ItemDelegate {
-                    opacity: statusRole === 'FINAL' ? 0.5 : 1.0
-                    width: ListView.view.width
-                    contentItem: RowLayout {
-                        anchors.horizontalCenter: parent.horizontalCenter
-                        spacing: 12
-                        Loader {
-                            sourceComponent: (scoreLayout==='stack' ? teamColumn : teamRowInline)
-                            onLoaded: {
-                                if (scoreLayout==='stack') { item.code = away; item.score = ag }
-                                else { item.awayCode = away; item.homeCode = home; item.agScore = ag; item.hgScore = hg }
+            tryDone()
+        }
+        xhrL.send()
+
+        // boxscore → stats d'équipe
+        let xhrB = new XMLHttpRequest()
+        xhrB.open("GET", "https://api-web.nhle.com/v1/gamecenter/" + gid + "/boxscore")
+        xhrB.onreadystatechange = function() {
+            if (xhrB.readyState !== XMLHttpRequest.DONE) return
+            if (xhrB.status === 200) {
+                try {
+                    let d = JSON.parse(xhrB.responseText)
+                    let st = {}
+                    // Tirs au but : directement dans awayTeam/homeTeam
+                    let awSog = d.awayTeam && d.awayTeam.sog !== undefined ? d.awayTeam.sog : null
+                    let hmSog = d.homeTeam && d.homeTeam.sog !== undefined ? d.homeTeam.sog : null
+                    if (awSog !== null && hmSog !== null) {
+                        st['sog'] = { away: awSog, home: hmSog }
+                    }
+                    // Autres stats dans teamGameStats
+                    let ts = d.teamGameStats || []
+                    for (let i = 0; i < ts.length; i++) {
+                        let row = ts[i]
+                        let av = row.awayValue !== undefined ? row.awayValue : '—'
+                        let hv = row.homeValue !== undefined ? row.homeValue : '—'
+                        st[row.category || ''] = { away: av, home: hv }
+                    }
+                    detailStats = st
+                } catch(e) { detailError = 'boxscore: ' + e }
+            } else {
+                if (!detailError) detailError = 'HTTP ' + xhrB.status + ' (boxscore)'
+            }
+            tryDone()
+        }
+        xhrB.send()
+    }
+
+    // Timer rafraîchissement automatique du popup détail
+    Timer {
+        id: detailRefreshTimer
+        interval: 30000
+        running: root.detailOpen && root.detailStatus === 'LIVE'
+        repeat: true
+        onTriggered: {
+            if (root.detailOpen) {
+                // Mettre à jour le score depuis le modèle si le match est toujours là
+                for (let i = 0; i < todayGames.count; i++) {
+                    let g = todayGames.get(i)
+                    if (g.gameId === root.detailGameId) {
+                        root.detailAg      = g.ag
+                        root.detailHg      = g.hg
+                        root.detailPeriod  = g.period
+                        root.detailRemain  = g.liveRemain
+                        root.detailStatus  = g.statusRole
+                        root.detailPType   = g.periodType
+                        break
+                    }
+                }
+                // Recharger les buts et stats
+                fetchDetail(root.detailGameId)
+            }
+        }
+    }
+
+    // ── fullRepresentation : popup natif Plasma, bien positionné ─────────
+    fullRepresentation: Item {
+        implicitWidth:  440
+        implicitHeight: 520
+
+        // Vue liste des matchs
+        ScrollView {
+            anchors.fill: parent
+            visible: !root.detailOpen
+
+            ColumnLayout {
+                width: parent.width
+                spacing: 8
+
+                ListView {
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: contentHeight
+                    model: todayGames
+                    interactive: false
+
+                    delegate: ItemDelegate {
+                        opacity: statusRole === 'FINAL' ? 0.55 : 1.0
+                        width: ListView.view.width
+                        contentItem: Item {
+                            implicitHeight: delegateRow.implicitHeight + 8
+
+                            // Rangée centrée horizontalement
+                            RowLayout {
+                                id: delegateRow
+                                anchors.centerIn: parent
+                                spacing: 10
+
+                                // Équipe visiteur
+                                Loader {
+                                    sourceComponent: (scoreLayout==='stack' ? teamColumn : teamRowInline)
+                                    onLoaded: {
+                                        if (scoreLayout==='stack') { item.code = away; item.score = ag }
+                                        else { item.awayCode = away; item.homeCode = home; item.agScore = ag; item.hgScore = hg }
+                                    }
+                                }
+
+                                // Équipe locale (mode stack seulement)
+                                Loader {
+                                    sourceComponent: (scoreLayout==='stack' ? teamColumn : null)
+                                    visible: (scoreLayout==='stack')
+                                    onLoaded: { if (scoreLayout==='stack') { item.code = home; item.score = hg } }
+                                }
+
+                                // Pastille statut + chrono + heure
+                                Column {
+                                    spacing: 2
+
+                                    // Pastille inline avec binding direct
+                                    Rectangle {
+                                        anchors.horizontalCenter: parent.horizontalCenter
+                                        radius: 5
+                                        color: statusColor(statusRole)
+                                        opacity: 0.95
+                                        width: listBadgeText.implicitWidth + 6
+                                        height: listBadgeText.implicitHeight + 2
+                                        Text {
+                                            id: listBadgeText
+                                            anchors.centerIn: parent
+                                            text: statusText(statusRole) + statusSuffix(rawState, periodType)
+                                            color: 'white'; font.pixelSize: 10; font.bold: true
+                                        }
+                                    }
+
+                                    // Chronomètre LIVE
+                                    Label {
+                                        anchors.horizontalCenter: parent.horizontalCenter
+                                        visible: statusRole === 'LIVE' && liveRemain !== ''
+                                        text: liveClockText(periodType, period, liveRemain)
+                                        color: Kirigami.Theme.disabledTextColor
+                                        font.pixelSize: 10
+                                    }
+
+                                    // Heure (upcoming) ou date (final)
+                                    Label {
+                                        anchors.horizontalCenter: parent.horizontalCenter
+                                        visible: (statusRole === 'UPCOMING' && showUpcomingTime) || statusRole === 'FINAL'
+                                        text: statusRole === 'FINAL'
+                                            ? finalWhenText(start, statusRole, home)
+                                            : upcomingWhenText(start, statusRole, home)
+                                        color: Kirigami.Theme.disabledTextColor
+                                        font.pixelSize: 10
+                                    }
+                                }
+
+                                // Flèche indicatrice
+                                Label {
+                                    text: '›'
+                                    font.pixelSize: 18
+                                    color: Kirigami.Theme.disabledTextColor
+                                }
                             }
                         }
-                        Loader {
-                            sourceComponent: (scoreLayout==='stack'? teamColumn : null)
-                            visible: (scoreLayout==='stack')
-                            onLoaded: { if (scoreLayout==='stack') { item.code = home; item.score = hg } }
+                        onClicked: root.openDetail(gameId, away, home, ag, hg, statusRole, periodType, period, liveRemain, start)
+                    }
+
+                    footer: Label {
+                        text: lastUpdated
+                            ? i18n('Updated: %1', Qt.formatTime(lastUpdated, 'hh:mm'))
+                              + (debugMsg ? '  ⚠  ' + debugMsg : '')
+                            : ''
+                        opacity: 0.45
+                        font.pixelSize: 10
+                        horizontalAlignment: Text.AlignHCenter
+                        width: ListView.view.width
+                        topPadding: 4; bottomPadding: 6
+                    }
+                }
+            }
+        }
+
+        // Vue détail d'un match
+        ScrollView {
+            id: detailScrollView
+            anchors.fill: parent
+            visible: root.detailOpen
+            contentWidth: availableWidth
+
+            Item {
+                width: detailScrollView.availableWidth
+                implicitHeight: detailColumn.implicitHeight
+
+                ColumnLayout {
+                    id: detailColumn
+                    width: Math.min(320, detailScrollView.availableWidth - 32)
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    spacing: 8
+
+                // ── Barre de retour ──────────────────────────────────────
+                RowLayout {
+                    Layout.fillWidth: true
+                    Layout.topMargin: 4
+
+                    Button {
+                        text: i18n('‹ Back')
+                        icon.name: 'go-previous'
+                        flat: true
+                        onClicked: root.detailOpen = false
+                    }
+                    Item { Layout.fillWidth: true }
+                    Button {
+                        text: i18n('NHL.com')
+                        icon.name: 'internet-web-browser'
+                        flat: true
+                        onClicked: Qt.openUrlExternally(
+                            gameCenterUrl(root.detailAway, root.detailHome, root.detailStart, root.detailGameId)
+                        )
+                    }
+                }
+
+                // ── En-tête score ────────────────────────────────────────
+                RowLayout {
+                    Layout.fillWidth: true
+                    Layout.leftMargin: 12
+                    Layout.rightMargin: 12
+                    Layout.alignment: Qt.AlignHCenter
+                    spacing: 8
+
+                    // Visiteur
+                    Column {
+                        spacing: 4
+                        Layout.alignment: Qt.AlignVCenter
+                        Rectangle {
+                            radius: 5; width: awLbl.implicitWidth + 14; height: awLbl.implicitHeight + 8
+                            color: teamColor(root.detailAway)
+                            border.color: 'white'; border.width: 1
+                            Label { id: awLbl; anchors.centerIn: parent; text: root.detailAway; color: 'white'; font.bold: true; font.pixelSize: 15 }
                         }
-                        ColumnLayout {
-                            spacing: 2
-                            Loader {
-                                sourceComponent: statusBadge
-                                onLoaded: { item.gameStatus = statusRole; item.suffix = statusSuffix(rawState, periodType) }
-                                Layout.alignment: Qt.AlignHCenter
+                        Label {
+                            anchors.horizontalCenter: parent.horizontalCenter
+                            text: String(root.detailAg)
+                            font.pixelSize: 32; font.bold: true
+                            color: Kirigami.Theme.textColor
+                        }
+                    }
+
+                    // Centre
+                    Column {
+                        spacing: 4
+                        Layout.fillWidth: true
+                        Layout.alignment: Qt.AlignVCenter
+                        // Pastille statut inline avec binding direct (pas de Loader/onLoaded)
+                        Rectangle {
+                            anchors.horizontalCenter: parent.horizontalCenter
+                            radius: 5
+                            color: statusColor(root.detailStatus)
+                            opacity: 0.95
+                            width: badgeDetailText.implicitWidth + 6
+                            height: badgeDetailText.implicitHeight + 2
+                            Text {
+                                id: badgeDetailText
+                                anchors.centerIn: parent
+                                text: statusText(root.detailStatus) + statusSuffix('', root.detailPType)
+                                color: 'white'
+                                font.pixelSize: 10
+                                font.bold: true
+                            }
+                        }
+                        Label {
+                            anchors.horizontalCenter: parent.horizontalCenter
+                            visible: root.detailStatus === 'LIVE' && root.detailRemain !== ''
+                            text: liveClockText(root.detailPType, root.detailPeriod, root.detailRemain)
+                            color: Kirigami.Theme.disabledTextColor; font.pixelSize: 12
+                        }
+                    }
+
+                    // Local
+                    Column {
+                        spacing: 4
+                        Layout.alignment: Qt.AlignVCenter
+                        Rectangle {
+                            radius: 5; width: hmLbl.implicitWidth + 14; height: hmLbl.implicitHeight + 8
+                            color: teamColor(root.detailHome)
+                            border.color: 'white'; border.width: 1
+                            Label { id: hmLbl; anchors.centerIn: parent; text: root.detailHome; color: 'white'; font.bold: true; font.pixelSize: 15 }
+                        }
+                        Label {
+                            anchors.horizontalCenter: parent.horizontalCenter
+                            text: String(root.detailHg)
+                            font.pixelSize: 32; font.bold: true
+                            color: Kirigami.Theme.textColor
+                        }
+                    }
+                }
+
+                // Chargement / erreur
+                Label {
+                    visible: root.detailLoading
+                    text: i18n('Loading…')
+                    color: Kirigami.Theme.disabledTextColor
+                    font.pixelSize: 12
+                    Layout.alignment: Qt.AlignHCenter
+                }
+                Label {
+                    visible: !root.detailLoading && root.detailError !== ''
+                    text: root.detailError
+                    color: 'tomato'; font.pixelSize: 11
+                    wrapMode: Text.Wrap
+                    Layout.fillWidth: true
+                }
+
+                // ── Tirs au but (mise en évidence) ───────────────────────
+                RowLayout {
+                    visible: !root.detailLoading && root.detailStats['sog'] !== undefined
+                    Layout.fillWidth: true
+                    spacing: 0
+                    Label {
+                        text: root.detailStats['sog'] ? String(root.detailStats['sog'].away) : ''
+                        font.pixelSize: 20; font.bold: true
+                        color: teamColor(root.detailAway)
+                        Layout.preferredWidth: 70; horizontalAlignment: Text.AlignHCenter
+                    }
+                    Label {
+                        text: i18n('Shots on Goal')
+                        font.pixelSize: 11
+                        color: Kirigami.Theme.disabledTextColor
+                        Layout.fillWidth: true; horizontalAlignment: Text.AlignHCenter
+                    }
+                    Label {
+                        text: root.detailStats['sog'] ? String(root.detailStats['sog'].home) : ''
+                        font.pixelSize: 20; font.bold: true
+                        color: teamColor(root.detailHome)
+                        Layout.preferredWidth: 70; horizontalAlignment: Text.AlignHCenter
+                    }
+                }
+
+                // ── Séparateur ───────────────────────────────────────────
+                Rectangle {
+                    visible: !root.detailLoading && Object.keys(root.detailStats).length > 0
+                    Layout.fillWidth: true; height: 1
+                    color: Kirigami.Theme.separatorColor
+                }
+
+                // ── Stats d'équipe (sans SOG, déjà affiché ci-dessus) ─────
+                ColumnLayout {
+                    visible: !root.detailLoading && Object.keys(root.detailStats).length > 0
+                    Layout.fillWidth: true
+                    spacing: 2
+
+                    // En-têtes colonnes
+                    RowLayout {
+                        Layout.fillWidth: true
+                        Label { text: root.detailAway; font.bold: true; font.pixelSize: 12; color: teamColor(root.detailAway); Layout.preferredWidth: 70; horizontalAlignment: Text.AlignHCenter }
+                        Label { text: ''; Layout.fillWidth: true }
+                        Label { text: root.detailHome; font.bold: true; font.pixelSize: 12; color: teamColor(root.detailHome); Layout.preferredWidth: 70; horizontalAlignment: Text.AlignHCenter }
+                    }
+
+                    Repeater {
+                        model: {
+                            let order = ['faceoffWinningPctg','powerPlay','hits','blockedShots','giveaways','takeaways','pim']
+                            let labels = {
+                                'sog':                 i18n('Shots'),
+                                'faceoffWinningPctg':   i18n('Faceoffs %'),
+                                'powerPlay':            i18n('Power Play'),
+                                'hits':                 i18n('Hits'),
+                                'blockedShots':         i18n('Blocks'),
+                                'giveaways':            i18n('Giveaways'),
+                                'takeaways':            i18n('Takeaways'),
+                                'pim':                  i18n('PIM')
+                            }
+                            let rows = []
+                            for (let i = 0; i < order.length; i++) {
+                                let k = order[i]
+                                let entry = root.detailStats[k]
+                                if (entry === undefined) continue
+                                let av = entry.away
+                                let hv = entry.home
+                                if (k === 'powerPlay' && av !== null && typeof av === 'object') {
+                                    let ho = entry.home
+                                    av = (av.goals||0) + '/' + (av.opportunities||0)
+                                    hv = (ho.goals||0) + '/' + (ho.opportunities||0)
+                                }
+                                if (k === 'faceoffWinningPctg') {
+                                    av = typeof av === 'number' ? av.toFixed(1) + '%' : String(av)
+                                    hv = typeof hv === 'number' ? hv.toFixed(1) + '%' : String(hv)
+                                }
+                                rows.push({ label: labels[k] || k, away: String(av), home: String(hv) })
+                            }
+                            return rows
+                        }
+                        delegate: RowLayout {
+                            Layout.fillWidth: true
+                            spacing: 0
+                            Label { text: modelData.away; font.pixelSize: 12; font.bold: true; color: Kirigami.Theme.textColor; Layout.preferredWidth: 70; horizontalAlignment: Text.AlignHCenter }
+                            Label { text: modelData.label; font.pixelSize: 11; color: Kirigami.Theme.disabledTextColor; Layout.fillWidth: true; horizontalAlignment: Text.AlignHCenter }
+                            Label { text: modelData.home; font.pixelSize: 12; font.bold: true; color: Kirigami.Theme.textColor; Layout.preferredWidth: 70; horizontalAlignment: Text.AlignHCenter }
+                        }
+                    }
+                }
+
+                // ── Buts ─────────────────────────────────────────────────
+                Rectangle {
+                    visible: !root.detailLoading
+                    Layout.fillWidth: true; height: 1
+                    color: Kirigami.Theme.separatorColor
+                }
+
+                Label {
+                    visible: !root.detailLoading
+                    text: i18n('Goals')
+                    font.bold: true; font.pixelSize: 12
+                    color: Kirigami.Theme.textColor
+                    Layout.alignment: Qt.AlignHCenter
+                }
+
+                Repeater {
+                    model: root.detailGoals
+                    delegate: RowLayout {
+                        Layout.fillWidth: true
+                        spacing: 6
+
+                        Rectangle {
+                            radius: 3
+                            width: tBadge.implicitWidth + 8; height: tBadge.implicitHeight + 4
+                            color: teamColor(modelData.team)
+                            Label { id: tBadge; anchors.centerIn: parent; text: modelData.team; color: 'white'; font.pixelSize: 10; font.bold: true }
+                        }
+                        Label {
+                            text: 'P' + modelData.period + ' ' + modelData.time
+                            font.pixelSize: 10; color: Kirigami.Theme.disabledTextColor
+                            Layout.preferredWidth: 62
+                        }
+                        Column {
+                            spacing: 1
+                            Layout.fillWidth: true
+                            Label {
+                                text: modelData.scorer
+                                    + (modelData.ppg ? '  🔵 PP' : '')
+                                    + (modelData.shg ? '  🔴 SH' : '')
+                                    + (modelData.en  ? '  🥅 EN' : '')
+                                font.pixelSize: 12; font.bold: true
+                                color: Kirigami.Theme.textColor; wrapMode: Text.Wrap
                             }
                             Label {
-
-                                visible: (statusRole === 'UPCOMING' && showUpcomingTime)
-                                || statusRole === 'FINAL'
-
-                                text: statusRole === 'FINAL'
-                                ? finalWhenText(start, statusRole, home)
-                                : upcomingWhenText(start, statusRole, home)
-
-                                color: Kirigami.Theme.disabledTextColor
-                                font.pixelSize: 11
-                                Layout.alignment: Qt.AlignHCenter
+                                visible: modelData.assists.length > 0
+                                text: i18n('Assists: ') + modelData.assists.join(', ')
+                                font.pixelSize: 10; color: Kirigami.Theme.disabledTextColor
+                                wrapMode: Text.Wrap
                             }
                         }
                     }
-                    onClicked: Qt.openUrlExternally(gameCenterUrl(away, home, start, gameId))
                 }
-                footer: Label {
-                    text: (lastUpdated ? i18n('Updated: %1', Qt.formatDateTime(lastUpdated, 'hh:mm:ss')) : '') + (debugMsg ? '  ·  ' + debugMsg : '')
-                    opacity: 0.6
+
+                Label {
+                    visible: !root.detailLoading && root.detailGoals.length === 0 && root.detailStatus === 'UPCOMING'
+                    text: i18n('Game not started yet.')
+                    color: Kirigami.Theme.disabledTextColor; font.pixelSize: 12
+                    Layout.alignment: Qt.AlignHCenter
+                    Layout.fillWidth: true
                     horizontalAlignment: Text.AlignHCenter
-                    width: ListView.view.width
                 }
-            }
+                Label {
+                    visible: !root.detailLoading && root.detailGoals.length === 0
+                        && root.detailStatus !== 'UPCOMING' && root.detailError === ''
+                    text: i18n('No goals recorded.')
+                    color: Kirigami.Theme.disabledTextColor; font.pixelSize: 12
+                    Layout.alignment: Qt.AlignHCenter
+                    Layout.fillWidth: true
+                    horizontalAlignment: Text.AlignHCenter
+                }
+
+                Item { height: 8 }
+                } // ColumnLayout
+            } // Item wrapper
         }
     }
 
-    Plasmoid.contextualActions: [
-        PlasmaCore.Action {
-            text: i18n('Refresh now')
-            icon.name: 'view-refresh'
-            onTriggered: refresh()
-        }
-    ]
 }

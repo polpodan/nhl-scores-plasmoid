@@ -8,6 +8,7 @@ Item {
   id: page
   property string title
 
+  // ── Propriétés liées à main.xml ──────────────────────────────────────
   property string cfg_scoreLayout
   property string cfg_scoreLayoutDefault
   property string cfg_liveColor
@@ -20,18 +21,6 @@ Item {
   property bool   cfg_showOvertimeSuffixDefault
   property bool   cfg_showUpcomingTime
   property bool   cfg_showUpcomingTimeDefault
-  property string cfg_favorites
-  property string cfg_favoritesDefault
-  property bool   cfg_showAll
-  property bool   cfg_showAllDefault
-  property bool   cfg_todayOnly
-  property bool   cfg_todayOnlyDefault
-  property int    cfg_compactMaxGames
-  property int    cfg_compactMaxGamesDefault
-  property int    cfg_maxTotalGames
-  property int    cfg_maxTotalGamesDefault
-  property int    cfg_lookaheadDays
-  property int    cfg_lookaheadDaysDefault
   property string cfg_dateMode
   property string cfg_dateModeDefault
 
@@ -81,10 +70,6 @@ Item {
         currentIndex: indexFromValue(page.cfg_scoreLayout)
         onActivated: page.cfg_scoreLayout = valueFromIndex(currentIndex)
       }
-      QQC2.Label {
-        text: page.cfg_scoreLayout
-        opacity: 0.5
-      }
     }
 
     RowLayout {
@@ -94,10 +79,6 @@ Item {
         model: [ i18n("Local timezone (computer)"), i18n("Venue timezone (arena)") ]
         currentIndex: page.cfg_dateMode === 'venue' ? 1 : 0
         onActivated: page.cfg_dateMode = (currentIndex===1 ? 'venue' : 'local')
-      }
-      QQC2.Label {
-        text: page.cfg_dateMode
-        opacity: 0.5
       }
     }
   }
