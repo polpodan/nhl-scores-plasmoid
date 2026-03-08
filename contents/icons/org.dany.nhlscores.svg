@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <!-- Fond circulaire -->
+  <circle cx="64" cy="64" r="56" fill="#1d99f3"/>
+
+  <!-- Corps -->
+  <ellipse cx="64" cy="72" rx="26" ry="30" fill="#2a2a2a"/>
+
+  <!-- Ventre -->
+  <ellipse cx="64" cy="78" rx="16" ry="20" fill="#ffffff"/>
+
+  <!-- Tête -->
+  <circle cx="64" cy="42" r="18" fill="#2a2a2a"/>
+
+  <!-- Yeux -->
+  <circle cx="58" cy="40" r="2.5" fill="#ffffff"/>
+  <circle cx="70" cy="40" r="2.5" fill="#ffffff"/>
+
+  <!-- Bec -->
+  <polygon points="64,44 58,52 70,52" fill="#f67400"/>
+
+  <!-- Aile -->
+  <ellipse cx="88" cy="74" rx="8" ry="18" fill="#2a2a2a" transform="rotate(25 88 74)"/>
+
+  <!-- Bâton -->
+  <path d="M86 74 L110 96" stroke="#c28c3d" stroke-width="4" stroke-linecap="round"/>
+  <path d="M110 96 L116 92 L102 86 Z" fill="#c28c3d"/>
+
+  <!-- Rondelle -->
+  <circle cx="104" cy="104" r="4" fill="#1a1a1a"/>
+
+</svg>

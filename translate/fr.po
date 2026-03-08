@@ -54,8 +54,6 @@ msgid "Venue timezone (arena)"
 msgstr "Fuseau horaire du lieu (aréna)"
 
 # ---- Config: General (favorites grid) ----
-msgid "Favorite teams by division:"
-msgstr "Équipes favorites par division :"
 
 msgid "── Atlantic ──"
 msgstr "── Atlantique ──"
@@ -69,26 +67,23 @@ msgstr "── Centrale ──"
 msgid "── Pacific ──"
 msgstr "── Pacifique ──"
 
-msgid "Show all games"
-msgstr "Afficher tous les matchs"
+msgid "Show all teams"
+msgstr "Afficher toutes les équipes"
 
-msgid "Today only (for All)"
-msgstr "Aujourd’hui seulement (pour Tous)"
+msgid "Favorite teams :"
+msgstr "Équipes favorites :"
 
-msgid "Days ahead:"
-msgstr "Jours à venir :"
+msgid "Days ahead :"
+msgstr "Jours à venir :"
 
-msgid "Games in compact view:"
-msgstr "Matchs en vue compacte :"
+msgid "Max games to display :"
+msgstr "Nombre d'équipes à afficher au maximum :"
 
-msgid "Cap for All view:"
-msgstr "Plafond pour la vue Tous :"
+msgid "Show yesterday's games."
+msgstr "Voir les parties d'hier."
 
-msgid "Show games from yesterday."
-msgstr "Voir les parties d'hier"
-
-msgid "Show games from the day before yesterday."
-msgstr "Voir les parties d'avant-hier"
+msgid "Show games from two days ago."
+msgstr "Voir les parties d'avant-hier."
 
 # ---- Applet UI ----
 msgid "NHL Scores"

@@ -15,10 +15,15 @@ We use **KI18n** in QML via `i18n()` and ship a `translate/` helper. Build the F
 ```bash
 cd translate
 ./build.sh
+
 ```
 This will produce and install `~/.local/share/locale/fr/LC_MESSAGES/plasma_applet_org.dany.nhlscores.mo`.
 
 See KDE developer docs: i18n in Plasma widgets.\[1]
+
+
+## Icon theme
+To get the icon theme from the theme, you must copy the icon from "contents/icons/" to "~/.local/share/icons/hicolor/scalable/apps/".
 
 ## License
 GPL-3.0-or-later © Dany Martineau

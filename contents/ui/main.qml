@@ -10,13 +10,16 @@ PlasmoidItem {
     id: root
     Plasmoid.title: i18n("NHL Scores")
     preferredRepresentation: compactRepresentation
-
-    property var favoriteTeams: (Plasmoid.configuration.favorites || "VAN,TOR").split(/\s*,\s*/).filter(function(s){ return s.length > 0 })
-    property bool showAll: Plasmoid.configuration.showAll
-    property bool todayOnly: Plasmoid.configuration.todayOnly
+    property var favoriteTeams: []
+    property bool showAllTeams: Plasmoid.configuration.showAllTeams || false
+    property int maxGames: Plasmoid.configuration.maxGames || 10
     property int lookaheadDays: Plasmoid.configuration.lookaheadDays || 2
-    property int compactMaxGames: Plasmoid.configuration.compactMaxGames || 2
-    property int maxTotalGames: Plasmoid.configuration.maxTotalGames || 20
+    function updateFavoriteTeams() {
+        let f = Plasmoid.configuration.favorites || ""
+        favoriteTeams = f.split(/\s*,\s*/).filter(function(s){
+            return s.length > 0
+        })
+    }
     property bool showOvertimeSuffix: Plasmoid.configuration.showOvertimeSuffix
     property color liveColor: Plasmoid.configuration.liveColor || "#d90429"
     property color upcomingColor: Plasmoid.configuration.upcomingColor || "#2b6cb0"
@@ -27,8 +30,14 @@ PlasmoidItem {
     property bool showYesterday: Plasmoid.configuration.showYesterday
     property bool showTwoDaysAgo: Plasmoid.configuration.showTwoDaysAgo
 
+    Component.onCompleted: {
+        updateFavoriteTeams()
+        refresh()
+    }
 
-    ListModel { id: todayGames }
+    ListModel {
+        id: todayGames
+    }
     property date lastUpdated
     property string debugMsg: ""
 
@@ -61,6 +70,26 @@ PlasmoidItem {
     function teamColor(code) {
         var c = teamColors[String(code||'').toUpperCase()]
         return c ? c : Kirigami.Theme.positiveBackgroundColor
+    }
+    function computeLiveClock(remain, wall, running) {
+
+        if (!running || !remain || !wall)
+            return remain
+
+            let parts = remain.split(":")
+            let total = parseInt(parts[0])*60 + parseInt(parts[1])
+
+            let start = new Date(wall).getTime()
+            let now = Date.now()
+
+            let elapsed = Math.floor((now - start)/1000)
+
+            let left = Math.max(total - elapsed, 0)
+
+            let m = Math.floor(left/60)
+            let s = left % 60
+
+            return m + ":" + (s<10?"0":"") + s
     }
 
     function pad2(n) { return (n < 10 ? "0" : "") + n }
@@ -155,6 +184,29 @@ PlasmoidItem {
         return days
     }
 
+    function liveClockText(periodType, period, timeRemaining) {
+
+        if (!timeRemaining)
+            return ""
+
+            if (periodType === "OT")
+                return "OT " + timeRemaining
+
+                if (periodType === "SO")
+                    return "SO"
+
+                    if (period === 1)
+                        return "1st " + timeRemaining
+
+                        if (period === 2)
+                            return "2nd " + timeRemaining
+
+                            if (period === 3)
+                                return "3rd " + timeRemaining
+
+                                return ""
+    }
+
     function fetchLeagueByDates(days, cb){
         let acc=[]
         let pending=days.length
@@ -212,17 +264,15 @@ PlasmoidItem {
                 days.push(new Date(base))
 
                 // futur si todayOnly = false
-                if (!todayOnly){
-                    for(let i=1;i<=lookaheadDays;i++){
-                        days.push(new Date(base.getTime()+i*24*3600*1000))
-                    }
+                for(let i=1;i<=lookaheadDays;i++){
+                    days.push(new Date(base.getTime()+i*24*3600*1000))
                 }
 
                 fetchLeagueByDates(days, function(leagueGames, leagueErrs){
                     if (leagueGames && leagueGames.length){
                         buildFromRawGames(leagueGames, leagueErrs)
                     } else {
-                        const pool = showAll ? allTeams : favoriteTeams
+                        const pool = showAllTeams ? allTeams : favoriteTeams
                         fetchTeamNow(pool, function(teamGames, teamErrs){
                             buildFromRawGames(teamGames || [],
                                               (leagueErrs||[]).concat(teamErrs||[]))
@@ -268,6 +318,50 @@ PlasmoidItem {
 
     function statusColor(st){ return st==='LIVE' ? liveColor : (st==='FINAL' ? finalColor : upcomingColor) }
 
+    function fetchClock(gameId, modelIndex) {
+
+        let xhr = new XMLHttpRequest()
+
+        xhr.open(
+            "GET",
+            "https://api-web.nhle.com/v1/gamecenter/" +
+            gameId +
+            "/play-by-play"
+        )
+
+        xhr.onreadystatechange = function() {
+
+            if (xhr.readyState === XMLHttpRequest.DONE &&
+                xhr.status === 200) {
+
+                let data = JSON.parse(xhr.responseText)
+
+                if (data.clock) {
+
+                    todayGames.setProperty(
+                        modelIndex,
+                        "clockStartRemain",
+                        data.clock.timeRemaining
+                    )
+
+                    todayGames.setProperty(
+                        modelIndex,
+                        "clockRunning",
+                        data.clock.running
+                    )
+
+                    todayGames.setProperty(
+                        modelIndex,
+                        "pbpPeriod",
+                        data.displayPeriod
+                    )
+                }
+                }
+        }
+
+        xhr.send()
+    }
+
     function gameCenterUrl(away, home, start, gameId){
         var d = new Date(start)
         var y = d.getFullYear()
@@ -302,15 +396,24 @@ PlasmoidItem {
                                               now.getMonth(),
                                               now.getDate() - pastDays
                 )
-        const endWin = new Date(now.getFullYear(), now.getMonth(), now.getDate() + (todayOnly ? 0 : lookaheadDays), 23, 59, 59, 999)
+                const endWin = new Date(
+                    now.getFullYear(),
+                                        now.getMonth(),
+                                        now.getDate() + lookaheadDays,
+                                        23, 59, 59, 999
+                )
         function inWindow(g){ const t = new Date(g.startTimeUTC || now); return t >= startOfToday && t <= endWin }
         let filtered = games.filter(function(g){ return inWindow(g) })
 
-        if (!showAll && favoriteTeams.length){
+        if (!showAllTeams && favoriteTeams.length){
+
             filtered = filtered.filter(function(g){
+
                 const h = g.homeTeam && g.homeTeam.abbrev
                 const a = g.awayTeam && g.awayTeam.abbrev
-                return favoriteTeams.indexOf(h) >= 0 || favoriteTeams.indexOf(a) >= 0
+
+                return favoriteTeams.indexOf(h) >= 0 ||
+                favoriteTeams.indexOf(a) >= 0
             })
         }
 
@@ -322,31 +425,70 @@ PlasmoidItem {
             return {
                 gameId: g.id || 0,
                 home: (g.homeTeam && g.homeTeam.abbrev) || '',
-                away: (g.awayTeam && g.awayTeam.abbrev) || '',
-                hg: (g.homeTeam && g.homeTeam.score !== undefined ? g.homeTeam.score : 0),
-                ag: (g.awayTeam && g.awayTeam.score !== undefined ? g.awayTeam.score : 0),
-                start: new Date(g.startTimeUTC || new Date()).getTime() || 999,
-                statusRole: st,
-                rawState: (g.gameState || ''),
-                periodType: (g.periodDescriptor && g.periodDescriptor.periodType) ? g.periodDescriptor.periodType : ''
+                        away: (g.awayTeam && g.awayTeam.abbrev) || '',
+                        hg: (g.homeTeam && g.homeTeam.score !== undefined ? g.homeTeam.score : 0),
+                        ag: (g.awayTeam && g.awayTeam.score !== undefined ? g.awayTeam.score : 0),
+                        start: new Date(g.startTimeUTC || new Date()).getTime() || 999,
+                        statusRole: st,
+                        rawState: (g.gameState || ''),
+                        periodType: g.periodDescriptor?.periodType || "",
+                        period: g.periodDescriptor?.number || 0,
+                        pbpClock: "",
+                        pbpPeriod: 0,
+                        clockStartRemain: "",
+                        clockStartWall: "",
+                        clockRunning: false,
+                        rawClock: g.clock || null
             }
-        }).sort(function(a,b){ return a.start - b.start })
+        })
+        .sort(function(a,b){ return a.start - b.start })
 
+        uniq = uniq.slice(0, maxGames)
         todayGames.clear()
-        for (let i=0;i<uniq.length;i++) { todayGames.append(uniq[i]) }
+        for (let i=0;i<uniq.length;i++) {
+
+            let liveRemain = ""
+            let livePeriod = uniq[i].period
+
+            if (uniq[i].statusRole === "LIVE") {
+
+                let g = uniq[i]
+
+                // scoreboard contient déjà le clock
+                if (g.rawClock) {
+                    liveRemain = g.rawClock.timeRemaining
+                }
+            }
+
+            todayGames.append({
+
+                gameId: uniq[i].gameId,
+                home: uniq[i].home,
+                away: uniq[i].away,
+                hg: uniq[i].hg,
+                ag: uniq[i].ag,
+                start: uniq[i].start,
+                statusRole: uniq[i].statusRole,
+                rawState: uniq[i].rawState,
+                periodType: uniq[i].periodType,
+                period: livePeriod,
+                liveRemain: liveRemain
+            })
+        }
+
         lastUpdated = new Date()
         debugMsg = (errors && errors.length ? (errors.join(' | ') + ' · ') : '') + 'loaded ' + todayGames.count + ' game(s)'
-        pollTimer.running = hasActiveGames()
+        pollTimer.running = true
     }
 
     Connections {
         target: Plasmoid.configuration
         function onFavoritesChanged(){ root.favoriteTeams = (Plasmoid.configuration.favorites||'').split(/\s*,\s*/).filter(function(s){return s.length>0}); refresh() }
-        function onShowAllChanged(){ refresh() }
-        function onTodayOnlyChanged(){ refresh() }
+        function onShowAllTeamsChanged(){ refresh() }
+        function onMaxGamesChanged(){ refresh() }
+        function onLookaheadDaysChanged(){ refresh() }
         function onShowYesterdayChanged(){ refresh() }
         function onShowTwoDaysAgoChanged(){ refresh() }
-        function onLookaheadDaysChanged(){ refresh() }
         function onScoreLayoutChanged(){ root.scoreLayout = Plasmoid.configuration.scoreLayout || 'stack' }
         function onShowUpcomingTimeChanged(){ }
         function onDateModeChanged(){ }
@@ -473,35 +615,57 @@ PlasmoidItem {
             anchors.verticalCenter: parent.verticalCenter
             spacing: 6
             visible: todayGames.count > 0
+
             Repeater {
                 model: todayGames
+
                 delegate: Row {
+
                     opacity: statusRole === 'FINAL' ? 0.5 : 1.0
-                    visible: index < compactMaxGames
+                    visible: index < maxGames
+
                     spacing: 6
+
                     Loader {
                         sourceComponent: (scoreLayout==='stack' ? teamColumn : teamRowInline)
                         onLoaded: {
-                            if (scoreLayout==='stack') { item.code = away; item.score = ag }
-                            else { item.awayCode = away; item.homeCode = home; item.agScore = ag; item.hgScore = hg }
+                            if (scoreLayout==='stack') {
+                                item.code = away
+                                item.score = ag
+                            } else {
+                                item.awayCode = away
+                                item.homeCode = home
+                                item.agScore = ag
+                                item.hgScore = hg
+                            }
                         }
                     }
+
                     Loader {
                         sourceComponent: (scoreLayout==='stack' ? teamColumn : null)
                         visible: (scoreLayout==='stack')
-                        onLoaded: { if (scoreLayout==='stack') { item.code = home; item.score = hg } }
+                        onLoaded: {
+                            if (scoreLayout==='stack') {
+                                item.code = home
+                                item.score = hg
+                            }
+                        }
                     }
+
                     Column {
                         spacing: 2
+
                         Loader {
                             sourceComponent: statusBadge
-                            onLoaded: { item.gameStatus = statusRole; item.suffix = statusSuffix(rawState, periodType) }
+                            onLoaded: {
+                                item.gameStatus = statusRole
+                                item.suffix = statusSuffix(rawState, periodType)
+                            }
                         }
-                        Label {
 
+                        Label {
                             visible: (statusRole === 'UPCOMING' && showUpcomingTime)
                             || statusRole === 'FINAL'
-
                             text: statusRole === 'FINAL'
                             ? finalWhenText(start, statusRole, home)
                             : upcomingWhenText(start, statusRole, home)
@@ -511,11 +675,30 @@ PlasmoidItem {
                             horizontalAlignment: Text.AlignHCenter
                             anchors.horizontalCenter: parent.horizontalCenter
                         }
+                        Label {
+
+                            visible: statusRole === "LIVE" &&
+                            liveRemain !== ""
+
+                            text: liveClockText(
+                                periodType,
+                                period,
+                                liveRemain
+                            )
+
+                            color: Kirigami.Theme.disabledTextColor
+                            font.pixelSize: 10
+                            horizontalAlignment: Text.AlignHCenter
+                            anchors.horizontalCenter: parent.horizontalCenter
+                        }
                     }
+
                     TapHandler {
                         acceptedButtons: Qt.LeftButton
                         gesturePolicy: TapHandler.ReleaseWithinBounds
-                        onTapped: Qt.openUrlExternally(gameCenterUrl(away, home, start, gameId))
+                        onTapped: Qt.openUrlExternally(
+                            gameCenterUrl(away, home, start, gameId)
+                        )
                         cursorShape: Qt.PointingHandCursor
                     }
                 }
@@ -537,8 +720,6 @@ PlasmoidItem {
             spacing: 8
             RowLayout {
                 Layout.fillWidth: true
-                CheckBox { text: i18n('All'); checked: showAll; onToggled: Plasmoid.configuration.showAll = checked }
-                CheckBox { text: i18n('Today only'); checked: todayOnly; onToggled: Plasmoid.configuration.todayOnly = checked }
                 CheckBox { text: i18n('OT/SO suffix'); checked: showOvertimeSuffix; onToggled: Plasmoid.configuration.showOvertimeSuffix = checked }
                 ComboBox {
                     id: layoutCombo
