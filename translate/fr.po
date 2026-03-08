@@ -1,9 +1,9 @@
 msgid ""
 msgstr ""
-"Project-Id-Version: org.dany.nhlscores 1.7.1\n"
-"Report-Msgid-Bugs-To: "
-"POT-Creation-Date: 2026-03-05 23:01+0000\n"
-"PO-Revision-Date: 2026-03-05 23:01+0000\n"
+"Project-Id-Version: org.dany.nhlscores 1.8.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-03-08 22:00+0000\n"
+"PO-Revision-Date: 2026-03-08 22:00+0000\n"
 "Last-Translator: Dany Martineau <dany@example.com>\n"
 "Language-Team: French <fr@li.org>\n"
 "Language: fr\n"
@@ -12,31 +12,33 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n > 1);\n"
 
-# ---- Categories / Pages ----
+# ── Catégories / Pages ───────────────────────────────────────────────────────
+
 msgid "General"
 msgstr "Général"
 
 msgid "Display"
 msgstr "Affichage"
 
-# ---- Config: Display ----
+# ── Config : Affichage ───────────────────────────────────────────────────────
+
 msgid "LIVE color:"
-msgstr "Couleur LIVE :"
+msgstr "Couleur LIVE :"
 
 msgid "Upcoming color:"
-msgstr "Couleur À venir :"
+msgstr "Couleur À venir :"
 
 msgid "Final color:"
-msgstr "Couleur Final :"
+msgstr "Couleur Final :"
 
 msgid "Show OT/SO suffix in badge"
-msgstr "Afficher le suffixe OT/SO sur l’étiquette"
+msgstr "Afficher le suffixe OT/SO sur l'étiquette"
 
 msgid "Show upcoming game time under badge"
-msgstr "Afficher l’heure du prochain match sous l’étiquette"
+msgstr "Afficher l'heure du prochain match sous l'étiquette"
 
 msgid "Score layout:"
-msgstr "Disposition du score :"
+msgstr "Disposition du score :"
 
 msgid "Score below (column)"
 msgstr "Score en dessous (colonne)"
@@ -45,7 +47,7 @@ msgid "Score next to name (row)"
 msgstr "Score à côté du nom (ligne)"
 
 msgid "Date mode:"
-msgstr "Mode de date :"
+msgstr "Mode de date :"
 
 msgid "Local timezone (computer)"
 msgstr "Fuseau horaire local (ordinateur)"
@@ -53,7 +55,7 @@ msgstr "Fuseau horaire local (ordinateur)"
 msgid "Venue timezone (arena)"
 msgstr "Fuseau horaire du lieu (aréna)"
 
-# ---- Config: General (favorites grid) ----
+# ── Config : Général ─────────────────────────────────────────────────────────
 
 msgid "── Atlantic ──"
 msgstr "── Atlantique ──"
@@ -73,21 +75,47 @@ msgstr "Afficher toutes les équipes"
 msgid "Favorite teams :"
 msgstr "Équipes favorites :"
 
+msgid "Max games to display :"
+msgstr "Nombre de matchs à afficher au maximum :"
+
 msgid "Days ahead :"
 msgstr "Jours à venir :"
 
-msgid "Max games to display :"
-msgstr "Nombre d'équipes à afficher au maximum :"
-
 msgid "Show yesterday's games."
-msgstr "Voir les parties d'hier."
+msgstr "Voir les matchs d'hier."
 
 msgid "Show games from two days ago."
-msgstr "Voir les parties d'avant-hier."
+msgstr "Voir les matchs d'avant-hier."
 
-# ---- Applet UI ----
+# ── Config : Notifications ───────────────────────────────────────────────────
+
+msgid "Notifications"
+msgstr "Notifications"
+
+msgid "Notify on goals (requires notify-send)"
+msgstr "Notifier lors d'un but"
+
+# ── Interface de l'applet ────────────────────────────────────────────────────
+
 msgid "NHL Scores"
 msgstr "Scores LNH"
+
+msgid "NHL Scores – No games"
+msgstr "Scores LNH – Aucun match"
+
+msgid "Refresh now"
+msgstr "Actualiser maintenant"
+
+msgid "Loading…"
+msgstr "Chargement…"
+
+msgid "No games"
+msgstr "Aucun match"
+
+msgid "Updated: %1"
+msgstr "Mise à jour : %1"
+
+# ── Statuts de match ─────────────────────────────────────────────────────────
 
 msgid "Final"
 msgstr "Final"
@@ -95,23 +123,67 @@ msgstr "Final"
 msgid "Upcoming"
 msgstr "À venir"
 
-msgid "No games"
-msgstr "Aucun match"
+msgid "live"
+msgstr "en direct"
 
-msgid "Updated: %1"
-msgstr "Mise à jour : %1"
+msgid "upcoming"
+msgstr "à venir"
 
-msgid "All"
-msgstr "Tous"
+msgid "final"
+msgstr "terminé"
 
-msgid "Today only"
-msgstr "Aujourd’hui seulement"
+# ── Vue détail — en-tête ─────────────────────────────────────────────────────
 
-msgid "OT/SO suffix"
-msgstr "Suffixe OT/SO"
+msgid "‹ Back"
+msgstr "‹ Retour"
 
-msgid "Configure NHL Scores…"
-msgstr "Configurer Scores LNH…"
+msgid "NHL.com"
+msgstr "NHL.com"
 
-msgid "Refresh now"
-msgstr "Actualiser maintenant"
+# ── Vue détail — statistiques ────────────────────────────────────────────────
+
+msgid "Shots on Goal"
+msgstr "Tirs au but"
+
+msgid "Shots"
+msgstr "Tirs"
+
+msgid "Faceoffs %"
+msgstr "Mises en jeu %"
+
+msgid "Power Play"
+msgstr "Avantage numérique"
+
+msgid "Hits"
+msgstr "Mises en échec"
+
+msgid "Blocks"
+msgstr "Tirs bloqués"
+
+msgid "Giveaways"
+msgstr "Revirements offerts"
+
+msgid "Takeaways"
+msgstr "Revirements provoqués"
+
+msgid "PIM"
+msgstr "Minutes de punition"
+
+# ── Vue détail — buts ────────────────────────────────────────────────────────
+
+msgid "Goals"
+msgstr "Buts"
+
+msgid "Assists: "
+msgstr "Passes : "
+
+msgid "Game not started yet."
+msgstr "La partie n'a pas encore commencé."
+
+msgid "No goals recorded."
+msgstr "Aucun but enregistré."
+
+# ── Notifications ────────────────────────────────────────────────────────────
+
+msgid "NHL Goal!"
+msgstr "But dans la LNH !"
