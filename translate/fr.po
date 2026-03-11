@@ -243,3 +243,37 @@ msgstr "Fixe (panneau vertical)"
 
 msgid "LIVE"
 msgstr "EN DIRECT"
+
+msgid "Schedule"
+msgstr "Calendrier"
+
+msgid "vs"
+msgstr "vs"
+
+msgid "@"
+msgstr "@"
+
+msgid "Stats"
+msgstr "Stats"
+
+msgid "Player"
+msgstr "Joueur"
+
+msgid "PJ"
+msgstr "PJ"
+
+msgid "B"
+msgstr "B"
+
+msgid "A"
+msgstr "A"
+
+msgid "PTS"
+msgstr "PTS"
+
+msgid "+/-"
+msgstr "+/-"
+
+msgid "Goalies"
+msgstr "Gardiens"
+

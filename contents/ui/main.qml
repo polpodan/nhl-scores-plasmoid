@@ -57,18 +57,29 @@ PlasmoidItem {
     toolTipMainText: i18n("NHL Scores")
     readonly property string _tooltipSub: {
         if (todayGames.count === 0) return i18n("No games")
-        var live = 0, upcoming = 0, ended = 0
+        var lines = []
         for (var i = 0; i < todayGames.count; i++) {
-            var s = todayGames.get(i).statusRole
-            if (s === 'LIVE') live++
-            else if (s === 'UPCOMING') upcoming++
-            else ended++
+            var g = todayGames.get(i)
+            var st = g.statusRole
+            if (st === 'LIVE') {
+                // Ex : "MTL 3 – 2 TOR  |  2e période 14:32"
+                var clock = badgeLine1(st, g.rawState, g.periodType, g.period,
+                                       g.liveRemain, g.start, g.home, g.inIntermission)
+                lines.push(g.away + "  " + g.ag + " – " + g.hg + "  " + g.home
+                           + "   ·  " + clock)
+            } else if (st === 'UPCOMING') {
+                // Ex : "MTL – TOR  à 19:00"
+                var when = upcomingWhenText(g.start, st, g.home)
+                lines.push(g.away + "  –  " + g.home
+                           + (when !== '' ? "   ·  " + when : ""))
+            } else {
+                // FINAL — Ex : "MTL 3 – 2 TOR  |  Final"
+                lines.push(g.away + "  " + g.ag + " – " + g.hg + "  " + g.home
+                           + "   ·  " + i18n("Final"))
+            }
         }
-        var parts = []
-        if (live > 0)     parts.push(live + " " + i18n("live"))
-        if (upcoming > 0) parts.push(upcoming + " " + i18n("upcoming"))
-        if (ended > 0)    parts.push(ended + " " + i18n("final"))
-        return parts.join(", ")
+        return lines.join("
+")
     }
     toolTipSubText: _tooltipSub
 
@@ -1077,6 +1088,150 @@ PlasmoidItem {
     }
 
 
+    // ── État du calendrier d'équipe ─────────────────────────────────────
+    property bool   scheduleOpen:      false
+    property bool   scheduleShowStats: false   // false=calendrier  true=stats joueurs
+    property string scheduleTeam:      ''
+    property var    scheduleGames:     []
+    property bool   scheduleLoading:   false
+    property string scheduleError:     ''
+    property var    scheduleSkaters:   []   // [{name, pos, gp, g, a, pts, plusMinus, pim}]
+    property var    scheduleGoalies:   []   // [{name, gp, wins, losses, gaa, svPct}]
+    property bool   scheduleStatsLoading: false
+    property string scheduleStatsError:   ''
+
+    function openSchedule(team) {
+        scheduleShowStats    = false
+        scheduleSkaters      = []
+        scheduleGoalies      = []
+        scheduleStatsError   = ''
+        scheduleStatsLoading = false
+        scheduleTeam    = team
+        scheduleGames   = []
+        scheduleError   = ''
+        scheduleLoading = true
+        scheduleOpen    = true
+        fetchSchedule(team)
+    }
+
+    function fetchSchedule(team) {
+        var xhr = new XMLHttpRequest()
+        xhr.open("GET", "https://api-web.nhle.com/v1/club-schedule-season/" + team + "/now")
+        xhr.onreadystatechange = function() {
+            if (xhr.readyState !== XMLHttpRequest.DONE) return
+            scheduleLoading = false
+            if (xhr.status !== 200) { scheduleError = "HTTP " + xhr.status; return }
+            try {
+                var data = JSON.parse(xhr.responseText)
+                var games = data.games || []
+                var past = [], future = []
+                for (var i = 0; i < games.length; i++) {
+                    var g = games[i]
+                    var st = (g.gameState || '').toUpperCase()
+                    var isFinal = (st === 'FINAL' || st === 'OFF' || st === 'OFFICIAL')
+                    if (isFinal) past.push(g)
+                    else future.push(g)
+                }
+                // Garder les N derniers matchs joués + tous les futurs
+                var recent = past.slice(-5)  // 5 derniers matchs joués
+                var result = recent.concat(future)
+                scheduleGames = result.map(function(g) {
+                    var st = (g.gameState || '').toUpperCase()
+                    var isFinal = (st === 'FINAL' || st === 'OFF' || st === 'OFFICIAL')
+                    var isLive  = (st === 'LIVE' || st === 'IN_PROGRESS')
+                    var away  = g.awayTeam  ? (g.awayTeam.abbrev  || '?') : '?'
+                    var home  = g.homeTeam  ? (g.homeTeam.abbrev  || '?') : '?'
+                    var ag    = g.awayTeam  ? (g.awayTeam.score   !== undefined ? g.awayTeam.score  : -1) : -1
+                    var hg    = g.homeTeam  ? (g.homeTeam.score   !== undefined ? g.homeTeam.score  : -1) : -1
+                    var startMs = new Date(g.startTimeUTC || '').getTime() || 0
+                    // Résultat W/L/OTW/OTL pour l'équipe sélectionnée
+                    var matchResult = ''
+                    if (isFinal && ag >= 0 && hg >= 0) {
+                        var teamIsHome = (home === team)
+                        var teamScore = teamIsHome ? hg : ag
+                        var oppScore  = teamIsHome ? ag : hg
+                        var pd = g.periodDescriptor
+                        var wasOT = pd && (pd.periodType === 'OT' || pd.periodType === 'SO' || pd.number > 3)
+                        if (teamScore > oppScore) matchResult = wasOT ? 'OTW' : 'W'
+                        else                      matchResult = wasOT ? 'OTL' : 'L'
+                    }
+                    return {
+                        away: away, home: home,
+                        ag: ag, hg: hg,
+                        startMs: startMs,
+                        isFinal: isFinal,
+                        isLive:  isLive,
+                        result:  matchResult,
+                        gameId:  g.id || 0
+                    }
+                })
+            } catch(e) { scheduleError = String(e) }
+        }
+        xhr.send()
+    }
+
+    function fetchTeamStats(team) {
+        scheduleStatsLoading = true
+        scheduleStatsError   = ''
+        var xhr = new XMLHttpRequest()
+        // Endpoint stats équipe saison courante
+        xhr.open("GET", "https://api-web.nhle.com/v1/club-stats/" + team + "/now")
+        xhr.onreadystatechange = function() {
+            if (xhr.readyState !== XMLHttpRequest.DONE) return
+            scheduleStatsLoading = false
+            if (xhr.status !== 200) { scheduleStatsError = "HTTP " + xhr.status; return }
+            try {
+                var data = JSON.parse(xhr.responseText)
+                // Patineurs
+                var sk = []
+                var skaters = data.skaters || []
+                for (var i = 0; i < skaters.length; i++) {
+                    var s = skaters[i]
+                    var fname = s.firstName  ? (s.firstName.default  || '') : ''
+                    var lname = s.lastName   ? (s.lastName.default   || '') : ''
+                    sk.push({
+                        name:      fname + ' ' + lname,
+                        pos:       s.positionCode || '?',
+                        gp:        s.gamesPlayed  || 0,
+                        g:         s.goals        || 0,
+                        a:         s.assists      || 0,
+                        pts:       s.points       || 0,
+                        plusMinus: s.plusMinus    !== undefined ? s.plusMinus : 0,
+                        pim:       s.penaltyMinutes || 0
+                    })
+                }
+                // Trier par pts desc, puis goals desc
+                sk.sort(function(a, b) {
+                    return b.pts !== a.pts ? b.pts - a.pts : b.g - a.g
+                })
+                scheduleSkaters = sk
+                // Gardiens
+                var gl = []
+                var goalies = data.goalies || []
+                for (var gi = 0; gi < goalies.length; gi++) {
+                    var g = goalies[gi]
+                    var gfname = g.firstName ? (g.firstName.default || '') : ''
+                    var glname = g.lastName  ? (g.lastName.default  || '') : ''
+                    gl.push({
+                        name:   gfname + ' ' + glname,
+                        gp:     g.gamesPlayed   || 0,
+                        wins:   g.wins          || 0,
+                        losses: g.losses        || 0,
+                        ot:     g.otLosses      || 0,
+                        gaa:    g.goalsAgainstAverage !== undefined
+                                    ? Math.round(g.goalsAgainstAverage * 100) / 100 : 0,
+                        svPct:  g.savePctg !== undefined
+                                    ? Math.round(g.savePctg * 1000) / 1000 : 0
+                    })
+                }
+                // Trier par wins desc
+                gl.sort(function(a, b) { return b.wins - a.wins })
+                scheduleGoalies = gl
+            } catch(e) { scheduleStatsError = String(e) }
+        }
+        xhr.send()
+    }
+
     // ── État du détail de match (au niveau root) ─────────────────────────
     property int  detailGameId:   0
     property string detailAway:   ''
@@ -1090,12 +1245,89 @@ PlasmoidItem {
     property var  detailStart:    0
     property bool detailInterm:   false
     property var  detailGoals:    []
+
+    // Liste plate pour affichage par période :
+    // éléments de type { isPeriodHeader: true, label: "1re période" }
+    // ou               { isPeriodHeader: false, ...données but... }
+    readonly property var detailGoalsByPeriod: {
+        var result = []
+        var seenPeriods = []
+        var maxPeriod = 0
+        // Déterminer la période courante pour les matchs en cours
+        if (detailStatus === 'LIVE' || detailStatus === 'FINAL') {
+            maxPeriod = detailPeriod || 0
+        }
+        // Collecter les périodes qui ont des buts
+        for (var i = 0; i < detailGoals.length; i++) {
+            var p = detailGoals[i].period
+            if (seenPeriods.indexOf(p) === -1) seenPeriods.push(p)
+        }
+        // Assurer que les périodes réglementaires jouées apparaissent (max 3)
+        // Les périodes OT/SO sont ajoutées seulement si elles ont des buts (déjà dans seenPeriods)
+        for (var pn = 1; pn <= Math.min(maxPeriod, 3); pn++) {
+            var pStr = String(pn)
+            if (seenPeriods.indexOf(pStr) === -1) seenPeriods.push(pStr)
+        }
+        // Trier : 1, 2, 3, OT, SO
+        seenPeriods.sort(function(a, b) {
+            var order = { '1':1, '2':2, '3':3, 'OT':4, 'SO':99 }
+            // 2OT=5, 3OT=6, etc.
+            function rank(p) {
+                if (order[p] !== undefined) return order[p]
+                var m = p.match(/^(\d+)OT$/)
+                if (m) return 3 + parseInt(m[1])  // 2OT→5, 3OT→6...
+                return 98
+            }
+            return rank(a) - rank(b)
+        })
+        // Construire la liste plate
+        for (var pi = 0; pi < seenPeriods.length; pi++) {
+            var period = seenPeriods[pi]
+            var label = period === 'SO' ? i18n('Shootout')
+                      : period === 'OT' ? i18n('Overtime')
+                      : /^\d+OT$/.test(period) ? (period.replace('OT','') + 'e ' + i18n('Overtime'))
+                      : period === '1'  ? i18n('1st period')
+                      : period === '2'  ? i18n('2nd period')
+                      : period === '3'  ? i18n('3rd period')
+                      : i18n('Period') + ' ' + period
+            result.push({ isPeriodHeader: true, label: label, period: period,
+                          team:'', scorer:'', assists:[], time:'', goalsToDate:-1,
+                          ppg:false, shg:false, en:false })
+            var count = 0
+            for (var gi = 0; gi < detailGoals.length; gi++) {
+                if (detailGoals[gi].period === period) {
+                    var gobj = detailGoals[gi]
+                    result.push({ isPeriodHeader: false, label: '',
+                                  period: gobj.period, time: gobj.time,
+                                  team: gobj.team, scorer: gobj.scorer,
+                                  goalsToDate: gobj.goalsToDate,
+                                  assists: gobj.assists,
+                                  ppg: gobj.ppg, shg: gobj.shg, en: gobj.en })
+                    count++
+                }
+            }
+            if (count === 0) {
+                result.push({ isPeriodHeader: false, label: i18n('No goals recorded.'),
+                              period: period, time:'', team:'', scorer:'',
+                              assists:[], goalsToDate:-1,
+                              ppg:false, shg:false, en:false,
+                              isEmpty: true })
+            }
+        }
+        return result
+    }
     property var  detailStats:    ({})
     property bool detailLoading:  false
     property string detailError:  ''
     property bool detailOpen:     false
 
     function openDetail(gid, away, home, ag, hg, status, ptype, period, remain, start, interm) {
+        // Toggle : fermer si le même match est déjà ouvert
+        if (detailOpen && detailGameId === gid) {
+            detailOpen = false
+            expanded   = false
+            return
+        }
         detailGameId  = gid
         detailAway    = away
         detailHome    = home
@@ -1133,11 +1365,11 @@ PlasmoidItem {
                     let periods = (d.summary && d.summary.scoring) ? d.summary.scoring : []
                     for (let p = 0; p < periods.length; p++) {
                         let ps = periods[p]
-                        let pname = ps.periodDescriptor
-                            ? (ps.periodDescriptor.periodType === 'OT' ? 'OT'
-                               : ps.periodDescriptor.periodType === 'SO' ? 'SO'
-                               : ps.periodDescriptor.number + '')
-                            : (p+1) + ''
+                        let pnum  = ps.periodDescriptor ? (ps.periodDescriptor.number || (p+1)) : (p+1)
+                        let ptype = ps.periodDescriptor ? (ps.periodDescriptor.periodType || '') : ''
+                        let pname = ptype === 'SO' ? 'SO'
+                                  : ptype === 'OT' ? (pnum === 4 ? 'OT' : (pnum - 3) + 'OT')
+                                  : String(pnum)
                         let gs = ps.goals || []
                         for (let gi = 0; gi < gs.length; gi++) {
                             let gl = gs[gi]
@@ -1148,9 +1380,13 @@ PlasmoidItem {
                             if (gl.assists) {
                                 for (let ai = 0; ai < gl.assists.length; ai++) {
                                     let a = gl.assists[ai]
-                                    assists.push(a.firstName
+                                    let aName = a.firstName
                                         ? (a.firstName.default || '') + ' ' + (a.lastName.default || '')
-                                        : (a.name && a.name.default ? a.name.default : '?'))
+                                        : (a.name && a.name.default ? a.name.default : '?')
+                                    assists.push({
+                                        name:          aName,
+                                        assistsToDate: a.assistsToDate !== undefined ? a.assistsToDate : -1
+                                    })
                                 }
                             }
                             g.push({
@@ -1387,6 +1623,7 @@ PlasmoidItem {
                                     Layout.alignment: Qt.AlignVCenter
                                     sourceComponent: (scoreLayout==='stack' ? teamColumn : teamRowInline)
                                     onLoaded: {
+                                        item.sz = 14
                                         item.gameId = String(gameId)
                                         if (scoreLayout==='stack') { item.code = away; item.score = ag; item.teamSide = 'away' }
                                         else { item.awayCode = away; item.homeCode = home; item.agScore = ag; item.hgScore = hg }
@@ -1398,7 +1635,7 @@ PlasmoidItem {
                                     Layout.alignment: Qt.AlignVCenter
                                     sourceComponent: (scoreLayout==='stack' ? teamColumn : null)
                                     visible: (scoreLayout==='stack')
-                                    onLoaded: { item.gameId = String(gameId); item.teamSide = 'home'; if (scoreLayout==='stack') { item.code = home; item.score = hg } }
+                                    onLoaded: { item.sz = 14; item.gameId = String(gameId); item.teamSide = 'home'; if (scoreLayout==='stack') { item.code = home; item.score = hg } }
                                 }
 
                                 // Pastille unique fusionnée
@@ -1457,7 +1694,7 @@ PlasmoidItem {
         ScrollView {
             id: detailScrollView
             anchors.fill: parent
-            visible: root.detailOpen
+            visible: root.detailOpen && !root.scheduleOpen
             contentWidth: availableWidth
 
             Item {
@@ -1505,10 +1742,24 @@ PlasmoidItem {
                         spacing: 4
                         Layout.alignment: Qt.AlignVCenter
                         Rectangle {
+                            id: awayBadgeRect
                             radius: 5; width: awLbl.implicitWidth + 14; height: awLbl.implicitHeight + 8
                             color: teamColor(root.detailAway)
                             border.color: 'white'; border.width: 1
                             Label { id: awLbl; anchors.centerIn: parent; text: root.detailAway; color: teamTextColor(root.detailAway); font.bold: true; font.pixelSize: 15 }
+                            // Indicateur cliquable
+                            Label {
+                                anchors { bottom: parent.bottom; horizontalCenter: parent.horizontalCenter }
+                                anchors.bottomMargin: -10
+                                text: "▾"; font.pixelSize: 8; opacity: 0.5
+                                color: Kirigami.Theme.textColor
+                            }
+                            HoverHandler { cursorShape: Qt.PointingHandCursor }
+                            TapHandler {
+                                acceptedButtons: Qt.LeftButton
+                                gesturePolicy: TapHandler.ReleaseWithinBounds
+                                onTapped: root.openSchedule(root.detailAway)
+                            }
                         }
                         Label {
                             anchors.horizontalCenter: parent.horizontalCenter
@@ -1557,9 +1808,22 @@ PlasmoidItem {
                         spacing: 4
                         Layout.alignment: Qt.AlignVCenter
                         Rectangle {
+                            id: homeBadgeRect
                             radius: 5; width: hmLbl.implicitWidth + 14; height: hmLbl.implicitHeight + 8
                             color: teamColor(root.detailHome)
                             border.color: 'white'; border.width: 1
+                            Label {
+                                anchors { bottom: parent.bottom; horizontalCenter: parent.horizontalCenter }
+                                anchors.bottomMargin: -10
+                                text: "▾"; font.pixelSize: 8; opacity: 0.5
+                                color: Kirigami.Theme.textColor
+                            }
+                            HoverHandler { cursorShape: Qt.PointingHandCursor }
+                            TapHandler {
+                                acceptedButtons: Qt.LeftButton
+                                gesturePolicy: TapHandler.ReleaseWithinBounds
+                                onTapped: root.openSchedule(root.detailHome)
+                            }
                             Label { id: hmLbl; anchors.centerIn: parent; text: root.detailHome; color: teamTextColor(root.detailHome); font.bold: true; font.pixelSize: 15 }
                         }
                         Label {
@@ -1686,69 +1950,123 @@ PlasmoidItem {
                 }
 
                 Label {
-                    visible: !root.detailLoading
+                    visible: !root.detailLoading && root.detailStatus !== 'UPCOMING'
                     text: i18n('Goals')
                     font.bold: true; font.pixelSize: 12
                     color: Kirigami.Theme.textColor
                     Layout.alignment: Qt.AlignHCenter
                 }
 
-                Repeater {
-                    model: root.detailGoals
-                    delegate: RowLayout {
-                        Layout.fillWidth: true
-                        spacing: 6
-
-                        Rectangle {
-                            radius: 3
-                            width: tBadge.implicitWidth + 8; height: tBadge.implicitHeight + 4
-                            color: teamColor(modelData.team)
-                            Label { id: tBadge; anchors.centerIn: parent; text: modelData.team; color: teamTextColor(modelData.team); font.pixelSize: 10; font.bold: true }
-                        }
-                        Label {
-                            text: 'P' + modelData.period + ' ' + modelData.time
-                            font.pixelSize: 10; color: Kirigami.Theme.disabledTextColor
-                            Layout.preferredWidth: 62
-                        }
-                        Column {
-                            spacing: 1
-                            Layout.fillWidth: true
-                            Label {
-                                text: modelData.goalsToDate > 0
-                                    ? modelData.scorer + ' (' + modelData.goalsToDate + ')'
-                                    : modelData.scorer
-                                    + (modelData.ppg ? '  🔵 PP' : '')
-                                    + (modelData.shg ? '  🔴 SH' : '')
-                                    + (modelData.en  ? '  🥅 EN' : '')
-                                font.pixelSize: 12; font.bold: true
-                                color: Kirigami.Theme.textColor; wrapMode: Text.Wrap
-                            }
-                            Label {
-                                visible: modelData.assists.length > 0
-                                text: i18n('Assists: ') + modelData.assists.join(', ')
-                                font.pixelSize: 10; color: Kirigami.Theme.disabledTextColor
-                                wrapMode: Text.Wrap
-                            }
-                        }
-                    }
-                }
-
+                // Match à venir — pas encore commencé
                 Label {
-                    visible: !root.detailLoading && root.detailGoals.length === 0 && root.detailStatus === 'UPCOMING'
+                    visible: !root.detailLoading && root.detailStatus === 'UPCOMING'
                     text: i18n('Game not started yet.')
                     color: Kirigami.Theme.disabledTextColor; font.pixelSize: 12
                     Layout.alignment: Qt.AlignHCenter
                     Layout.fillWidth: true
                     horizontalAlignment: Text.AlignHCenter
                 }
-                Label {
-                    visible: !root.detailLoading && root.detailGoals.length === 0
-                        && root.detailStatus !== 'UPCOMING' && root.detailError === ''
-                    text: i18n('No goals recorded.')
-                    color: Kirigami.Theme.disabledTextColor; font.pixelSize: 12
-                    Layout.alignment: Qt.AlignHCenter
-                    Layout.fillWidth: true
-                    horizontalAlignment: Text.AlignHCenter
+
+                // Liste des buts groupés par période
+                Repeater {
+                    model: root.detailStatus !== 'UPCOMING' ? root.detailGoalsByPeriod : []
+                    delegate: Item {
+                        Layout.fillWidth: true
+                        implicitHeight: modelData.isPeriodHeader ? periodRow.implicitHeight + 10
+                                      : goalRow.implicitHeight + 4
+
+                        // ── En-tête de période ──────────────────────────
+                        RowLayout {
+                            id: periodRow
+                            visible: modelData.isPeriodHeader
+                            anchors { left: parent.left; right: parent.right; verticalCenter: parent.verticalCenter }
+                            spacing: 8
+
+                            Rectangle {
+                                height: 1; Layout.fillWidth: true
+                                color: Kirigami.Theme.textColor; opacity: 0.2
+                            }
+                            Label {
+                                text: modelData.label
+                                font.pixelSize: 10; font.bold: true
+                                color: Kirigami.Theme.disabledTextColor
+                                opacity: 0.8
+                            }
+                            Rectangle {
+                                height: 1; Layout.fillWidth: true
+                                color: Kirigami.Theme.textColor; opacity: 0.2
+                            }
+                        }
+
+                        // ── Ligne de but ────────────────────────────────
+                        RowLayout {
+                            id: goalRow
+                            visible: !modelData.isPeriodHeader
+                            anchors { left: parent.left; right: parent.right; verticalCenter: parent.verticalCenter }
+                            spacing: 6
+
+                            // Aucun but dans cette période
+                            Label {
+                                visible: modelData.isEmpty || false
+                                Layout.fillWidth: true
+                                text: i18n('No goals recorded.')
+                                font.pixelSize: 11; font.italic: true
+                                color: Kirigami.Theme.disabledTextColor
+                                horizontalAlignment: Text.AlignHCenter
+                            }
+
+                            // But normal
+                            Rectangle {
+                                visible: !(modelData.isEmpty || false) && modelData.team !== ''
+                                radius: 3
+                                width: tBadge.implicitWidth + 8; height: tBadge.implicitHeight + 4
+                                color: teamColor(modelData.team)
+                                Label {
+                                    id: tBadge; anchors.centerIn: parent
+                                    text: modelData.team
+                                    color: teamTextColor(modelData.team)
+                                    font.pixelSize: 10; font.bold: true
+                                }
+                            }
+                            Label {
+                                visible: !(modelData.isEmpty || false)
+                                text: modelData.time || ''
+                                font.pixelSize: 10; color: Kirigami.Theme.disabledTextColor
+                                Layout.preferredWidth: 48
+                            }
+                            Column {
+                                visible: !(modelData.isEmpty || false)
+                                spacing: 1
+                                Layout.fillWidth: true
+                                Label {
+                                    text: (modelData.goalsToDate > 0
+                                              ? modelData.scorer + ' (' + modelData.goalsToDate + ')'
+                                              : modelData.scorer)
+                                        + (modelData.ppg ? '  🔵 PP' : '')
+                                        + (modelData.shg ? '  🔴 SH' : '')
+                                        + (modelData.en  ? '  🥅 EN' : '')
+                                    font.pixelSize: 12; font.bold: true
+                                    color: Kirigami.Theme.textColor; wrapMode: Text.Wrap
+                                }
+                                Label {
+                                    visible: modelData.assists && modelData.assists.length > 0
+                                    text: {
+                                        if (!modelData.assists || modelData.assists.length === 0) return ''
+                                        var parts = []
+                                        for (var ai = 0; ai < modelData.assists.length; ai++) {
+                                            var a = modelData.assists[ai]
+                                            parts.push(a.assistsToDate > 0
+                                                ? a.name + ' (' + a.assistsToDate + ')'
+                                                : a.name)
+                                        }
+                                        return i18n('Assists: ') + parts.join(', ')
+                                    }
+                                    font.pixelSize: 10; color: Kirigami.Theme.disabledTextColor
+                                    wrapMode: Text.Wrap
+                                }
+                            }
+                        }
+                    }
                 }
 
                 Item { height: 8 }
@@ -1757,10 +2075,430 @@ PlasmoidItem {
         }
     
 
+
+        // ── Vue calendrier d'équipe ──────────────────────────────────────
+        Item {
+            anchors.fill: parent
+            visible: root.scheduleOpen
+
+            ColumnLayout {
+                anchors.fill: parent
+                spacing: 0
+
+                // ── Barre navigation : [‹ Back]  [🏒 TEAM Titre]  [Stats / Calendrier]
+                RowLayout {
+                    Layout.fillWidth: true
+                    Layout.leftMargin: 4; Layout.rightMargin: 4
+                    Layout.topMargin: 4; Layout.bottomMargin: 2
+                    spacing: 4
+
+                    // Bouton retour
+                    Button {
+                        text: i18n("‹ Back")
+                        icon.name: "go-previous"
+                        flat: true
+                        onClicked: root.scheduleOpen = false
+                    }
+
+                    Item { Layout.fillWidth: true }
+
+                    // Pastille équipe + titre centré
+                    RowLayout {
+                        spacing: 6
+                        Layout.alignment: Qt.AlignHCenter
+                        Rectangle {
+                            radius: 4
+                            width: schedTeamLbl.implicitWidth + 12
+                            height: schedTeamLbl.implicitHeight + 6
+                            color: root.teamColor(root.scheduleTeam)
+                            Label {
+                                id: schedTeamLbl
+                                anchors.centerIn: parent
+                                text: root.scheduleTeam
+                                color: root.teamTextColor(root.scheduleTeam)
+                                font.bold: true; font.pixelSize: 13; font.family: "monospace"
+                            }
+                        }
+                        Label {
+                            text: root.scheduleShowStats ? i18n("Stats") : i18n("Schedule")
+                            font.bold: true; font.pixelSize: 13
+                        }
+                    }
+
+                    Item { Layout.fillWidth: true }
+
+                    // Bouton bascule Calendrier ↔ Stats
+                    Button {
+                        text: root.scheduleShowStats ? i18n("Schedule") : i18n("Stats")
+                        icon.name: root.scheduleShowStats
+                            ? "view-calendar"
+                            : "view-statistics"
+                        flat: true
+                        onClicked: {
+                            root.scheduleShowStats = !root.scheduleShowStats
+                            // Charger les stats si pas encore fait
+                            if (root.scheduleShowStats
+                                    && root.scheduleSkaters.length === 0
+                                    && !root.scheduleStatsLoading
+                                    && root.scheduleStatsError === '') {
+                                root.fetchTeamStats(root.scheduleTeam)
+                            }
+                        }
+                    }
+                }
+
+                // Chargement / erreur
+                Label {
+                    Layout.alignment: Qt.AlignHCenter; Layout.topMargin: 20
+                    visible: root.scheduleLoading
+                    text: i18n("Loading…"); opacity: 0.6; font.italic: true
+                }
+                Label {
+                    Layout.alignment: Qt.AlignHCenter; Layout.topMargin: 20
+                    visible: !root.scheduleLoading && root.scheduleError !== ""
+                    text: root.scheduleError
+                    color: Kirigami.Theme.negativeTextColor
+                }
+
+                // Liste des matchs (mode calendrier)
+                ScrollView {
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    visible: !root.scheduleShowStats && !root.scheduleLoading && root.scheduleError === ""
+                    contentWidth: availableWidth
+                    clip: true
+
+                    ListView {
+                        id: schedListView
+                        anchors.fill: parent
+                        model: root.scheduleGames
+                        spacing: 0
+
+                        delegate: Item {
+                            width: schedListView.width
+                            height: schedRow.implicitHeight + 10
+
+                            // Highlight aujourd'hui
+                            readonly property bool isToday: modelData.startMs > 0 &&
+                                isSameDay(new Date(modelData.startMs), new Date())
+                            readonly property bool isPast: modelData.isFinal
+
+                            Rectangle {
+                                anchors.fill: parent
+                                color: isToday
+                                    ? Qt.rgba(Kirigami.Theme.highlightColor.r,
+                                              Kirigami.Theme.highlightColor.g,
+                                              Kirigami.Theme.highlightColor.b, 0.12)
+                                    : "transparent"
+                                radius: 4
+                            }
+
+                            RowLayout {
+                                id: schedRow
+                                width: Math.min(340, parent.width - 16)
+                                anchors.horizontalCenter: parent.horizontalCenter
+                                anchors.verticalCenter: parent.verticalCenter
+                                spacing: 6
+                                opacity: isPast ? 0.65 : 1.0
+
+                                // Date
+                                Label {
+                                    text: modelData.startMs > 0
+                                        ? Qt.formatDate(new Date(modelData.startMs), "dd MMM")
+                                        : "–"
+                                    font.pixelSize: 11
+                                    color: Kirigami.Theme.disabledTextColor
+                                    Layout.preferredWidth: 42
+                                }
+
+                                // Équipe adversaire
+                                RowLayout {
+                                    spacing: 4
+                                    // @ ou vs
+                                    Label {
+                                        text: modelData.home === root.scheduleTeam ? i18n("vs") : i18n("@")
+                                        font.pixelSize: 10; opacity: 0.6
+                                        color: Kirigami.Theme.textColor
+                                    }
+                                    Rectangle {
+                                        radius: 3
+                                        width: oppLbl.implicitWidth + 8; height: oppLbl.implicitHeight + 4
+                                        color: root.teamColor(modelData.home === root.scheduleTeam
+                                                              ? modelData.away : modelData.home)
+                                        Label {
+                                            id: oppLbl
+                                            anchors.centerIn: parent
+                                            text: modelData.home === root.scheduleTeam
+                                                  ? modelData.away : modelData.home
+                                            color: root.teamTextColor(modelData.home === root.scheduleTeam
+                                                                      ? modelData.away : modelData.home)
+                                            font.pixelSize: 10; font.bold: true; font.family: "monospace"
+                                        }
+                                    }
+                                }
+
+                                Item { Layout.fillWidth: true }
+
+                                // Score ou heure
+                                Label {
+                                    visible: modelData.isFinal && modelData.ag >= 0
+                                    text: modelData.away + "  " + modelData.ag + " – " + modelData.hg + "  " + modelData.home
+                                    font.pixelSize: 11; font.bold: true
+                                    color: Kirigami.Theme.textColor
+                                }
+                                Label {
+                                    visible: modelData.isLive
+                                    text: i18n("LIVE")
+                                    font.pixelSize: 11; font.bold: true
+                                    color: root.liveColor
+                                }
+                                Label {
+                                    visible: !modelData.isFinal && !modelData.isLive
+                                    text: modelData.startMs > 0
+                                        ? Qt.formatTime(new Date(modelData.startMs), "hh:mm")
+                                        : "–"
+                                    font.pixelSize: 11
+                                    color: Kirigami.Theme.disabledTextColor
+                                }
+
+                                // Résultat W/L
+                                Rectangle {
+                                    visible: modelData.result !== ''
+                                    radius: 3
+                                    width: resultLbl.implicitWidth + 8; height: resultLbl.implicitHeight + 4
+                                    color: (modelData.result === 'W' || modelData.result === 'OTW')
+                                        ? Kirigami.Theme.positiveBackgroundColor
+                                        : Qt.rgba(Kirigami.Theme.negativeTextColor.r,
+                                                  Kirigami.Theme.negativeTextColor.g,
+                                                  Kirigami.Theme.negativeTextColor.b, 0.25)
+                                    Label {
+                                        id: resultLbl
+                                        anchors.centerIn: parent
+                                        text: modelData.result
+                                        font.pixelSize: 10; font.bold: true
+                                        color: (modelData.result === 'W' || modelData.result === 'OTW')
+                                            ? Kirigami.Theme.positiveTextColor
+                                            : Kirigami.Theme.negativeTextColor
+                                    }
+                                }
+                            }
+
+                            // Séparateur
+                            Rectangle {
+                                anchors { bottom: parent.bottom; left: parent.left; right: parent.right }
+                                height: 1; color: Kirigami.Theme.textColor; opacity: 0.08
+                            }
+                        }
+
+                        Label {
+                            anchors.centerIn: parent
+                            visible: !root.scheduleLoading && root.scheduleGames.length === 0
+                            text: i18n("No games")
+                            opacity: 0.5; font.italic: true
+                        }
+                    }
+                }
+
+                // ── Vue stats joueurs (mode stats) ─────────────────────
+                Item {
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    visible: root.scheduleShowStats
+
+                    // Chargement / erreur stats
+                    Label {
+                        anchors.centerIn: parent
+                        visible: root.scheduleStatsLoading
+                        text: i18n("Loading…"); opacity: 0.6; font.italic: true
+                    }
+                    Label {
+                        anchors.centerIn: parent
+                        visible: !root.scheduleStatsLoading && root.scheduleStatsError !== ""
+                        text: root.scheduleStatsError
+                        color: Kirigami.Theme.negativeTextColor
+                        wrapMode: Text.Wrap; width: parent.width - 20
+                        horizontalAlignment: Text.AlignHCenter
+                    }
+
+                    // Liste stats
+                    ScrollView {
+                        anchors.fill: parent
+                        visible: !root.scheduleStatsLoading && root.scheduleStatsError === ""
+                        contentWidth: availableWidth
+                        clip: true
+
+                        ListView {
+                            id: statsListView
+                            anchors.fill: parent
+                            // Patineurs + séparateur + gardiens
+                            model: root.scheduleSkaters.length + root.scheduleGoalies.length
+                                   + (root.scheduleGoalies.length > 0 ? 1 : 0)
+                            spacing: 0
+
+                            header: Item {
+                                width: statsListView.width
+                                height: statsHeaderRow.implicitHeight + 6
+
+                                RowLayout {
+                                    id: statsHeaderRow
+                                    width: Math.min(360, parent.width - 16)
+                                    anchors.horizontalCenter: parent.horizontalCenter
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    spacing: 0
+
+                                    Label { text: i18n("Player"); font.pixelSize: 10; font.bold: true;
+                                            opacity: 0.6; Layout.fillWidth: true }
+                                    Label { text: i18n("PJ");  font.pixelSize: 10; font.bold: true; opacity: 0.6
+                                            Layout.preferredWidth: 28; horizontalAlignment: Text.AlignRight }
+                                    Label { text: i18n("B");   font.pixelSize: 10; font.bold: true; opacity: 0.6
+                                            Layout.preferredWidth: 28; horizontalAlignment: Text.AlignRight }
+                                    Label { text: i18n("A");   font.pixelSize: 10; font.bold: true; opacity: 0.6
+                                            Layout.preferredWidth: 28; horizontalAlignment: Text.AlignRight }
+                                    Label { text: i18n("PTS"); font.pixelSize: 10; font.bold: true; opacity: 0.6
+                                            Layout.preferredWidth: 34; horizontalAlignment: Text.AlignRight }
+                                    Label { text: i18n("+/-"); font.pixelSize: 10; font.bold: true; opacity: 0.6
+                                            Layout.preferredWidth: 30; horizontalAlignment: Text.AlignRight }
+                                }
+                                Rectangle {
+                                    anchors { bottom: parent.bottom; left: parent.left; right: parent.right }
+                                    height: 1; color: Kirigami.Theme.textColor; opacity: 0.2
+                                }
+                            }
+
+                            delegate: Item {
+                                id: statsDelegate
+                                width: statsListView.width
+
+                                // Index réel dans skaters ou goalies
+                                readonly property int nSkaters:  root.scheduleSkaters.length
+                                readonly property int nGoalies:  root.scheduleGoalies.length
+                                readonly property bool isSep:    index === nSkaters
+                                readonly property bool isGoalie: !isSep && index > nSkaters
+                                readonly property int  skaterIdx: index
+                                readonly property int  goalieIdx: index - nSkaters - 1
+                                readonly property var  skater: (!isSep && !isGoalie && index < nSkaters)
+                                                               ? root.scheduleSkaters[skaterIdx] : null
+                                readonly property var  goalie: (isGoalie && goalieIdx >= 0 && goalieIdx < nGoalies)
+                                                               ? root.scheduleGoalies[goalieIdx] : null
+
+                                height: isSep ? sepRow.implicitHeight + 10
+                                      : isGoalie ? goalieRow.implicitHeight + 8
+                                      : skaterRow.implicitHeight + 8
+
+                                // ── Séparateur gardiens ─────────────────
+                                RowLayout {
+                                    id: sepRow
+                                    visible: isSep
+                                    anchors { left: parent.left; right: parent.right; verticalCenter: parent.verticalCenter }
+                                    anchors.leftMargin: 8; anchors.rightMargin: 8
+                                    spacing: 8
+                                    Rectangle { height: 1; Layout.fillWidth: true; color: Kirigami.Theme.textColor; opacity: 0.2 }
+                                    Label { text: i18n("Goalies"); font.pixelSize: 10; font.bold: true; opacity: 0.6
+                                            color: Kirigami.Theme.disabledTextColor }
+                                    Rectangle { height: 1; Layout.fillWidth: true; color: Kirigami.Theme.textColor; opacity: 0.2 }
+                                }
+
+                                // ── Ligne patineur ──────────────────────
+                                RowLayout {
+                                    id: skaterRow
+                                    visible: !isSep && !isGoalie && skater !== null
+                                    width: Math.min(360, statsDelegate.width - 16)
+                                    anchors.horizontalCenter: parent.horizontalCenter
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    spacing: 0
+
+                                    RowLayout {
+                                        Layout.fillWidth: true
+                                        spacing: 4
+                                        Label {
+                                            text: skater ? skater.pos : ''
+                                            font.pixelSize: 9; font.bold: true
+                                            opacity: 0.5
+                                            color: Kirigami.Theme.disabledTextColor
+                                            Layout.preferredWidth: 16
+                                        }
+                                        Label {
+                                            text: skater ? skater.name : ''
+                                            font.pixelSize: 11
+                                            color: Kirigami.Theme.textColor
+                                            elide: Text.ElideRight
+                                            Layout.fillWidth: true
+                                        }
+                                    }
+                                    Label { text: skater ? skater.gp : ''; font.pixelSize: 11; opacity: 0.55
+                                            Layout.preferredWidth: 28; horizontalAlignment: Text.AlignRight }
+                                    Label { text: skater ? skater.g  : ''; font.pixelSize: 11
+                                            color: Kirigami.Theme.textColor
+                                            Layout.preferredWidth: 28; horizontalAlignment: Text.AlignRight }
+                                    Label { text: skater ? skater.a  : ''; font.pixelSize: 11
+                                            color: Kirigami.Theme.textColor
+                                            Layout.preferredWidth: 28; horizontalAlignment: Text.AlignRight }
+                                    Label { text: skater ? skater.pts : ''; font.pixelSize: 12; font.bold: true
+                                            color: Kirigami.Theme.textColor
+                                            Layout.preferredWidth: 34; horizontalAlignment: Text.AlignRight }
+                                    Label {
+                                        text: skater ? (skater.plusMinus >= 0 ? '+' + skater.plusMinus : skater.plusMinus) : ''
+                                        font.pixelSize: 11
+                                        color: skater ? (skater.plusMinus > 0 ? Kirigami.Theme.positiveTextColor
+                                                       : skater.plusMinus < 0 ? Kirigami.Theme.negativeTextColor
+                                                       : Kirigami.Theme.disabledTextColor) : "transparent"
+                                        Layout.preferredWidth: 30; horizontalAlignment: Text.AlignRight
+                                    }
+                                }
+
+                                // ── Ligne gardien ───────────────────────
+                                RowLayout {
+                                    id: goalieRow
+                                    visible: isGoalie && goalie !== null
+                                    width: Math.min(360, statsDelegate.width - 16)
+                                    anchors.horizontalCenter: parent.horizontalCenter
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    spacing: 0
+
+                                    Label {
+                                        text: goalie ? goalie.name : ''
+                                        font.pixelSize: 11; color: Kirigami.Theme.textColor
+                                        elide: Text.ElideRight; Layout.fillWidth: true
+                                    }
+                                    // PJ
+                                    Label { text: goalie ? goalie.gp : ''; font.pixelSize: 11; opacity: 0.55
+                                            Layout.preferredWidth: 28; horizontalAlignment: Text.AlignRight }
+                                    // V (wins)
+                                    Label { text: goalie ? goalie.wins : ''; font.pixelSize: 11
+                                            color: Kirigami.Theme.positiveTextColor
+                                            Layout.preferredWidth: 28; horizontalAlignment: Text.AlignRight }
+                                    // D (losses)
+                                    Label { text: goalie ? goalie.losses : ''; font.pixelSize: 11
+                                            color: Kirigami.Theme.negativeTextColor
+                                            Layout.preferredWidth: 28; horizontalAlignment: Text.AlignRight }
+                                    // MOY
+                                    Label { text: goalie ? goalie.gaa.toFixed(2) : ''; font.pixelSize: 11
+                                            color: Kirigami.Theme.textColor
+                                            Layout.preferredWidth: 34; horizontalAlignment: Text.AlignRight }
+                                    // %SV
+                                    Label { text: goalie ? ('.' + String(Math.round(goalie.svPct * 1000)).padStart(3,'0')) : ''
+                                            font.pixelSize: 11; font.bold: true
+                                            color: Kirigami.Theme.textColor
+                                            Layout.preferredWidth: 36; horizontalAlignment: Text.AlignRight }
+                                }
+
+                                // Séparateur ligne
+                                Rectangle {
+                                    visible: !isSep
+                                    anchors { bottom: parent.bottom; left: parent.left; right: parent.right }
+                                    height: 1; color: Kirigami.Theme.textColor; opacity: 0.06
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         // ── Vue classement Wild Card ─────────────────────────────────
         Item {
             anchors.fill: parent
-            visible: root.standingsOpen && !root.detailOpen
+            visible: root.standingsOpen && !root.detailOpen && !root.scheduleOpen
 
             ColumnLayout {
                 anchors.fill: parent
