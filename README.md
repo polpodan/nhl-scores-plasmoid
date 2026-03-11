@@ -6,8 +6,7 @@ provided via gettext (`.po` → `.mo`).
 ## Install (local user)
 
 ```bash
-chmod +x install.sh
-./install.sh
+kpackagetool6 -t Plasma/Applet -i org.dany.nhlscores-3.0.plasmoid
 ```
 ## Translations
 
@@ -23,6 +22,16 @@ This will produce and install
 
 See KDE developer docs: i18n in Plasma widgets.\[1]
 
+## Icon
+
+You may place
+~/.local/share/plasma/plasmoids/org.dany.nhlscores/contents/icons/org.dany.nhlsc
+res.svg into ~/.local/share/icons/hicolor/scalable/apps/ with these commands:
+
+```bash
+mkdir -p ~/.local/share/icons/hicolor/scalable/apps/
+cp ~/.local/share/plasma/plasmoids/org.dany.nhlscores/contents/icons/org.dany.nhlscores.svg ~/.local/share/icons/hicolor/scalable/apps/
+```
 ## License
 
 GPL-3.0-or-later © Dany Martineau
