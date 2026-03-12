@@ -281,6 +281,23 @@ PlasmoidItem {
     function isSameDay(a, b) { return a.getFullYear()===b.getFullYear() && a.getMonth()===b.getMonth() && a.getDate()===b.getDate() }
     function localTimeStr(ms) { var d = new Date(ms); return Qt.formatTime(d, Qt.DefaultLocaleShortDate) }
     function localDateStr(ms) { return Qt.formatDate(new Date(ms), "dd'/'MM") }
+    function localeDateLong(ms) {
+        var d = new Date(ms)
+        var days   = [i18n('Sunday'),i18n('Monday'),i18n('Tuesday'),i18n('Wednesday'),
+                      i18n('Thursday'),i18n('Friday'),i18n('Saturday')]
+        var months = [i18n('January'),i18n('February'),i18n('March'),i18n('April'),
+                      i18n('May'),i18n('June'),i18n('July'),i18n('August'),
+                      i18n('September'),i18n('October'),i18n('November'),i18n('December')]
+        return days[d.getDay()] + ' ' + d.getDate() + ' ' + months[d.getMonth()]
+    }
+    // URL du logo NHL selon thème clair/foncé
+    function teamLogoUrl(abbrev) {
+        if (!abbrev) return ''
+        var bg = Kirigami.Theme.backgroundColor
+        var L  = 0.2126*bg.r + 0.7152*bg.g + 0.0722*bg.b
+        var variant = L < 0.5 ? 'dark' : 'light'
+        return 'https://assets.nhle.com/logos/nhl/svg/' + abbrev + '_' + variant + '.svg'
+    }
 
     // ---- Venue timezone helpers ----
     function teamZone(code) {
@@ -1317,6 +1334,17 @@ PlasmoidItem {
         return result
     }
     property var  detailStats:    ({})
+    // Propriétés scalaires pour le preview UPCOMING (évite les bugs de binding QML avec var)
+    property string pvVenue:       ''
+    property int    pvSeriesAway:  0
+    property int    pvSeriesHome:  0
+    property bool   pvSeriesTotal: false
+    property string pvAwayRecord:  ''
+    property string pvHomeRecord:  ''
+    property var    pvAwayLeaders: []
+    property var    pvHomeLeaders: []
+    property var    pvAwayGoalie:  null
+    property var    pvHomeGoalie:  null
     property bool detailLoading:  false
     property string detailError:  ''
     property bool detailOpen:     false
@@ -1328,6 +1356,9 @@ PlasmoidItem {
             expanded   = false
             return
         }
+        // Fermer le calendrier/stats si ouvert
+        scheduleOpen      = false
+        scheduleShowStats = false
         detailGameId  = gid
         detailAway    = away
         detailHome    = home
@@ -1341,6 +1372,10 @@ PlasmoidItem {
         detailInterm  = interm || false
         detailGoals   = []
         detailStats   = ({})
+        pvVenue = ''; pvSeriesAway = 0; pvSeriesHome = 0; pvSeriesTotal = false
+        pvAwayRecord = ''; pvHomeRecord = ''
+        pvAwayLeaders = []; pvHomeLeaders = []
+        pvAwayGoalie = null; pvHomeGoalie = null
         detailError   = ''
         detailOpen    = true
         fetchDetail(gid)
@@ -1361,6 +1396,153 @@ PlasmoidItem {
             if (xhrL.status === 200) {
                 try {
                     let d = JSON.parse(xhrL.responseText)
+
+
+
+                    // ── Preview pour les matchs à venir ─────────────────
+                    // Structure confirmée :
+                    //   d.awayTeam.record          → string "W-L-OT"
+                    //   d.matchup.skaterComparison.leaders → [{category,awayLeader,homeLeader}]
+                    //     leader.name.default, leader.goals, leader.points
+                    //   d.matchup.goalieComparison.{awayTeam|homeTeam}.leaders[0] → gardien
+                    //   d.seasonSeries              → matchs de la série saison
+                    if (detailStatus === 'UPCOMING') {
+                        let pv = {}
+
+                        // Heure locale du match
+                        pv.startMs = detailStart || 0
+
+
+
+
+
+                        // Aréna
+                        let venue = d.venue
+                        pv.venue = venue ? (venue.default || venue) : ''
+
+                        // Série saison
+                        let ss = d.seasonSeries || []
+                        let awWins = 0, hmWins = 0
+                        for (let si = 0; si < ss.length; si++) {
+                            let sg = ss[si]
+                            let sgState = (sg.gameState || '').toUpperCase()
+                            if (sgState === 'FINAL' || sgState === 'OFF' || sgState === 'OFFICIAL') {
+                                let aw = sg.awayTeam ? (sg.awayTeam.abbrev || '') : ''
+                                let awS = sg.awayTeam ? (sg.awayTeam.score || 0) : 0
+                                let hmS = sg.homeTeam ? (sg.homeTeam.score || 0) : 0
+                                if (aw === detailAway) { if (awS > hmS) awWins++; else hmWins++ }
+                                else                   { if (hmS > awS) awWins++; else hmWins++ }
+                            }
+                        }
+                        pv.seriesAway  = awWins
+                        pv.seriesHome  = hmWins
+                        pv.seriesTotal = ss.length > 0
+
+                        // Fiche : d.awayTeam.record est une string "W-L-OT"
+                        function parseRecord(team) {
+                            if (!team || !team.record) return { wins:'–', losses:'–', ot:'–' }
+                            let rec = team.record
+                            if (typeof rec === 'string') {
+                                let p = rec.split('-')
+                                return { wins: p[0]||'–', losses: p[1]||'–', ot: p[2]||'–' }
+                            }
+                            return {
+                                wins:   rec.wins     !== undefined ? rec.wins     : '–',
+                                losses: rec.losses   !== undefined ? rec.losses   : '–',
+                                ot:     rec.otLosses !== undefined ? rec.otLosses : '–'
+                            }
+                        }
+                        pv.awayRecord = parseRecord(d.awayTeam)
+                        pv.homeRecord = parseRecord(d.homeTeam)
+
+                        // Leaders : d.matchup.skaterComparison.leaders
+                        // = [{category:"points"|"goals"|"assists", awayLeader:{name,value}, homeLeader:{name,value}}]
+                        // Chaque row = UN meneur par catégorie — afficher points/goals/assists séparément
+                        function parseLeaders(scLeaders, side) {
+                            if (!scLeaders || !scLeaders.length) return []
+                            let catOrder = ['points', 'goals', 'assists']
+                            let result = []
+                            // D'abord dans l'ordre souhaité
+                            for (let oi = 0; oi < catOrder.length; oi++) {
+                                let cat = catOrder[oi]
+                                for (let ci = 0; ci < scLeaders.length; ci++) {
+                                    let row = scLeaders[ci]
+                                    if ((row.category || '').toLowerCase() !== cat) continue
+                                    let p = side === 'away' ? row.awayLeader : row.homeLeader
+                                    if (!p) continue
+                                    let name = p.name ? (p.name.default || '') : ''
+                                    result.push({
+                                        cat:   cat,
+                                        name:  name,
+                                        value: p.value !== undefined ? p.value : '–'
+                                    })
+                                    break
+                                }
+                            }
+                            return result
+                        }
+                        let scLeaders = (d.matchup && d.matchup.skaterComparison
+                                         && d.matchup.skaterComparison.leaders) || []
+                        pv.awayLeaders = parseLeaders(scLeaders, 'away')
+                        pv.homeLeaders = parseLeaders(scLeaders, 'home')
+
+                        // Gardiens : d.matchup.goalieComparison.{awayTeam|homeTeam}.leaders[0]
+                        // Champs confirmés : playerId, name, gamesPlayed, seasonPoints,
+                        //                   record (string ou objet), gaa (float), savePctg (float), shutouts
+                        function parseGoalie(teamData) {
+                            if (!teamData) return null
+                            let leaders = teamData.leaders || []
+                            let g = leaders.length > 0 ? leaders[0] : null
+                            if (!g) return null
+                            let name = g.name ? (g.name.default || '') : ''
+                            if (!name) return null
+                            // record : peut être string "W-L-OT" ou objet
+                            let recStr = '–'
+                            if (g.record !== undefined) {
+                                if (typeof g.record === 'string') {
+                                    recStr = g.record
+                                } else if (typeof g.record === 'object') {
+                                    let r = g.record
+                                    recStr = (r.wins||0) + '-' + (r.losses||0)
+                                           + (r.otLosses !== undefined ? '-' + r.otLosses : '')
+                                }
+                            }
+                            // gaa : float direct
+                            let gaa = g.gaa !== undefined    ? parseFloat(g.gaa).toFixed(2)
+                                    : g.goalsAgainstAverage !== undefined
+                                        ? parseFloat(g.goalsAgainstAverage).toFixed(2) : '–'
+                            // savePctg : float ex 0.912
+                            let svp = g.savePctg !== undefined ? g.savePctg : null
+                            return {
+                                name:   name,
+                                record: recStr,
+                                gaa:    gaa,
+                                svPct:  svp !== null
+                                    ? ('.' + String(Math.round(svp*1000)).padStart(3,'0')) : '–'
+                            }
+                        }
+                        let glComp = (d.matchup && d.matchup.goalieComparison) || null
+                        pv.awayGoalie = parseGoalie(glComp ? glComp.awayTeam : null)
+                        pv.homeGoalie = parseGoalie(glComp ? glComp.homeTeam : null)
+
+                        // Assigner chaque propriété scalaire séparément → bindings QML fiables
+                        pvVenue       = pv.venue || ''
+                        pvSeriesAway  = pv.seriesAway  || 0
+                        pvSeriesHome  = pv.seriesHome  || 0
+                        pvSeriesTotal = pv.seriesTotal || false
+                        pvAwayRecord  = (pv.awayRecord
+                            ? (pv.awayRecord.wins||'–')+'-'+(pv.awayRecord.losses||'–')+'-'+(pv.awayRecord.ot||'–')
+                            : '')
+                        pvHomeRecord  = (pv.homeRecord
+                            ? (pv.homeRecord.wins||'–')+'-'+(pv.homeRecord.losses||'–')+'-'+(pv.homeRecord.ot||'–')
+                            : '')
+                        pvAwayLeaders = pv.awayLeaders || []
+                        pvHomeLeaders = pv.homeLeaders || []
+                        pvAwayGoalie  = pv.awayGoalie  || null
+                        pvHomeGoalie  = pv.homeGoalie  || null
+                    }
+
+                    // ── Buts pour les matchs commencés / terminés ────────
                     let g = []
                     let periods = (d.summary && d.summary.scoring) ? d.summary.scoring : []
                     for (let p = 0; p < periods.length; p++) {
@@ -1536,6 +1718,11 @@ PlasmoidItem {
             standingsFlatModel.append({ type: "wcHeader", label: i18n("Wild Card"),
                 abbrev:"", city:"", gp:0, w:0, l:0, ot:0, pts:0 })
             for (var wci = 0; wci < wc.length; wci++) {
+                // Séparateur après les 2 spots Wild Card (positions 7 et 8)
+                if (wci === 2) {
+                    standingsFlatModel.append({ type: "wcSeparator", label: "",
+                        abbrev:"", city:"", gp:0, w:0, l:0, ot:0, pts:0 })
+                }
                 var wt = wc[wci]
                 standingsFlatModel.append({
                     type:   "team",
@@ -1592,7 +1779,7 @@ PlasmoidItem {
                         text: i18n("Standings")
                         icon.name: "view-list-symbolic"
                         flat: true
-                        font.pixelSize: 11
+                        font.pixelSize: 14
                         onClicked: {
                             root.standingsOpen = true
                             fetchStandings()
@@ -1667,7 +1854,7 @@ PlasmoidItem {
                                 // Flèche indicatrice
                                 Label {
                                     text: '›'
-                                    font.pixelSize: 18
+                                    font.pixelSize: 22
                                     color: Kirigami.Theme.disabledTextColor
                                 }
                             }
@@ -1681,7 +1868,7 @@ PlasmoidItem {
                               + (debugMsg ? '  ⚠  ' + debugMsg : '')
                             : ''
                         opacity: 0.45
-                        font.pixelSize: 10
+                        font.pixelSize: 12
                         horizontalAlignment: Text.AlignHCenter
                         width: ListView.view.width
                         topPadding: 4; bottomPadding: 6
@@ -1741,18 +1928,14 @@ PlasmoidItem {
                     Column {
                         spacing: 4
                         Layout.alignment: Qt.AlignVCenter
-                        Rectangle {
-                            id: awayBadgeRect
-                            radius: 5; width: awLbl.implicitWidth + 14; height: awLbl.implicitHeight + 8
-                            color: teamColor(root.detailAway)
-                            border.color: 'white'; border.width: 1
-                            Label { id: awLbl; anchors.centerIn: parent; text: root.detailAway; color: teamTextColor(root.detailAway); font.bold: true; font.pixelSize: 15 }
-                            // Indicateur cliquable
-                            Label {
-                                anchors { bottom: parent.bottom; horizontalCenter: parent.horizontalCenter }
-                                anchors.bottomMargin: -10
-                                text: "▾"; font.pixelSize: 8; opacity: 0.5
-                                color: Kirigami.Theme.textColor
+                        Item {
+                            width: 100; height: 100
+                            anchors.horizontalCenter: parent.horizontalCenter
+                            Image {
+                                anchors.fill: parent
+                                source: root.teamLogoUrl(root.detailAway)
+                                fillMode: Image.PreserveAspectFit
+                                smooth: true
                             }
                             HoverHandler { cursorShape: Qt.PointingHandCursor }
                             TapHandler {
@@ -1774,9 +1957,10 @@ PlasmoidItem {
                         spacing: 4
                         Layout.fillWidth: true
                         Layout.alignment: Qt.AlignVCenter
-                        // Pastille unique fusionnée
+                        // Pastille : seulement pour les matchs terminés (FINAL)
                         Rectangle {
                             anchors.horizontalCenter: parent.horizontalCenter
+                            visible: root.detailStatus === 'FINAL'
                             radius: 5
                             color: statusColor(root.detailStatus)
                             opacity: 0.95
@@ -1801,22 +1985,41 @@ PlasmoidItem {
                                 }
                             }
                         }
+                        // LIVE : période et temps restant en texte simple
+                        Column {
+                            anchors.horizontalCenter: parent.horizontalCenter
+                            visible: root.detailStatus === 'LIVE'
+                            spacing: 2
+                            Label {
+                                anchors.horizontalCenter: parent.horizontalCenter
+                                text: badgeLine1(root.detailStatus, '', root.detailPType,
+                                                 root.detailPeriod, root.detailRemain,
+                                                 root.detailStart, root.detailHome, root.detailInterm)
+                                font.pixelSize: 13; font.bold: true
+                                color: Kirigami.Theme.textColor
+                            }
+                            Label {
+                                anchors.horizontalCenter: parent.horizontalCenter
+                                visible: text !== ''
+                                text: badgeLine2(root.detailStatus, root.detailStart, root.detailHome)
+                                font.pixelSize: 11
+                                color: Kirigami.Theme.disabledTextColor
+                            }
+                        }
                     }
 
                     // Local
                     Column {
                         spacing: 4
                         Layout.alignment: Qt.AlignVCenter
-                        Rectangle {
-                            id: homeBadgeRect
-                            radius: 5; width: hmLbl.implicitWidth + 14; height: hmLbl.implicitHeight + 8
-                            color: teamColor(root.detailHome)
-                            border.color: 'white'; border.width: 1
-                            Label {
-                                anchors { bottom: parent.bottom; horizontalCenter: parent.horizontalCenter }
-                                anchors.bottomMargin: -10
-                                text: "▾"; font.pixelSize: 8; opacity: 0.5
-                                color: Kirigami.Theme.textColor
+                        Item {
+                            width: 100; height: 100
+                            anchors.horizontalCenter: parent.horizontalCenter
+                            Image {
+                                anchors.fill: parent
+                                source: root.teamLogoUrl(root.detailHome)
+                                fillMode: Image.PreserveAspectFit
+                                smooth: true
                             }
                             HoverHandler { cursorShape: Qt.PointingHandCursor }
                             TapHandler {
@@ -1824,7 +2027,6 @@ PlasmoidItem {
                                 gesturePolicy: TapHandler.ReleaseWithinBounds
                                 onTapped: root.openSchedule(root.detailHome)
                             }
-                            Label { id: hmLbl; anchors.centerIn: parent; text: root.detailHome; color: teamTextColor(root.detailHome); font.bold: true; font.pixelSize: 15 }
                         }
                         Label {
                             anchors.horizontalCenter: parent.horizontalCenter
@@ -1840,13 +2042,13 @@ PlasmoidItem {
                     visible: root.detailLoading
                     text: i18n('Loading…')
                     color: Kirigami.Theme.disabledTextColor
-                    font.pixelSize: 12
+                    font.pixelSize: 15
                     Layout.alignment: Qt.AlignHCenter
                 }
                 Label {
                     visible: !root.detailLoading && root.detailError !== ''
                     text: root.detailError
-                    color: 'tomato'; font.pixelSize: 11
+                    color: 'tomato'; font.pixelSize: 14
                     wrapMode: Text.Wrap
                     Layout.fillWidth: true
                 }
@@ -1858,19 +2060,19 @@ PlasmoidItem {
                     spacing: 0
                     Label {
                         text: root.detailStats['sog'] ? String(root.detailStats['sog'].away) : ''
-                        font.pixelSize: 20; font.bold: true
+                        font.pixelSize: 25; font.bold: true
                         color: teamColorAdapted(root.detailAway)
                         Layout.preferredWidth: 70; horizontalAlignment: Text.AlignHCenter
                     }
                     Label {
                         text: i18n('Shots on Goal')
-                        font.pixelSize: 11
+                        font.pixelSize: 14
                         color: Kirigami.Theme.disabledTextColor
                         Layout.fillWidth: true; horizontalAlignment: Text.AlignHCenter
                     }
                     Label {
                         text: root.detailStats['sog'] ? String(root.detailStats['sog'].home) : ''
-                        font.pixelSize: 20; font.bold: true
+                        font.pixelSize: 25; font.bold: true
                         color: teamColorAdapted(root.detailHome)
                         Layout.preferredWidth: 70; horizontalAlignment: Text.AlignHCenter
                     }
@@ -1893,9 +2095,9 @@ PlasmoidItem {
                     // En-têtes colonnes
                     RowLayout {
                         Layout.fillWidth: true
-                        Label { text: root.detailAway; font.bold: true; font.pixelSize: 12; color: teamColorAdapted(root.detailAway); Layout.preferredWidth: 70; horizontalAlignment: Text.AlignHCenter }
+                        Label { text: root.detailAway; font.bold: true; font.pixelSize: 15; color: teamColorAdapted(root.detailAway); Layout.preferredWidth: 70; horizontalAlignment: Text.AlignHCenter }
                         Label { text: ''; Layout.fillWidth: true }
-                        Label { text: root.detailHome; font.bold: true; font.pixelSize: 12; color: teamColorAdapted(root.detailHome); Layout.preferredWidth: 70; horizontalAlignment: Text.AlignHCenter }
+                        Label { text: root.detailHome; font.bold: true; font.pixelSize: 15; color: teamColorAdapted(root.detailHome); Layout.preferredWidth: 70; horizontalAlignment: Text.AlignHCenter }
                     }
 
                     Repeater {
@@ -1934,9 +2136,9 @@ PlasmoidItem {
                         delegate: RowLayout {
                             Layout.fillWidth: true
                             spacing: 0
-                            Label { text: modelData.away; font.pixelSize: 12; font.bold: true; color: Kirigami.Theme.textColor; Layout.preferredWidth: 70; horizontalAlignment: Text.AlignHCenter }
-                            Label { text: modelData.label; font.pixelSize: 11; color: Kirigami.Theme.disabledTextColor; Layout.fillWidth: true; horizontalAlignment: Text.AlignHCenter }
-                            Label { text: modelData.home; font.pixelSize: 12; font.bold: true; color: Kirigami.Theme.textColor; Layout.preferredWidth: 70; horizontalAlignment: Text.AlignHCenter }
+                            Label { text: modelData.away; font.pixelSize: 15; font.bold: true; color: Kirigami.Theme.textColor; Layout.preferredWidth: 70; horizontalAlignment: Text.AlignHCenter }
+                            Label { text: modelData.label; font.pixelSize: 14; color: Kirigami.Theme.disabledTextColor; Layout.fillWidth: true; horizontalAlignment: Text.AlignHCenter }
+                            Label { text: modelData.home; font.pixelSize: 15; font.bold: true; color: Kirigami.Theme.textColor; Layout.preferredWidth: 70; horizontalAlignment: Text.AlignHCenter }
                         }
                     }
                 }
@@ -1952,19 +2154,258 @@ PlasmoidItem {
                 Label {
                     visible: !root.detailLoading && root.detailStatus !== 'UPCOMING'
                     text: i18n('Goals')
-                    font.bold: true; font.pixelSize: 12
+                    font.bold: true; font.pixelSize: 15
                     color: Kirigami.Theme.textColor
                     Layout.alignment: Qt.AlignHCenter
                 }
 
-                // Match à venir — pas encore commencé
-                Label {
+                // ── Preview match à venir ────────────────────────────
+                ColumnLayout {
                     visible: !root.detailLoading && root.detailStatus === 'UPCOMING'
-                    text: i18n('Game not started yet.')
-                    color: Kirigami.Theme.disabledTextColor; font.pixelSize: 12
-                    Layout.alignment: Qt.AlignHCenter
                     Layout.fillWidth: true
-                    horizontalAlignment: Text.AlignHCenter
+                    spacing: 6
+
+                    // Heure du match
+                    Label {
+                        visible: root.detailStart > 0
+                        Layout.alignment: Qt.AlignHCenter
+                        text: root.detailStart > 0
+                            ? Qt.formatTime(new Date(root.detailStart), "hh:mm") + "  ·  "
+                              + root.localeDateLong(root.detailStart)
+                            : ""
+                        font.pixelSize: 15; font.bold: true
+                        color: Kirigami.Theme.textColor
+                    }
+
+                    // Aréna
+                    Label {
+                        visible: (root.pvVenue || '') !== ''
+                        Layout.alignment: Qt.AlignHCenter
+                        text: root.pvVenue || ''
+                        font.pixelSize: 14; opacity: 0.6
+                        color: Kirigami.Theme.disabledTextColor
+                    }
+
+                    // Séparateur
+                    Rectangle { Layout.fillWidth: true; height: 1; color: Kirigami.Theme.textColor; opacity: 0.15 }
+
+                    // Série saison
+                    Label {
+                        visible: root.pvSeriesTotal || false
+                        Layout.alignment: Qt.AlignHCenter
+                        text: i18n("Season series") + " :  "
+                              + root.detailAway + "  "
+                              + (root.pvSeriesAway || 0)
+                              + " – "
+                              + (root.pvSeriesHome || 0)
+                              + "  " + root.detailHome
+                        font.pixelSize: 14; font.bold: true
+                        color: Kirigami.Theme.textColor
+                    }
+
+                    // Séparateur
+                    Rectangle { Layout.fillWidth: true; height: 1; color: Kirigami.Theme.textColor; opacity: 0.15 }
+
+                    // Fiches saison
+                    Item {
+                        Layout.fillWidth: true
+                        height: fichesRow.implicitHeight
+                        RowLayout {
+                            id: fichesRow
+                            anchors.horizontalCenter: parent.horizontalCenter
+                            spacing: 32
+                            // Visiteur
+                            ColumnLayout {
+                                spacing: 2
+                                Label { Layout.alignment: Qt.AlignHCenter
+                                        text: root.pvAwayRecord || '–'
+                                        font.pixelSize: 18; font.bold: true
+                                        color: root.teamColorAdapted(root.detailAway) }
+                                Label { Layout.alignment: Qt.AlignHCenter
+                                        text: i18n("Record")
+                                        font.pixelSize: 11; opacity: 0.55
+                                        color: Kirigami.Theme.disabledTextColor }
+                            }
+                            // Local
+                            ColumnLayout {
+                                spacing: 2
+                                Label { Layout.alignment: Qt.AlignHCenter
+                                        text: root.pvHomeRecord || '–'
+                                        font.pixelSize: 18; font.bold: true
+                                        color: root.teamColorAdapted(root.detailHome) }
+                                Label { Layout.alignment: Qt.AlignHCenter
+                                        text: i18n("Record")
+                                        font.pixelSize: 11; opacity: 0.55
+                                        color: Kirigami.Theme.disabledTextColor }
+                            }
+                        }
+                    }
+
+                    // Séparateur
+                    Rectangle { Layout.fillWidth: true; height: 1; color: Kirigami.Theme.textColor; opacity: 0.15 }
+
+                    // Leaders points — titre
+                    Label {
+                        Layout.alignment: Qt.AlignHCenter
+                        visible: (root.pvAwayLeaders || []).length > 0
+                                 || (root.pvHomeLeaders || []).length > 0
+                        text: i18n("Points leaders (last 5 games)")
+                        font.pixelSize: 12; font.bold: true; opacity: 0.6
+                        color: Kirigami.Theme.disabledTextColor
+                    }
+
+                    // Leaders côte à côte
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: 8
+                        visible: (root.pvAwayLeaders || []).length > 0
+                                 || (root.pvHomeLeaders || []).length > 0
+
+                        // Leaders visiteur
+                        ColumnLayout {
+                            Layout.fillWidth: true; spacing: 3
+                            Repeater {
+                                model: root.pvAwayLeaders || []
+                                delegate: ColumnLayout {
+                                    Layout.fillWidth: true; spacing: 0
+                                    Label {
+                                        Layout.fillWidth: true
+                                        text: {
+                                            var lbl = modelData.cat === 'points' ? i18n('PTS')
+                                                    : modelData.cat === 'goals'   ? i18n('Goals')
+                                                    : i18n('Assists')
+                                            return lbl + ' : ' + modelData.value
+                                        }
+                                        font.pixelSize: 11; font.bold: true; opacity: 0.55
+                                        color: Kirigami.Theme.disabledTextColor
+                                    }
+                                    Label {
+                                        Layout.fillWidth: true
+                                        text: modelData.name
+                                        font.pixelSize: 14
+                                        color: root.teamColorAdapted(root.detailAway)
+                                        elide: Text.ElideRight
+                                    }
+                                }
+                            }
+                        }
+
+                        // Séparateur vertical
+                        Rectangle {
+                            width: 1; Layout.fillHeight: true
+                            color: Kirigami.Theme.textColor; opacity: 0.15
+                        }
+
+                        // Leaders local
+                        ColumnLayout {
+                            Layout.fillWidth: true; spacing: 3
+                            Repeater {
+                                model: root.pvHomeLeaders || []
+                                delegate: ColumnLayout {
+                                    Layout.fillWidth: true; spacing: 0
+                                    Label {
+                                        Layout.fillWidth: true
+                                        text: {
+                                            var lbl = modelData.cat === 'points' ? i18n('PTS')
+                                                    : modelData.cat === 'goals'   ? i18n('Goals')
+                                                    : i18n('Assists')
+                                            return lbl + ' : ' + modelData.value
+                                        }
+                                        font.pixelSize: 11; font.bold: true; opacity: 0.55
+                                        color: Kirigami.Theme.disabledTextColor
+                                    }
+                                    Label {
+                                        Layout.fillWidth: true
+                                        text: modelData.name
+                                        font.pixelSize: 14
+                                        color: root.teamColorAdapted(root.detailHome)
+                                        elide: Text.ElideRight
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // Séparateur
+                    Rectangle {
+                        visible: root.pvAwayGoalie !== null
+                                 || root.pvHomeGoalie !== null
+                        Layout.fillWidth: true; height: 1
+                        color: Kirigami.Theme.textColor; opacity: 0.15
+                    }
+
+                    // Gardiens probables
+                    Label {
+                        visible: root.pvAwayGoalie !== null
+                                 || root.pvHomeGoalie !== null
+                        Layout.alignment: Qt.AlignHCenter
+                        text: i18n("Probable goalies")
+                        font.pixelSize: 12; font.bold: true; opacity: 0.6
+                        color: Kirigami.Theme.disabledTextColor
+                    }
+
+                    Item {
+                        Layout.fillWidth: true
+                        visible: root.pvAwayGoalie !== null || root.pvHomeGoalie !== null
+                        height: goaliesRow.implicitHeight
+                        RowLayout {
+                            id: goaliesRow
+                            anchors.horizontalCenter: parent.horizontalCenter
+                            spacing: 24
+                            // Gardien visiteur
+                            ColumnLayout {
+                                spacing: 1
+                                Label {
+                                    Layout.alignment: Qt.AlignHCenter
+                                    text: root.pvAwayGoalie ? root.pvAwayGoalie.name : '–'
+                                    font.pixelSize: 14; font.bold: true
+                                    color: root.teamColorAdapted(root.detailAway)
+                                }
+                                Label {
+                                    Layout.alignment: Qt.AlignHCenter
+                                    text: root.pvAwayGoalie ? root.pvAwayGoalie.record : ''
+                                    font.pixelSize: 12; opacity: 0.7
+                                    color: Kirigami.Theme.disabledTextColor
+                                }
+                                Label {
+                                    Layout.alignment: Qt.AlignHCenter
+                                    text: root.pvAwayGoalie
+                                        ? (root.pvAwayGoalie.gaa + " MOY  " + root.pvAwayGoalie.svPct + " %SV") : ''
+                                    font.pixelSize: 12; opacity: 0.7
+                                    color: Kirigami.Theme.disabledTextColor
+                                }
+                            }
+                            Rectangle {
+                                width: 1; height: 40
+                                color: Kirigami.Theme.textColor; opacity: 0.15
+                            }
+                            // Gardien local
+                            ColumnLayout {
+                                spacing: 1
+                                Label {
+                                    Layout.alignment: Qt.AlignHCenter
+                                    text: root.pvHomeGoalie ? root.pvHomeGoalie.name : '–'
+                                    font.pixelSize: 14; font.bold: true
+                                    color: root.teamColorAdapted(root.detailHome)
+                                }
+                                Label {
+                                    Layout.alignment: Qt.AlignHCenter
+                                    text: root.pvHomeGoalie ? root.pvHomeGoalie.record : ''
+                                    font.pixelSize: 12; opacity: 0.7
+                                    color: Kirigami.Theme.disabledTextColor
+                                }
+                                Label {
+                                    Layout.alignment: Qt.AlignHCenter
+                                    text: root.pvHomeGoalie
+                                        ? (root.pvHomeGoalie.gaa + " MOY  " + root.pvHomeGoalie.svPct + " %SV") : ''
+                                    font.pixelSize: 12; opacity: 0.7
+                                    color: Kirigami.Theme.disabledTextColor
+                                }
+                            }
+                        }
+                    }
+
+                    Item { height: 4 }
                 }
 
                 // Liste des buts groupés par période
@@ -1988,7 +2429,7 @@ PlasmoidItem {
                             }
                             Label {
                                 text: modelData.label
-                                font.pixelSize: 10; font.bold: true
+                                font.pixelSize: 12; font.bold: true
                                 color: Kirigami.Theme.disabledTextColor
                                 opacity: 0.8
                             }
@@ -2010,7 +2451,7 @@ PlasmoidItem {
                                 visible: modelData.isEmpty || false
                                 Layout.fillWidth: true
                                 text: i18n('No goals recorded.')
-                                font.pixelSize: 11; font.italic: true
+                                font.pixelSize: 14; font.italic: true
                                 color: Kirigami.Theme.disabledTextColor
                                 horizontalAlignment: Text.AlignHCenter
                             }
@@ -2025,13 +2466,13 @@ PlasmoidItem {
                                     id: tBadge; anchors.centerIn: parent
                                     text: modelData.team
                                     color: teamTextColor(modelData.team)
-                                    font.pixelSize: 10; font.bold: true
+                                    font.pixelSize: 12; font.bold: true
                                 }
                             }
                             Label {
                                 visible: !(modelData.isEmpty || false)
                                 text: modelData.time || ''
-                                font.pixelSize: 10; color: Kirigami.Theme.disabledTextColor
+                                font.pixelSize: 12; color: Kirigami.Theme.disabledTextColor
                                 Layout.preferredWidth: 48
                             }
                             Column {
@@ -2045,7 +2486,7 @@ PlasmoidItem {
                                         + (modelData.ppg ? '  🔵 PP' : '')
                                         + (modelData.shg ? '  🔴 SH' : '')
                                         + (modelData.en  ? '  🥅 EN' : '')
-                                    font.pixelSize: 12; font.bold: true
+                                    font.pixelSize: 15; font.bold: true
                                     color: Kirigami.Theme.textColor; wrapMode: Text.Wrap
                                 }
                                 Label {
@@ -2061,7 +2502,7 @@ PlasmoidItem {
                                         }
                                         return i18n('Assists: ') + parts.join(', ')
                                     }
-                                    font.pixelSize: 10; color: Kirigami.Theme.disabledTextColor
+                                    font.pixelSize: 12; color: Kirigami.Theme.disabledTextColor
                                     wrapMode: Text.Wrap
                                 }
                             }
@@ -2102,26 +2543,20 @@ PlasmoidItem {
 
                     Item { Layout.fillWidth: true }
 
-                    // Pastille équipe + titre centré
+                    // Logo équipe + titre centré
                     RowLayout {
                         spacing: 6
                         Layout.alignment: Qt.AlignHCenter
-                        Rectangle {
-                            radius: 4
-                            width: schedTeamLbl.implicitWidth + 12
-                            height: schedTeamLbl.implicitHeight + 6
-                            color: root.teamColor(root.scheduleTeam)
-                            Label {
-                                id: schedTeamLbl
-                                anchors.centerIn: parent
-                                text: root.scheduleTeam
-                                color: root.teamTextColor(root.scheduleTeam)
-                                font.bold: true; font.pixelSize: 13; font.family: "monospace"
-                            }
+                        Image {
+                            source: root.teamLogoUrl(root.scheduleTeam)
+                            Layout.preferredWidth: 96
+                            Layout.preferredHeight: 96
+                            fillMode: Image.PreserveAspectFit
+                            smooth: true
                         }
                         Label {
                             text: root.scheduleShowStats ? i18n("Stats") : i18n("Schedule")
-                            font.bold: true; font.pixelSize: 13
+                            font.bold: true; font.pixelSize: 16
                         }
                     }
 
@@ -2206,7 +2641,7 @@ PlasmoidItem {
                                     text: modelData.startMs > 0
                                         ? Qt.formatDate(new Date(modelData.startMs), "dd MMM")
                                         : "–"
-                                    font.pixelSize: 11
+                                    font.pixelSize: 14
                                     color: Kirigami.Theme.disabledTextColor
                                     Layout.preferredWidth: 42
                                 }
@@ -2217,7 +2652,7 @@ PlasmoidItem {
                                     // @ ou vs
                                     Label {
                                         text: modelData.home === root.scheduleTeam ? i18n("vs") : i18n("@")
-                                        font.pixelSize: 10; opacity: 0.6
+                                        font.pixelSize: 12; opacity: 0.6
                                         color: Kirigami.Theme.textColor
                                     }
                                     Rectangle {
@@ -2232,7 +2667,7 @@ PlasmoidItem {
                                                   ? modelData.away : modelData.home
                                             color: root.teamTextColor(modelData.home === root.scheduleTeam
                                                                       ? modelData.away : modelData.home)
-                                            font.pixelSize: 10; font.bold: true; font.family: "monospace"
+                                            font.pixelSize: 12; font.bold: true; font.family: "monospace"
                                         }
                                     }
                                 }
@@ -2243,13 +2678,13 @@ PlasmoidItem {
                                 Label {
                                     visible: modelData.isFinal && modelData.ag >= 0
                                     text: modelData.away + "  " + modelData.ag + " – " + modelData.hg + "  " + modelData.home
-                                    font.pixelSize: 11; font.bold: true
+                                    font.pixelSize: 14; font.bold: true
                                     color: Kirigami.Theme.textColor
                                 }
                                 Label {
                                     visible: modelData.isLive
                                     text: i18n("LIVE")
-                                    font.pixelSize: 11; font.bold: true
+                                    font.pixelSize: 14; font.bold: true
                                     color: root.liveColor
                                 }
                                 Label {
@@ -2257,7 +2692,7 @@ PlasmoidItem {
                                     text: modelData.startMs > 0
                                         ? Qt.formatTime(new Date(modelData.startMs), "hh:mm")
                                         : "–"
-                                    font.pixelSize: 11
+                                    font.pixelSize: 14
                                     color: Kirigami.Theme.disabledTextColor
                                 }
 
@@ -2275,7 +2710,7 @@ PlasmoidItem {
                                         id: resultLbl
                                         anchors.centerIn: parent
                                         text: modelData.result
-                                        font.pixelSize: 10; font.bold: true
+                                        font.pixelSize: 12; font.bold: true
                                         color: (modelData.result === 'W' || modelData.result === 'OTW')
                                             ? Kirigami.Theme.positiveTextColor
                                             : Kirigami.Theme.negativeTextColor
@@ -2346,17 +2781,17 @@ PlasmoidItem {
                                     anchors.verticalCenter: parent.verticalCenter
                                     spacing: 0
 
-                                    Label { text: i18n("Player"); font.pixelSize: 10; font.bold: true;
+                                    Label { text: i18n("Player"); font.pixelSize: 12; font.bold: true;
                                             opacity: 0.6; Layout.fillWidth: true }
-                                    Label { text: i18n("PJ");  font.pixelSize: 10; font.bold: true; opacity: 0.6
+                                    Label { text: i18n("PJ");  font.pixelSize: 12; font.bold: true; opacity: 0.6
                                             Layout.preferredWidth: 28; horizontalAlignment: Text.AlignRight }
-                                    Label { text: i18n("B");   font.pixelSize: 10; font.bold: true; opacity: 0.6
+                                    Label { text: i18n("B");   font.pixelSize: 12; font.bold: true; opacity: 0.6
                                             Layout.preferredWidth: 28; horizontalAlignment: Text.AlignRight }
-                                    Label { text: i18n("A");   font.pixelSize: 10; font.bold: true; opacity: 0.6
+                                    Label { text: i18n("A");   font.pixelSize: 12; font.bold: true; opacity: 0.6
                                             Layout.preferredWidth: 28; horizontalAlignment: Text.AlignRight }
-                                    Label { text: i18n("PTS"); font.pixelSize: 10; font.bold: true; opacity: 0.6
+                                    Label { text: i18n("PTS"); font.pixelSize: 12; font.bold: true; opacity: 0.6
                                             Layout.preferredWidth: 34; horizontalAlignment: Text.AlignRight }
-                                    Label { text: i18n("+/-"); font.pixelSize: 10; font.bold: true; opacity: 0.6
+                                    Label { text: i18n("+/-"); font.pixelSize: 12; font.bold: true; opacity: 0.6
                                             Layout.preferredWidth: 30; horizontalAlignment: Text.AlignRight }
                                 }
                                 Rectangle {
@@ -2393,7 +2828,7 @@ PlasmoidItem {
                                     anchors.leftMargin: 8; anchors.rightMargin: 8
                                     spacing: 8
                                     Rectangle { height: 1; Layout.fillWidth: true; color: Kirigami.Theme.textColor; opacity: 0.2 }
-                                    Label { text: i18n("Goalies"); font.pixelSize: 10; font.bold: true; opacity: 0.6
+                                    Label { text: i18n("Goalies"); font.pixelSize: 12; font.bold: true; opacity: 0.6
                                             color: Kirigami.Theme.disabledTextColor }
                                     Rectangle { height: 1; Layout.fillWidth: true; color: Kirigami.Theme.textColor; opacity: 0.2 }
                                 }
@@ -2412,33 +2847,33 @@ PlasmoidItem {
                                         spacing: 4
                                         Label {
                                             text: skater ? skater.pos : ''
-                                            font.pixelSize: 9; font.bold: true
+                                            font.pixelSize: 11; font.bold: true
                                             opacity: 0.5
                                             color: Kirigami.Theme.disabledTextColor
                                             Layout.preferredWidth: 16
                                         }
                                         Label {
                                             text: skater ? skater.name : ''
-                                            font.pixelSize: 11
+                                            font.pixelSize: 14
                                             color: Kirigami.Theme.textColor
                                             elide: Text.ElideRight
                                             Layout.fillWidth: true
                                         }
                                     }
-                                    Label { text: skater ? skater.gp : ''; font.pixelSize: 11; opacity: 0.55
+                                    Label { text: skater ? skater.gp : ''; font.pixelSize: 14; opacity: 0.55
                                             Layout.preferredWidth: 28; horizontalAlignment: Text.AlignRight }
-                                    Label { text: skater ? skater.g  : ''; font.pixelSize: 11
+                                    Label { text: skater ? skater.g  : ''; font.pixelSize: 14
                                             color: Kirigami.Theme.textColor
                                             Layout.preferredWidth: 28; horizontalAlignment: Text.AlignRight }
-                                    Label { text: skater ? skater.a  : ''; font.pixelSize: 11
+                                    Label { text: skater ? skater.a  : ''; font.pixelSize: 14
                                             color: Kirigami.Theme.textColor
                                             Layout.preferredWidth: 28; horizontalAlignment: Text.AlignRight }
-                                    Label { text: skater ? skater.pts : ''; font.pixelSize: 12; font.bold: true
+                                    Label { text: skater ? skater.pts : ''; font.pixelSize: 15; font.bold: true
                                             color: Kirigami.Theme.textColor
                                             Layout.preferredWidth: 34; horizontalAlignment: Text.AlignRight }
                                     Label {
                                         text: skater ? (skater.plusMinus >= 0 ? '+' + skater.plusMinus : skater.plusMinus) : ''
-                                        font.pixelSize: 11
+                                        font.pixelSize: 14
                                         color: skater ? (skater.plusMinus > 0 ? Kirigami.Theme.positiveTextColor
                                                        : skater.plusMinus < 0 ? Kirigami.Theme.negativeTextColor
                                                        : Kirigami.Theme.disabledTextColor) : "transparent"
@@ -2457,27 +2892,27 @@ PlasmoidItem {
 
                                     Label {
                                         text: goalie ? goalie.name : ''
-                                        font.pixelSize: 11; color: Kirigami.Theme.textColor
+                                        font.pixelSize: 14; color: Kirigami.Theme.textColor
                                         elide: Text.ElideRight; Layout.fillWidth: true
                                     }
                                     // PJ
-                                    Label { text: goalie ? goalie.gp : ''; font.pixelSize: 11; opacity: 0.55
+                                    Label { text: goalie ? goalie.gp : ''; font.pixelSize: 14; opacity: 0.55
                                             Layout.preferredWidth: 28; horizontalAlignment: Text.AlignRight }
                                     // V (wins)
-                                    Label { text: goalie ? goalie.wins : ''; font.pixelSize: 11
+                                    Label { text: goalie ? goalie.wins : ''; font.pixelSize: 14
                                             color: Kirigami.Theme.positiveTextColor
                                             Layout.preferredWidth: 28; horizontalAlignment: Text.AlignRight }
                                     // D (losses)
-                                    Label { text: goalie ? goalie.losses : ''; font.pixelSize: 11
+                                    Label { text: goalie ? goalie.losses : ''; font.pixelSize: 14
                                             color: Kirigami.Theme.negativeTextColor
                                             Layout.preferredWidth: 28; horizontalAlignment: Text.AlignRight }
                                     // MOY
-                                    Label { text: goalie ? goalie.gaa.toFixed(2) : ''; font.pixelSize: 11
+                                    Label { text: goalie ? goalie.gaa.toFixed(2) : ''; font.pixelSize: 14
                                             color: Kirigami.Theme.textColor
                                             Layout.preferredWidth: 34; horizontalAlignment: Text.AlignRight }
                                     // %SV
                                     Label { text: goalie ? ('.' + String(Math.round(goalie.svPct * 1000)).padStart(3,'0')) : ''
-                                            font.pixelSize: 11; font.bold: true
+                                            font.pixelSize: 14; font.bold: true
                                             color: Kirigami.Theme.textColor
                                             Layout.preferredWidth: 36; horizontalAlignment: Text.AlignRight }
                                 }
@@ -2516,10 +2951,11 @@ PlasmoidItem {
                     }
                     Item { Layout.fillWidth: true }
                     Label {
-                        text: i18n("Wild Card Standings")
-                        font.bold: true; font.pixelSize: 13
-                        rightPadding: 12
+                        text: i18n("Standings")
+                        font.bold: true; font.pixelSize: 16
+                        Layout.alignment: Qt.AlignHCenter
                     }
+                    Item { Layout.fillWidth: true }
                 }
 
                 // Chargement / erreur
@@ -2546,11 +2982,18 @@ PlasmoidItem {
                     Layout.fillHeight: true
                     visible: !root.standingsLoading && root.standingsError === ""
                     contentWidth: availableWidth
+                    ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
                     clip: true
 
-                    ListView {
+                    Item {
+                        width: standingsScroll.availableWidth
+                        height: standingsScroll.availableHeight
+
+                        ListView {
                         id: standingsListView
-                        anchors.fill: parent
+                        width: Math.min(340, parent.width)
+                        height: parent.height
+                        anchors.horizontalCenter: parent.horizontalCenter
                         model: standingsFlatModel
                         interactive: true
                         spacing: 0
@@ -2566,17 +3009,18 @@ PlasmoidItem {
                             property int    rOt:     model.ot     || 0
                             property int    rPts:    model.pts    || 0
 
-                            readonly property int maxTableW: 340
-                            width: Math.min(maxTableW, standingsListView.width)
-                            x: (standingsListView.width - width) / 2
-                            height: rType === "confHeader" ? hdrLabel.implicitHeight + 8
-                                  : rType === "colHeader"  ? 18
-                                  : rType === "team"       ? teamRow.implicitHeight + 6
+                            width: standingsListView.width
+                            x: 0
+                            height: rType === "confHeader"  ? hdrLabel.implicitHeight + 8
+                                  : rType === "colHeader"   ? 18
+                                  : rType === "team"        ? teamRow.implicitHeight + 6
+                                  : rType === "wcSeparator" ? 12
                                   : hdrLabel.implicitHeight + 4   // divHeader / wcHeader
 
                             // Fond coloré selon le type
                             Rectangle {
                                 anchors.fill: parent
+                                visible: rType !== "wcSeparator"
                                 color: rType === "confHeader" ? Kirigami.Theme.alternateBackgroundColor
                                      : rType === "divHeader"  ? Qt.rgba(Kirigami.Theme.highlightColor.r,
                                                                         Kirigami.Theme.highlightColor.g,
@@ -2585,6 +3029,15 @@ PlasmoidItem {
                                                                         Kirigami.Theme.positiveBackgroundColor.g,
                                                                         Kirigami.Theme.positiveBackgroundColor.b, 0.25)
                                      : "transparent"
+                            }
+                            // Ligne séparatrice Wild Card (entre les pos. 8 et 9)
+                            Rectangle {
+                                visible: rType === "wcSeparator"
+                                anchors.centerIn: parent
+                                width: parent.width * 0.85
+                                height: 1
+                                color: Kirigami.Theme.textColor
+                                opacity: 0.35
                             }
 
                             // Label centré : confHeader / divHeader / wcHeader
@@ -2606,16 +3059,26 @@ PlasmoidItem {
                                 visible: rType === "colHeader"
                                 spacing: 0
                                 Item { width: 38 }  // largeur pastille équipe
-                                Label { text: i18n("Team"); font.pixelSize: 10; font.bold: true; opacity: 0.6; Layout.preferredWidth: 44 }
+                                Label { text: i18n("Team"); font.pixelSize: 12; font.bold: true; opacity: 0.6; Layout.preferredWidth: 44 }
                                 Label { Layout.fillWidth: true }
-                                Label { text: "GP";  font.pixelSize: 10; font.bold: true; opacity: 0.6; Layout.preferredWidth: 28; horizontalAlignment: Text.AlignHCenter }
-                                Label { text: "W";   font.pixelSize: 10; font.bold: true; opacity: 0.6; Layout.preferredWidth: 24; horizontalAlignment: Text.AlignHCenter }
-                                Label { text: "L";   font.pixelSize: 10; font.bold: true; opacity: 0.6; Layout.preferredWidth: 24; horizontalAlignment: Text.AlignHCenter }
-                                Label { text: "OT";  font.pixelSize: 10; font.bold: true; opacity: 0.6; Layout.preferredWidth: 24; horizontalAlignment: Text.AlignHCenter }
-                                Label { text: "PTS"; font.pixelSize: 10; font.bold: true; opacity: 0.6; Layout.preferredWidth: 30; horizontalAlignment: Text.AlignHCenter }
+                                Label { text: "GP";  font.pixelSize: 12; font.bold: true; opacity: 0.6; Layout.preferredWidth: 28; horizontalAlignment: Text.AlignHCenter }
+                                Label { text: "W";   font.pixelSize: 12; font.bold: true; opacity: 0.6; Layout.preferredWidth: 24; horizontalAlignment: Text.AlignHCenter }
+                                Label { text: "L";   font.pixelSize: 12; font.bold: true; opacity: 0.6; Layout.preferredWidth: 24; horizontalAlignment: Text.AlignHCenter }
+                                Label { text: "OT";  font.pixelSize: 12; font.bold: true; opacity: 0.6; Layout.preferredWidth: 24; horizontalAlignment: Text.AlignHCenter }
+                                Label { text: "PTS"; font.pixelSize: 12; font.bold: true; opacity: 0.6; Layout.preferredWidth: 30; horizontalAlignment: Text.AlignHCenter }
                             }
 
-                            // Ligne équipe
+                            // Ligne équipe cliquable → calendrier
+                            HoverHandler {
+                                enabled: rType === "team"
+                                cursorShape: Qt.PointingHandCursor
+                            }
+                            TapHandler {
+                                enabled: rType === "team"
+                                acceptedButtons: Qt.LeftButton
+                                gesturePolicy: TapHandler.ReleaseWithinBounds
+                                onTapped: root.openSchedule(rAbbrev)
+                            }
                             RowLayout {
                                 id: teamRow
                                 anchors { left: parent.left; right: parent.right
@@ -2633,18 +3096,19 @@ PlasmoidItem {
                                         anchors.centerIn: parent
                                         text: rAbbrev !== "" ? rAbbrev : "?"
                                         color: root.teamTextColor(rAbbrev)
-                                        font.pixelSize: 10; font.bold: true; font.family: "monospace"
+                                        font.pixelSize: 12; font.bold: true; font.family: "monospace"
                                     }
                                 }
-                                Label { Layout.leftMargin: 6; text: rCity; font.pixelSize: 11; Layout.fillWidth: true; elide: Text.ElideRight }
-                                Label { text: rGp;  font.pixelSize: 11; Layout.preferredWidth: 28; horizontalAlignment: Text.AlignHCenter }
-                                Label { text: rW;   font.pixelSize: 11; Layout.preferredWidth: 24; horizontalAlignment: Text.AlignHCenter }
-                                Label { text: rL;   font.pixelSize: 11; Layout.preferredWidth: 24; horizontalAlignment: Text.AlignHCenter }
-                                Label { text: rOt;  font.pixelSize: 11; Layout.preferredWidth: 24; horizontalAlignment: Text.AlignHCenter }
-                                Label { text: rPts; font.pixelSize: 11; font.bold: true; Layout.preferredWidth: 30; horizontalAlignment: Text.AlignHCenter }
+                                Label { Layout.leftMargin: 6; text: rCity; font.pixelSize: 14; Layout.fillWidth: true; elide: Text.ElideRight }
+                                Label { text: rGp;  font.pixelSize: 14; Layout.preferredWidth: 28; horizontalAlignment: Text.AlignHCenter }
+                                Label { text: rW;   font.pixelSize: 14; Layout.preferredWidth: 24; horizontalAlignment: Text.AlignHCenter }
+                                Label { text: rL;   font.pixelSize: 14; Layout.preferredWidth: 24; horizontalAlignment: Text.AlignHCenter }
+                                Label { text: rOt;  font.pixelSize: 14; Layout.preferredWidth: 24; horizontalAlignment: Text.AlignHCenter }
+                                Label { text: rPts; font.pixelSize: 14; font.bold: true; Layout.preferredWidth: 30; horizontalAlignment: Text.AlignHCenter }
                             }
                         }
-                    }
+                    } // fin ListView
+                    } // fin Item wrapper
                 } // fin ScrollView
             }
         }

@@ -1,108 +1,71 @@
 # Changelog — nhl-scores-plasmoid
 
-All notable changes to this project are documented in this file.
+All notable changes to this project will be documented in this file.
 
-- - -
-## \[3.1.0] — 2026-03-11
+---
 
-### New Features
+## [3.2] — 2026-03-11
 
-- **Team schedule viewer** — Clicking on a team badge in the match detail popup
-  now opens a full team schedule, showing the last 5 completed games and all
-  upcoming games. Each entry displays the opponent (with coloured badge), date,
-  score or start time, and a W / L / OTW / OTL result badge.
-- **Team player stats** — A "Stats" button in the schedule view toggles to a full
-  roster statistics panel. Skaters are listed by points (G / A / PTS / +/−),
-  followed by goalies (GP / W / L / GAA / SV%). Stats are loaded lazily on
-  first access.
-- **Assists totals** — Assist counts are now displayed alongside each assistant's
-  name in the goal summary (e.g. *Suzuki (52), Anderson (30)*), matching the
-  existing scorer total format.
-- **Goals grouped by period** — The match detail popup now organises goals under
-  period headers (*1st period*, *2nd period*, etc.). Periods with no goals show *
-  No goals recorded.* Playoff multi-overtime periods (2OT, 3OT, …) are fully
-  supported and sorted correctly.
+### Added
 
-### Improvements
+- **NHL team logos in popups** — team logos are loaded dynamically from `assets.nhle.com` and displayed in all popup views. The correct light or dark variant is chosen automatically based on the active Plasma theme. Logos appear in the game detail header (away and home), the schedule/stats navigation bar, and as a full team logo in the schedule and stats views. The compact applet representation retains its original colored badges — logos are exclusive to popups.
+- **Clickable teams in standings** — clicking on any team row in the Wild Card standings popup now opens that team's schedule view, consistent with the behavior already available in the game detail popup.
+- **Wild Card cutoff separator** — a horizontal separator line is now drawn between positions 8 and 9 in each conference's Wild Card section, visually marking the playoff qualification boundary.
+- **Team colors on leaders and goalies** — in the upcoming game preview popup, skater leaders and probable goalie names are now rendered in their respective team's adapted color instead of the default text color.
 
-- **Detail popup toggle** — Clicking the same game a second time now closes the
-  popup instead of reloading it.
-- **Enriched tooltip** — Hovering over the plasmoid now shows one line per game
-  (score + period/clock for live games, start time for upcoming games, final
-  score for finished games) instead of a generic count.
-- **"Goals" heading hidden for upcoming games** — The *Goals* section header no
-  longer appears when the game has not yet started.
-- **Desktop view centred** — Game cards, score rows, and the header bar are now
-  centred at a maximum width of 480 px on the desktop (planar) representation.
-- **Standings divisions fixed** — Division filtering now correctly uses the NHL
-  API English names (*Atlantic*, *Metropolitan*, *Central*, *Pacific*) for data
-  matching while displaying French labels (*Atlantique*, *Métropolitaine*, *
-  Centrale*, *Pacifique*) in the UI. The top 6 teams per conference were
-  previously missing; this is now resolved.
+### Changed
 
-### Localisation (fr.po)
+- **Standings title centered and renamed** — the standings popup header is now centered in the navigation bar and reads simply "Classement" (was left-aligned "Wild Card Standings").
+- **Standings table centered** — the standings `ListView` is now wrapped in a fixed-width `Item` and centered via `anchors.horizontalCenter`, replacing the previous fragile `x`-calculation approach that caused left-alignment on first render and jitter during resize.
+- **Horizontal scrollbar suppressed** — `ScrollBar.horizontal.policy: ScrollBar.AlwaysOff` is set on the standings `ScrollView`, eliminating the spurious horizontal scrollbar that appeared when the popup was wide.
 
-- Added translations for: `GOAL → BUT`, period labels (*1re période*, *2e période*
-  , …), intermission labels, `Overtime → Prolongation`, `Shootout → Tirs de
-  barrage`, `Starts at → Début à`, `Goal blink duration`, `Schedule → Calendrier`
-  , `Stats`, `Player → Joueur`, `Goalies → Gardiens`, column headers (PJ, B, A,
-  PTS, +/−).
-- Removed obsolete entries: `NHL Goal!`, `Notify on goals`, `Show yesterday`, `
-  Notifications`.
-- Fixed 3 duplicate `msgid` entries (`No games`, `Upcoming`, `Final`) that
-  caused `msgfmt` fatal errors.
+### Fixed
 
-### Bug Fixes
+- **Standings left-aligned on open** — the standings table was positioned to the left on first render and only centered after a resize event; the `ListView` is now correctly centered from the initial layout pass using Qt's anchor engine rather than a JS binding.
+- **Standings horizontal scrollbar inverted** — the horizontal scrollbar appeared when the popup was wide (no overflow) and disappeared when it was narrow (potential overflow); root cause was `anchors.leftMargin/rightMargin` on the `ListView` inflating `contentWidth` beyond `availableWidth`; fixed by removing the margins and setting `ScrollBar.horizontal.policy: ScrollBar.AlwaysOff`.
+- **Logo oversized in schedule/stats nav** — using `width`/`height` on an `Image` inside a `RowLayout` does not constrain SVG intrinsic size; replaced with `Layout.preferredWidth/Height` to correctly limit the logo to 96 px.
 
-- **Variable collision** in `fetchSchedule` — inner `var result` (W/L string)
-  was shadowing the outer `var result` (games array) due to JavaScript `var`
-  hoisting; renamed to `matchResult`.
-- **Missing `sz` injection** in the full-representation `Loader` `onLoaded`
-  handlers — team badge font size was not being passed in the panel list view.
-- **Unused variable** `var now = Date.now()` removed from `fetchSchedule`.
-- `schedulePastGames`** root property** removed; replaced by inline constant `5`.
-- **Playoff OT period naming** — periods beyond the third are now correctly
-  labelled `OT`, `2OT`, `3OT`, … instead of all collapsing to `OT`.
-- **Schedule delegate alignment** — first row in the schedule list was
-  misaligned; fixed by giving each delegate full `ListView` width and centring
-  content internally.
+### Localization
 
-- - -
-## \[3.0.0] — 2026-03-10
+- **fr.po — config files covered** — 26 new entries added for all `i18n()` strings in `configGeneral.qml` and `configDisplay.qml` that were previously untranslated (badge options, color pickers, layout choices, timezone modes, score layout, notification settings, etc.). Total: 108 entries.
 
-### New Features
+## [3.1] — 2026-03-11
 
-- Desktop (planar) representation with enriched game cards, goal banner, and
-  shared detail / standings views.
-- Score blinking on goals — only the scoring team's badge and score flash,
-  using a configurable duration (replaces system notifications).
-- Intermission badge (`INT`) shown during period breaks.
-- FINAL badge now shows the game date on a second line.
-- Standings view fixed width (340 px), centred.
+### Added
 
-### Improvements
+- **Team schedule view** — clicking on a team badge in the game detail popup opens a full schedule for that team, showing the last 5 completed games and all upcoming games with date, opponent, score/time, and W/L/OTW/OTL result badges.
+- **Player stats view** — a "Stats" button in the schedule header toggles to a player statistics table showing skaters sorted by points (GP, G, A, PTS, +/-) followed by goalies (GP, W, L, GAA, SV%). Stats are loaded lazily on first access.
+- **Assists totals** — assist counts are now displayed alongside the assisting player's name in the goal summary (e.g. "Suzuki (52), Anderson (30)"), matching the existing behavior for goal scorers.
+- **Goals grouped by period** — the game detail popup now organizes goals under period headers (1st, 2nd, 3rd, OT, 2OT, 3OT…, SO). Periods with no goals show "No goals recorded." Playoff multiple-overtime periods are fully supported.
+- **Intermission badge (INT)** — a dedicated INT badge is shown in place of the period clock during intermissions, consistent with the LIVE badge color.
+- **Rich tooltip** — hovering over the applet now shows one line per game with teams, score, period/clock for live games, start time for upcoming games, and "Final" for completed games, instead of a generic count.
+- **Detail popup toggle** — clicking the same game a second time while its detail popup is open now closes it instead of reloading it.
+- **Goal blink duration setting** — replaced the binary "Notify on goals" checkbox with a configurable blink duration spinbox (0–30 s; 0 = disabled) in General settings.
+- **Desktop representation** — enriched card-based layout for planar (desktop widget) form factor, with per-team score blinking, a goal banner, contextual period/time line, and shared detail/standings views.
+- **French translations** — added i18n strings for all new UI elements: period labels, intermission, overtime, shootout, schedule, stats, player table headers, goalies separator, goal blink duration, and more.
 
-- Dynamic compact sizing (`sz`) with automatic `forceInline` threshold below ~36
-  px.
-- Vertical separators between games in horizontal compact mode.
-- Config file root `Item` with `implicitWidth/Height` to suppress Qt warnings.
+### Changed
 
-- - -
-## \[1.8.0] — 2026-03-09
+- **Final badge** — the status badge for completed games now shows the date on a second line (e.g. "Final / 08 Mar") in both compact and full representations.
+- **Dynamic compact sizing** — the compact representation scales font and badge sizes dynamically based on panel height (`sz = 0.38 × height`), with automatic inline fallback below ~36 px.
+- **Standings fixed width** — the standings delegate is now capped at 340 px and centered, preventing it from stretching across wide panels.
+- **Desktop cards centered** — all desktop card content (team badges, scores, status badge, contextual line) is now centered within a 480 px maximum width.
+- **Conference/division names in French** — division names in the standings model now use French labels (Atlantique, Métropolitaine, Centrale, Pacifique) while keeping the correct English API keys for filtering.
+- **Schedule header layout** — three-zone navigation bar: Back button on the left, team badge + view title in the center, Schedule/Stats toggle button on the right.
 
-### New Features
+### Fixed
 
-- Wild Card standings view with conference / division grouping.
-- Unified status badge (single merged badge replacing separate team badges).
-- Vertical panel support with fixed layout.
-- French localisation (`fr.po`).
-- `install.sh` self-extracting installer.
-- Goal scorer stats in detail popup (`goalsToDate`).
-- Adaptive `pollTimer` (faster refresh during live games).
-- Team text colour contrast (WCAG-compliant `teamTextColor()`).
+- **Standings empty divisions** — francizing division display names had broken the API filter (`"Atlantique"` ≠ `"Atlantic"`); API name and display label are now stored separately.
+- **OT period shown as empty "Period 4"** — games won in overtime no longer display a spurious empty fourth period in the goal summary. Only regulation periods up to 3 are pre-populated; OT/SO entries appear only when goals exist.
+- **Variable collision in fetchSchedule** — `var result` (W/L string) shadowed the outer `result` array due to JS `var` hoisting; renamed to `matchResult`.
+- **Missing `sz` injection** — the full-representation game list Loaders were not injecting the `sz` size property into teamColumn/teamRowInline components; now consistent with the compact representation.
+- **`Goals` label shown for upcoming games** — the "Goals" section header is now hidden when the game has not yet started.
+- **Unused variables removed** — `var now` in `fetchSchedule` and the `schedulePastGames` root property (replaced by an inline constant) were removed.
+- **fr.po duplicate entries** — three duplicate `msgid` entries (`No games`, `Upcoming`, `Final`) introduced during a previous update have been removed; `msgfmt --check` now passes cleanly.
+- **RowLayout anchor warnings** — `anchors.verticalCenter` on direct children of `RowLayout` replaced with `Layout.alignment: Qt.AlignVCenter` throughout.
 
-- - -
-## \[1.0.0] — 2026-03-08
+---
 
-- Initial release: compact scoreboard, live clock, game detail popup (goals +
-  team stats), tooltip, favourite team filter, configurable colours and layout.
+## [1.8.0] — 2026-03-10
+
+> Initial public release. Core features: live scores polling, compact/full representations, vertical panel support, Wild Card standings, goal notifications, configurable badge colors, French localization.

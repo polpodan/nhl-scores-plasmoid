@@ -1,40 +1,35 @@
 # French translations for nhl-scores-plasmoid
-# Copyright (C) 2025 Dany Martineau
-# SPDX-License-Identifier: GPL-2.0-or-later
-#
+# Copyright (C) 2024 Dany Martineau
 msgid ""
 msgstr ""
-"Project-Id-Version: nhl-scores-plasmoid\n"
+"Project-Id-Version: nhl-scores-plasmoid 3.1\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-03-10 12:00+0000\n"
-"PO-Revision-Date: 2026-03-10 12:00+0000\n"
+"POT-Creation-Date: 2025-03-11\n"
+"PO-Revision-Date: 2025-03-11\n"
 "Last-Translator: Dany Martineau\n"
-"Language-Team: French\n"
 "Language: fr\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Plural-Forms: nplurals=2; plural=(n > 1);\n"
 
-# ── main.qml ────────────────────────────────────────────────────────────
-
+# ── Interface générale ──────────────────────────────────────────
 msgid "NHL Scores"
 msgstr "Scores LNH"
 
+msgid "Loading…"
+msgstr "Chargement…"
+
 msgid "Refresh now"
-msgstr "Rafraîchir maintenant"
+msgstr "Actualiser"
 
 msgid "No games"
 msgstr "Aucune partie"
 
-msgid "live"
-msgstr "en direct"
+msgid "No games today"
+msgstr "Aucune partie aujourd'hui"
 
-msgid "upcoming"
-msgstr "à venir"
-
-msgid "final"
-msgstr "terminé"
+msgid "LIVE"
+msgstr "EN DIRECT"
 
 msgid "Final"
 msgstr "Final"
@@ -42,81 +37,33 @@ msgstr "Final"
 msgid "Upcoming"
 msgstr "À venir"
 
+msgid "Starts at"
+msgstr "Début à"
 
-msgid "Eastern Conference"
-msgstr "Conférence Est"
+msgid "vs"
+msgstr "c."
 
-msgid "Western Conference"
-msgstr "Conférence Ouest"
+msgid "@"
+msgstr "@"
 
-msgid "Wild Card"
-msgstr "Wild Card"
+# ── Périodes ────────────────────────────────────────────────────
+msgid "1st period"
+msgstr "1re période"
 
-msgid "Standings"
-msgstr "Classement"
+msgid "2nd period"
+msgstr "2e période"
 
-msgid "Wild Card Standings"
-msgstr "Classement Wild Card"
+msgid "3rd period"
+msgstr "3e période"
 
-msgid "‹ Back"
-msgstr "‹ Retour"
+msgid "Period"
+msgstr "Période"
 
-msgid "Loading…"
-msgstr "Chargement…"
+msgid "Overtime"
+msgstr "Prolongation"
 
-msgid "Team"
-msgstr "Équipe"
-
-msgid "Updated: %1"
-msgstr "Mis à jour : %1"
-
-msgid "No goals recorded."
-msgstr "Aucun but enregistré."
-
-msgid "Game not started yet."
-msgstr "La partie n'a pas encore commencé."
-
-msgid "Goals"
-msgstr "Buts"
-
-msgid "Assists: "
-msgstr "Passes : "
-
-msgid "Shots on Goal"
-msgstr "Tirs au but"
-
-msgid "Shots"
-msgstr "Tirs"
-
-msgid "Power Play"
-msgstr "Avantage numérique"
-
-msgid "Faceoffs %"
-msgstr "Mises en jeu %"
-
-msgid "Hits"
-msgstr "Mises en échec"
-
-msgid "Blocks"
-msgstr "Tirs bloqués"
-
-msgid "Giveaways"
-msgstr "Pertes de rondelle"
-
-msgid "Takeaways"
-msgstr "Vols de rondelle"
-
-msgid "PIM"
-msgstr "PUN"
-
-msgid "NHL.com"
-msgstr "NHL.com"
-
-msgid "No games today"
-msgstr "Aucune partie aujourd'hui"
-
-msgid "GOAL"
-msgstr "BUT"
+msgid "Shootout"
+msgstr "Tirs de barrage"
 
 msgid "Intermission"
 msgstr "Entracte"
@@ -130,137 +77,73 @@ msgstr "2e entracte"
 msgid "3rd intermission"
 msgstr "3e entracte"
 
-msgid "1st period"
-msgstr "1re période"
+# ── Buts ────────────────────────────────────────────────────────
+msgid "GOAL"
+msgstr "BUT"
 
-msgid "2nd period"
-msgstr "2e période"
+msgid "Goals"
+msgstr "Buts"
 
-msgid "3rd period"
-msgstr "3e période"
+msgid "No goals recorded."
+msgstr "Aucun but enregistré."
 
-msgid "Overtime"
-msgstr "Prolongation"
+msgid "Power Play"
+msgstr "Avantage numérique"
 
-msgid "Shootout"
-msgstr "Tirs de barrage"
+# ── Stats de match ───────────────────────────────────────────────
+msgid "Shots on Goal"
+msgstr "Tirs au but"
 
-msgid "Period"
-msgstr "Période"
+msgid "Shots"
+msgstr "Tirs"
 
-msgid "Starts at"
-msgstr "Début à"
-# ── configGeneral.qml ───────────────────────────────────────────────────
+msgid "Hits"
+msgstr "Mises en échec"
 
-msgid "Favorite teams"
-msgstr "Équipes favorites"
+msgid "Blocks"
+msgstr "Tirs bloqués"
 
-msgid "Display"
-msgstr "Affichage"
+msgid "Faceoffs %"
+msgstr "% de mises en jeu"
 
+msgid "PIM"
+msgstr "PUN"
 
-msgid "Select / deselect all teams"
-msgstr "Tout sélectionner / désélectionner"
+msgid "Giveaways"
+msgstr "Revirements offensifs"
 
-msgid "Days ahead:"
-msgstr "Jours à l'avance :"
+msgid "Takeaways"
+msgstr "Revirements défensifs"
 
-msgid "Max games to display:"
-msgstr "Nombre max de parties :"
+# ── Navigation / popup ──────────────────────────────────────────
+msgid "‹ Back"
+msgstr "‹ Retour"
 
+msgid "NHL.com"
+msgstr "NHL.com"
 
-msgid "Show games from two days ago"
-msgstr "Afficher les parties d'avant-hier"
+# ── Classement ──────────────────────────────────────────────────
+msgid "Standings"
+msgstr "Classement"
 
+msgid "Wild Card Standings"
+msgstr "Classement"
 
-msgid "Goal blink duration:"
-msgstr "Durée du clignotement sur but :"
+msgid "Wild Card"
+msgstr "Wild Card"
 
-msgid "sec. (0 = disabled)"
-msgstr "sec. (0 = désactivé)"
+msgid "Eastern Conference"
+msgstr "Conférence Est"
 
-msgid "Show yesterday's games"
-msgstr "Afficher les parties d'hier"
+msgid "Western Conference"
+msgstr "Conférence Ouest"
 
-# ── configDisplay.qml ───────────────────────────────────────────────────
-
-msgid "Status badge colors"
-msgstr "Couleurs des pastilles de statut"
-
-msgid "Badge options"
-msgstr "Options des pastilles"
-
-msgid "Layout"
-msgstr "Disposition"
-
-msgid "LIVE:"
-msgstr "EN DIRECT :"
-
-msgid "Upcoming:"
-msgstr "À venir :"
-
-msgid "Final:"
-msgstr "Final :"
-
-msgid "Choose LIVE color"
-msgstr "Choisir la couleur EN DIRECT"
-
-msgid "Choose Upcoming color"
-msgstr "Choisir la couleur À VENIR"
-
-msgid "Choose Final color"
-msgstr "Choisir la couleur FINAL"
-
-msgid "Reset to default"
-msgstr "Réinitialiser"
-
-msgid "Show OT/SO suffix in badge"
-msgstr "Afficher le suffixe PR/TB dans la pastille"
-
-msgid "Show upcoming game time under badge"
-msgstr "Afficher l'heure des parties à venir sous la pastille"
-
-msgid "Score layout:"
-msgstr "Disposition du score :"
-
-msgid "Score next to name (row)"
-msgstr "Score à côté du nom (rangée)"
-
-msgid "Score below (column)"
-msgstr "Score en dessous (colonne)"
-
-msgid "Date mode:"
-msgstr "Mode de date :"
-
-msgid "Local timezone (computer)"
-msgstr "Fuseau local (ordinateur)"
-
-msgid "Venue timezone (arena)"
-msgstr "Fuseau de l'aréna"
-
-msgid "Fixed (vertical panel)"
-msgstr "Fixe (panneau vertical)"
-
-msgid "LIVE"
-msgstr "EN DIRECT"
-
-msgid "Schedule"
-msgstr "Calendrier"
-
-msgid "vs"
-msgstr "vs"
-
-msgid "@"
-msgstr "@"
-
-msgid "Stats"
-msgstr "Stats"
-
-msgid "Player"
-msgstr "Joueur"
-
+# ── Colonnes classement / stats ──────────────────────────────────
 msgid "PJ"
 msgstr "PJ"
+
+msgid "PTS"
+msgstr "PTS"
 
 msgid "B"
 msgstr "B"
@@ -268,12 +151,195 @@ msgstr "B"
 msgid "A"
 msgstr "A"
 
-msgid "PTS"
-msgstr "PTS"
-
 msgid "+/-"
 msgstr "+/-"
+
+msgid "Team"
+msgstr "Équipe"
+
+msgid "Player"
+msgstr "Joueur"
+
+# ── Calendrier / Stats équipe ────────────────────────────────────
+msgid "Schedule"
+msgstr "Calendrier"
+
+msgid "Stats"
+msgstr "Stats"
 
 msgid "Goalies"
 msgstr "Gardiens"
 
+# ── Preview match à venir ────────────────────────────────────────
+msgid "Season series"
+msgstr "Série saison"
+
+msgid "Record"
+msgstr "Fiche"
+
+msgid "GF/GP"
+msgstr "BP/PJ"
+
+msgid "GA/GP"
+msgstr "BC/PJ"
+
+msgid "Points leaders (last 5 games)"
+msgstr "Meneurs aux points (5 dernières parties)"
+
+msgid "Assists"
+msgstr "Passes"
+
+msgid "Assists: "
+msgstr "Passes : "
+
+msgid "Probable goalies"
+msgstr "Gardiens probables"
+
+# ── Config ───────────────────────────────────────────────────────
+msgid "Goal blink duration"
+msgstr "Durée du clignotement sur but"
+
+msgid "sec. (0 = disabled)"
+msgstr "sec. (0 = désactivé)"
+
+msgid "Fixed (vertical panel)"
+msgstr "Fixe (panneau vertical)"
+
+msgid "Show yesterday's games"
+msgstr "Afficher les parties d'hier"
+
+# ── Jours et mois (date longue traduite) ─────────────────────────
+msgid "Sunday"
+msgstr "Dimanche"
+
+msgid "Monday"
+msgstr "Lundi"
+
+msgid "Tuesday"
+msgstr "Mardi"
+
+msgid "Wednesday"
+msgstr "Mercredi"
+
+msgid "Thursday"
+msgstr "Jeudi"
+
+msgid "Friday"
+msgstr "Vendredi"
+
+msgid "Saturday"
+msgstr "Samedi"
+
+msgid "January"
+msgstr "Janvier"
+
+msgid "February"
+msgstr "Février"
+
+msgid "March"
+msgstr "Mars"
+
+msgid "April"
+msgstr "Avril"
+
+msgid "May"
+msgstr "Mai"
+
+msgid "June"
+msgstr "Juin"
+
+msgid "July"
+msgstr "Juillet"
+
+msgid "August"
+msgstr "Août"
+
+msgid "September"
+msgstr "Septembre"
+
+msgid "October"
+msgstr "Octobre"
+
+msgid "November"
+msgstr "Novembre"
+
+msgid "December"
+msgstr "Décembre"
+
+msgid "Badge options"
+msgstr "Options de pastille"
+
+msgid "Choose Final color"
+msgstr "Choisir la couleur Finale"
+
+msgid "Choose LIVE color"
+msgstr "Choisir la couleur EN DIRECT"
+
+msgid "Choose Upcoming color"
+msgstr "Choisir la couleur À venir"
+
+msgid "Date mode:"
+msgstr "Mode de date :"
+
+msgid "Days ahead:"
+msgstr "Jours à l'avance :"
+
+msgid "Display"
+msgstr "Affichage"
+
+msgid "Favorite teams"
+msgstr "Équipes favorites"
+
+msgid "Final:"
+msgstr "Finale :"
+
+msgid "Goal blink duration:"
+msgstr "Durée du clignotement de but :"
+
+msgid "LIVE:"
+msgstr "EN DIRECT :"
+
+msgid "Layout"
+msgstr "Disposition"
+
+msgid "Local timezone (computer)"
+msgstr "Fuseau horaire local (ordinateur)"
+
+msgid "Max games to display:"
+msgstr "Nombre max de matchs à afficher :"
+
+msgid "Notifications"
+msgstr "Notifications"
+
+msgid "Reset to default"
+msgstr "Réinitialiser"
+
+msgid "Score below (column)"
+msgstr "Score en dessous (colonne)"
+
+msgid "Score layout:"
+msgstr "Disposition du score :"
+
+msgid "Score next to name (row)"
+msgstr "Score à côté du nom (rangée)"
+
+msgid "Select / deselect all teams"
+msgstr "Sélectionner / désélectionner toutes les équipes"
+
+msgid "Show OT/SO suffix in badge"
+msgstr "Afficher le suffixe PR/TB dans la pastille"
+
+msgid "Show games from two days ago"
+msgstr "Afficher les matchs d'avant-hier"
+
+msgid "Show upcoming game time under badge"
+msgstr "Afficher l'heure du prochain match sous la pastille"
+
+msgid "Status badge colors"
+msgstr "Couleurs des pastilles de statut"
+
+msgid "Upcoming:"
+msgstr "À venir :"
+
+msgid "Venue timezone (arena)"
+msgstr "Fuseau horaire du lieu (aréna)"
