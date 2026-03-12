@@ -6,7 +6,7 @@ provided via gettext (`.po` → `.mo`).
 ## Install (local user)
 
 ```bash
-kpackagetool6 -t Plasma/Applet -i org.dany.nhlscores-3.0.plasmoid
+kpackagetool6 -t Plasma/Applet -i org.dany.nhlscores-3.2.plasmoid
 ```
 ## Translations
 
