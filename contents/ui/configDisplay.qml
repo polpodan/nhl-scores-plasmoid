@@ -10,13 +10,17 @@ Item {
   id: page
   implicitWidth: 600
   implicitHeight: 400
+  property string title: ""  // requis par Plasma
 
-  // Panneau vertical → disposition scoreLayout imposée, option masquée
+  // Panneau vertical ou bureau → disposition fixe
   readonly property bool isVertical: Plasmoid.formFactor === PlasmaCore.Types.Vertical
+  readonly property bool isDesktop:  Plasmoid.formFactor === PlasmaCore.Types.Planar
 
   // ── Propriétés liées à main.xml ──────────────────────────────────────
   property string cfg_scoreLayout
   property string cfg_scoreLayoutDefault
+  property bool   cfg_ultraCompact
+  property bool   cfg_ultraCompactDefault
   property string cfg_liveColor
   property string cfg_liveColorDefault
   property string cfg_upcomingColor
@@ -209,20 +213,26 @@ Item {
       Kirigami.FormData.label: i18n("Layout")
     }
 
-    // Score layout — masqué en panneau vertical (disposition fixe colonne)
+    // Score layout — grisé en panneau vertical ou bureau
     QQC2.ComboBox {
       Kirigami.FormData.label: i18n("Score layout:")
-      model: [ i18n("Score below (column)"), i18n("Score next to name (row)") ]
-      currentIndex: indexFromValue(page.cfg_scoreLayout)
-      onActivated: page.cfg_scoreLayout = valueFromIndex(currentIndex)
-      enabled: !page.isVertical
-      opacity: page.isVertical ? 0.4 : 1.0
-      visible: !page.isVertical
+      model: [ i18n("Score below (column)"), i18n("Score next to name (row)"), i18n("Ultra-compact (dots + score)") ]
+      currentIndex: page.cfg_ultraCompact ? 2 : indexFromValue(page.cfg_scoreLayout)
+      onActivated: {
+        if (currentIndex === 2) {
+          page.cfg_ultraCompact = true
+        } else {
+          page.cfg_ultraCompact = false
+          page.cfg_scoreLayout = valueFromIndex(currentIndex)
+        }
+      }
+      enabled: !page.isVertical && !page.isDesktop
+      opacity: (page.isVertical || page.isDesktop) ? 0.4 : 1.0
     }
     QQC2.Label {
-      visible: page.isVertical
-      Kirigami.FormData.label: i18n("Score layout:")
-      text: i18n("Fixed (vertical panel)")
+      visible: page.isVertical || page.isDesktop
+      Kirigami.FormData.label: ""
+      text: page.isDesktop ? i18n("N/A (desktop widget)") : i18n("Fixed (vertical panel)")
       opacity: 0.5
       font.italic: true
     }

@@ -7,6 +7,7 @@ Item {
   id: page
   implicitWidth: 600
   implicitHeight: 400
+  property string title: ""  // requis par Plasma
 
   // --- CONFIG ---
   property string cfg_favorites
@@ -17,6 +18,8 @@ Item {
   property bool   cfg_showTwoDaysAgo
   property int    cfg_blinkDuration
   // cfg_ Display (injectées par Plasma dans tous les fichiers de config)
+  property bool   cfg_ultraCompact
+  property bool   cfg_ultraCompactDefault
   property string cfg_scoreLayout
   property string cfg_liveColor
   property string cfg_upcomingColor
@@ -49,7 +52,7 @@ Item {
   readonly property int chipH: 32
 
   readonly property var teamColors: ({
-    "ANA":"#F47A38","ARI":"#8C2633","UTA":"#6E2B62","BOS":"#FFB81C","BUF":"#003087",
+    "ANA":"#F47A38","UTA":"#6E2B62","UTA":"#6E2B62","BOS":"#FFB81C","BUF":"#003087",
     "CAR":"#CC0000","CBJ":"#002654","CGY":"#C8102E","CHI":"#CF0A2C","COL":"#6F263D",
     "DAL":"#006847","DET":"#CE1126","EDM":"#FF4C00","FLA":"#C8102E","LAK":"#111111",
     "MIN":"#154734","MTL":"#AF1E2D","NJD":"#CE1126","NSH":"#FFB81C","NYI":"#00539B",
@@ -74,7 +77,7 @@ Item {
   readonly property var divisions: [
     { title: "Atlantic",     teams: ["BOS","BUF","DET","FLA","MTL","OTT","TBL","TOR"] },
     { title: "Metropolitan", teams: ["CAR","CBJ","NJD","NYI","NYR","PHI","PIT","WSH"] },
-    { title: "Central",      teams: ["ARI","CHI","COL","DAL","MIN","NSH","STL","WPG"] },
+    { title: "Central",      teams: ["UTA","CHI","COL","DAL","MIN","NSH","STL","WPG"] },
     { title: "Pacific",      teams: ["ANA","CGY","EDM","LAK","SJS","SEA","VAN","VGK"] }
   ]
 
@@ -362,7 +365,7 @@ Item {
         }
       }
 
-      // Cases à cocher : hier / avant-hier
+      // Cases à cocher : hier / avant-hier + mode ultra-compact
       ColumnLayout {
         Layout.alignment: Qt.AlignHCenter
         spacing: 6
@@ -376,6 +379,7 @@ Item {
           checked: cfg_showTwoDaysAgo
           onToggled: cfg_showTwoDaysAgo = checked
         }
+
       }
 
       // ════════════════════════════════════════════════════

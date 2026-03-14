@@ -4,6 +4,47 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [3.3] — 2026-03-14
+
+### Added
+
+- **Power play / empty net indicator in applet** — a colored badge appears below the clock in the compact applet during power plays (PP 5v4, 5v3, 4v4, 3v3) and displays the empty net emoji 🥅 when a goalie has been pulled. The badge uses the power play team's color. The situation is calculated by counting skaters and goalies from `summary.iceSurface` in the gamecenter landing API, since `situationCode` is not available in any NHL scoreboard endpoint.
+- **Penalty box display in game detail popup** — active penalties are shown in the detail popup during live games, with the penalized player's number, name, and time remaining per side. Data sourced from `summary.iceSurface.penaltyBox` in the landing API.
+- **Intermission countdown** — during intermissions, the remaining time before the next faceoff is displayed in the compact applet badge (below INT) and in the game detail popup. Time is sourced directly from `clock.timeRemaining` in the play-by-play API.
+- **Ultra-compact display mode** — a new "Ultra-compact (dots + score)" option in Display settings renders each game as two small colored circles with the team's initial, separated by the score (e.g. 🔴M 3–2 B🟡). Upcoming games show only the two dots. Games are grouped by date with `|DD/MM|` separators. No time or team name is shown, maximizing density.
+- **Date group separators** — games are now grouped by date in the compact applet. A `|DD/MM|` separator is injected between groups of upcoming games on different dates, eliminating the repeated date shown on each upcoming game badge.
+- **Team color gradients in applet** — each game card in the compact applet (horizontal and vertical modes) has a subtle background gradient from the away team's color to the home team's color during live games. The best-contrast combination of primary and secondary team colors is selected automatically using Euclidean RGB distance.
+- **Colored separators in game detail popup** — the five horizontal dividers inside the game detail popup are rendered as a gradient from the away team's color to the home team's color, replacing the plain grey lines.
+- **Secondary team colors** — a full table of official secondary colors for all 32 NHL teams is included, used by `bestGradientColors()` to resolve conflicts between teams with similar primary colors (e.g. TOR vs TBL, BOS vs NSH).
+- **Standings button in game detail popup** — the game detail popup now has a direct "Standings" button that opens the Wild Card standings without closing the match context. A "‹ Match" back button returns from standings to the open game.
+- **`blinkOpacity()` helper function** — replaces 8 verbose inline opacity expressions throughout the code with a single reusable function call.
+
+### Changed
+
+- **Compact applet card layout redesigned** — in "score below" mode, each game is now displayed as a fixed-width card with rounded corners, a subtle status-colored background (green for LIVE, blue for UPCOMING, grey for FINAL), team badges flanking the status badge, and the score centered below. All cards share the same width for a uniform scoreboard appearance.
+- **Popup navigation simplified** — the intermediate "game list" popup (the buggy list shown before opening a game detail) has been removed entirely. Clicking a game now opens the detail popup directly. The detail popup has a ✕ close button, a Standings button, and an NHL.com button.
+- **`upcomingWhenText()` shows time only** — for upcoming games on a future date, the function now returns only the local start time (not the date), since the date is already provided by the group separator.
+- **ARI replaced by UTA** — Arizona Coyotes (ARI) replaced by Utah Hockey Club (UTA) in the team selector and division assignments in `configGeneral.qml` and `teamColors`.
+- **Polling interval reduced to 20 s** — both `pollTimer` and `detailRefreshTimer` reduced from 30 s to 20 s for more responsive score and situation updates during live games.
+
+### Fixed
+
+- **`situationCode` unavailable in NHL APIs** — neither `/v1/score/now` nor `/v1/scoreboard/{date}` nor `/v1/gamecenter/{id}/play-by-play` expose `situationCode`. The field is now computed by counting players in `summary.iceSurface` from the landing endpoint, which is polled alongside `fetchClock` during live games.
+- **0v0 situation shown at period start** — when players have not yet taken the ice (start of period, end of intermission), `iceSurface` returns empty arrays. `parseSituation()` now returns `null` when both skater counts are zero, preventing a spurious "0v0 / empty net" display.
+- **Polish loop in horizontal compact Repeater** — a `Row` delegate inside a `Row` parent caused a Qt layout polish loop. Fixed by giving the delegate a fixed `height: compactRoot.height` and isolating the ultra-compact `Row` outside of `cardBg`.
+- **Ultra-compact mode overlap on layout switch** — switching from another layout mode to ultra-compact left residual elements visible due to QML not destroying `visible:false` children. Fixed by moving the UC `Row` outside `cardBg`, hiding `cardBg` in UC mode, and forcing `hRepeater` model reset on `ultraCompactChanged`.
+- **`DATE_SEP` items counted toward `maxGames`** — date separator items injected into `todayGames` were counted by `index < maxGames`, causing fewer real games to display than configured. Fixed by adding a `gameIndex` role (real game index, -1 for separators) and using `gameIndex < maxGames` for visibility.
+- **`DATE_SEP` appearing in tooltip** — date separator entries produced spurious "0–0 · Final" lines in the applet tooltip. Fixed by skipping `DATE_SEP` entries in the `_tooltipSub` loop.
+- **Score layout ComboBox active in desktop mode** — the score layout selector in Display settings was enabled in desktop (planar) widget mode where it has no effect. It is now grayed out with a "N/A (desktop widget)" label, consistent with the existing vertical panel behavior.
+- **`cfg_ultraCompactDefault` missing** — Plasma requires a `*Default` property for every `cfg_*` binding. Added `cfg_ultraCompactDefault` to both `configGeneral.qml` and `configDisplay.qml`.
+- **`title` property missing from config pages** — Plasma injects a `title` property into config pages; added `property string title: ""` to both config files to suppress the startup warning.
+
+### Localization
+
+- **fr.po updated** — 15 new entries added for v3.3 additions: ultra-compact layout label, N/A desktop widget, ‹ Match back button, ✕ close button, and date/mode strings. Total: 170 entries across `main.qml`, `configGeneral.qml`, and `configDisplay.qml`.
+
+---
+
 ## [3.2] — 2026-03-11
 
 ### Added
