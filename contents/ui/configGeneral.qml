@@ -11,6 +11,7 @@ Item {
 
   // --- CONFIG ---
   property string cfg_favorites
+  property string cfg_favoriteTeamSound
   property bool   cfg_showAllTeams
   property int    cfg_maxGames
   property int    cfg_lookaheadDays
@@ -29,6 +30,14 @@ Item {
   property string cfg_dateMode
 
   // Defaults
+  property string cfg_favoritesDefault
+  property string cfg_favoriteTeamSoundDefault
+  property bool   cfg_showAllTeamsDefault
+  property int    cfg_maxGamesDefault
+  property int    cfg_lookaheadDaysDefault
+  property bool   cfg_showYesterdayDefault
+  property bool   cfg_showTwoDaysAgoDefault
+  property int    cfg_blinkDurationDefault
   property string cfg_scoreLayoutDefault
   property string cfg_liveColorDefault
   property string cfg_upcomingColorDefault
@@ -36,13 +45,6 @@ Item {
   property bool   cfg_showOvertimeSuffixDefault
   property bool   cfg_showUpcomingTimeDefault
   property string cfg_dateModeDefault
-  property string cfg_favoritesDefault
-  property bool   cfg_showAllTeamsDefault
-  property int    cfg_maxGamesDefault
-  property int    cfg_lookaheadDaysDefault
-  property bool   cfg_showYesterdayDefault
-  property bool   cfg_showTwoDaysAgoDefault
-  property int    cfg_blinkDurationDefault
 
   // --- WORK VARS ---
   property string favString: cfg_favorites || "VAN,TOR"
@@ -397,6 +399,39 @@ Item {
           onValueModified: cfg_blinkDuration = value
         }
         QQC2.Label { text: i18n("sec. (0 = disabled)"); opacity: 0.6 }
+      }
+
+      // Équipe favorite pour les notifications sonores
+      RowLayout {
+        Layout.alignment: Qt.AlignHCenter
+        spacing: 8
+        QQC2.Label {
+          text: i18n("Sound notification for team:")
+          verticalAlignment: Text.AlignVCenter
+        }
+        QQC2.ComboBox {
+          id: favSoundCombo
+          property var teams: ['', 'ANA','UTA','BOS','BUF','CAR','CBJ','CGY','CHI',
+                               'COL','DAL','DET','EDM','FLA','LAK','MIN','MTL',
+                               'NJD','NSH','NYI','NYR','OTT','PHI','PIT','SEA',
+                               'SJS','STL','TBL','TOR','VAN','VGK','WPG','WSH']
+          model: {
+            var labels = [i18n("Disabled")]
+            for (var i = 1; i < teams.length; i++) labels.push(teams[i])
+            return labels
+          }
+          currentIndex: {
+            var idx = teams.indexOf(cfg_favoriteTeamSound || '')
+            return idx >= 0 ? idx : 0
+          }
+          onActivated: cfg_favoriteTeamSound = teams[currentIndex] || ''
+          implicitWidth: 90
+        }
+        QQC2.Label {
+          text: i18n("🚨 siren on goal")
+          opacity: 0.6
+          visible: (cfg_favoriteTeamSound || '') !== ''
+        }
       }
 
       Item { implicitHeight: 8 }

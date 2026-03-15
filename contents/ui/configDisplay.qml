@@ -19,6 +19,8 @@ Item {
   // ── Propriétés liées à main.xml ──────────────────────────────────────
   property string cfg_scoreLayout
   property string cfg_scoreLayoutDefault
+  property string cfg_favoriteTeamSound
+  property string cfg_favoriteTeamSoundDefault
   property bool   cfg_ultraCompact
   property bool   cfg_ultraCompactDefault
   property string cfg_liveColor
