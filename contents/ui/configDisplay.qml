@@ -21,6 +21,8 @@ Item {
   property string cfg_scoreLayoutDefault
   property string cfg_favoriteTeamSound
   property string cfg_favoriteTeamSoundDefault
+  property string cfg_soundTeams
+  property string cfg_soundTeamsDefault
   property bool   cfg_ultraCompact
   property bool   cfg_ultraCompactDefault
   property string cfg_liveColor

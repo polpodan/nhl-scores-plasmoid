@@ -447,3 +447,9 @@ msgstr "Choisir la couleur FINAL"
 
 msgid "Reset to default"
 msgstr "Réinitialiser"
+
+msgid "Divisions"
+msgstr "Divisions"
+
+msgid "League"
+msgstr "Ligue"

@@ -22,6 +22,9 @@
     <entry name="favoriteTeamSound" type="String">
       <default></default>
     </entry>
+    <entry name="soundTeams" type="String">
+      <default></default>
+    </entry>
     <entry name="maxGames" type="Int">
       <default>10</default>
     </entry>

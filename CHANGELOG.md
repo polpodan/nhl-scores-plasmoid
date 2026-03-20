@@ -4,6 +4,44 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [4.1.0] — 2026-03-19
+
+### Added
+
+- **Team statistics with progress bars** — the game detail popup now displays team stats styled like NHL.com: Faceoffs %, Power Play, PIM, Hits, Blocked Shots, Giveaways, and Takeaways, each with a bicolor progress bar in the away/home team colors. During live games, stats are aggregated in real time from `playerByGameStats` (forwards + defense). After the game, stats are sourced from `teamGameStats`.
+- **Standings modes** — the standings popup now has three toggle buttons: **Wild Card** (existing), **Divisions** (all 4 divisions with playoff cutoff separator), **League** (all 32 teams ranked by points).
+- **League standings table** — in League mode, the table shows GP, W, L, OT, PTS, GF, GA, S/O, HOME, AWAY, L10, and STRK. Clicking any sortable column header (GP, W, L, OT, PTS, GF, GA) sorts ascending or descending with a ↑/↓ arrow indicator. The active sort column is highlighted.
+- **Per-team goal sound notifications** — multiple teams can now have sound notifications enabled simultaneously. Each team plays its own sound file (`contents/sounds/{abbrev}.mp3`, e.g. `mtl.mp3`). Notifications fire only for teams that are also in the followed favorites.
+- **Sound preview on toggle** — clicking the 🎵 badge on a team chip in General settings plays the team's sound immediately as a preview. Clicking again stops it.
+- **🎵 badge on team chips** — in General settings, each selected (followed) team chip shows a small badge in the top-right corner: dark = no sound, yellow = sound enabled. Clicking the badge toggles the sound for that team independently of the follow status.
+- **OT/SO suffix under Final badge** — completed games that ended in overtime show `Final` on line 1 and `OT` (or `TB` in French) on line 2 of the status badge. Regular-time finals show only `Final` with no second line.
+
+### Changed
+
+- **`showYesterday` / `showTwoDaysAgo` use rolling window** — "Show yesterday's games" now includes games that started within the last 24 hours (rolling), and "Show games from two days ago" covers the last 48 hours. Today's games are always shown regardless of the option. This is intentionally approximate for a more intuitive experience.
+- **`badgeLine2` no longer shows the date** — previously displayed the game date under the Final badge; now only shows `OT` or `SO` when applicable, and nothing for regulation finals.
+- **`badgeLine1` no longer appends OT/SO suffix to Final** — the suffix is now exclusively handled by `badgeLine2` to avoid duplication.
+- **League standings sort** — S/O, HOME, AWAY, L10, and STRK columns are not sortable (composite W-L-OT format); GP, W, L, OT, PTS, GF, GA are sortable with click-to-toggle direction.
+- **HOME / AWAY / L10 format** — always shown as `W-L-OT` (e.g. `23-12-0`) for visual consistency, even when OT = 0.
+
+### Fixed
+
+- **`finalWhenText` removed** — dead function no longer called anywhere; cleaned up.
+- **`buildStandingsModel` role initialization** — QML `ListModel` roles are determined by the first appended item. Switching from Wild Card to League mode caused all new fields (`gf`, `ga`, `hw`, etc.) to display as 0 because the roles weren't registered. Fixed by prepending and immediately removing a full-schema sentinel item before building the model.
+- **`pending=3` / `done()` mismatch in `openTeamHub`** — verified and confirmed balanced (schedule, standings, coach static table each call `done()` exactly once).
+- **Stats showing 0 during live games** — `detailStats = st` was assigned before the `playerByGameStats` aggregation completed. Moved the assignment to after the full aggregation.
+
+### Removed
+
+- **Single favorite team sound selector (ComboBox)** — replaced by the per-team 🎵 badge system. The `favoriteTeamSound` property is kept as a legacy fallback for users upgrading from v4.0.
+- **Date display under Final badge** — replaced by OT/SO suffix (or nothing for regulation finals).
+
+### Localization
+
+- **fr.po** — new entries: `Divisions`, `League` (→ `Ligue`).
+
+---
+
 ## [4.0.0] — 2026-03-15
 
 ### Added

@@ -2,6 +2,7 @@ import QtQuick 2.15
 import QtQuick.Layouts 1.15
 import QtQuick.Controls 2.15 as QQC2
 import org.kde.kirigami 2.20 as Kirigami
+import QtMultimedia
 
 Item {
   id: page
@@ -9,9 +10,15 @@ Item {
   implicitHeight: 400
   property string title: ""  // requis par Plasma
 
+  MediaPlayer {
+    id: previewSound
+    audioOutput: AudioOutput { volume: 1.0 }
+  }
+
   // --- CONFIG ---
   property string cfg_favorites
   property string cfg_favoriteTeamSound
+  property string cfg_soundTeams
   property bool   cfg_showAllTeams
   property int    cfg_maxGames
   property int    cfg_lookaheadDays
@@ -32,6 +39,7 @@ Item {
   // Defaults
   property string cfg_favoritesDefault
   property string cfg_favoriteTeamSoundDefault
+  property string cfg_soundTeamsDefault
   property bool   cfg_showAllTeamsDefault
   property int    cfg_maxGamesDefault
   property int    cfg_lookaheadDaysDefault
@@ -49,6 +57,31 @@ Item {
   // --- WORK VARS ---
   property string favString: cfg_favorites || "VAN,TOR"
   property var selected: ({})
+  onCfg_soundTeamsChanged: rebuildSoundSet()
+  property var soundSet: ({})
+
+  function rebuildSoundSet() {
+    var s = {}
+    var arr = (cfg_soundTeams||'').split(',').filter(function(x){return x.length>0})
+    for (var i=0;i<arr.length;i++) s[arr[i]] = true
+    soundSet = s
+  }
+
+  function toggleSound(abbrev) {
+    var s = soundSet
+    var enabling = !s[abbrev]
+    if (s[abbrev]) delete s[abbrev]
+    else s[abbrev] = true
+    soundSet = s
+    cfg_soundTeams = Object.keys(s).join(',')
+    // Jouer le son en aperçu quand on l'active
+    if (enabling) {
+        previewSound.source = Qt.resolvedUrl("../sounds/" + abbrev.toLowerCase() + ".mp3")
+        previewSound.play()
+    } else {
+        previewSound.stop()
+    }
+  }
 
   readonly property int chipW: 58
   readonly property int chipH: 32
@@ -149,7 +182,10 @@ Item {
     rebuildFavString()
   }
 
-  Component.onCompleted: selected = parseFavs(favString)
+  Component.onCompleted: {
+    selected = parseFavs(favString)
+    rebuildSoundSet()
+  }
 
   // ── Pastille d'équipe ────────────────────────────────────────────────
   Component {
@@ -158,19 +194,25 @@ Item {
       width: page.chipW
       height: page.chipH
       property string abbr: ""
-      property bool checked: !!selected[abbr]
+      property bool checked:    !!selected[abbr]
+      property bool hasSnd:     !!soundSet[abbr]
       scale: checked ? 1.06 : 1.0
       Behavior on scale { NumberAnimation { duration: 120 } }
+
+      // Fond coloré
       Rectangle {
         anchors.fill: parent; radius: 7
         color: teamColors[abbr] || "#888"
         border.color: checked ? Kirigami.Theme.highlightColor : "#55ffffff"
         border.width: checked ? 3 : 1
       }
+      // Overlay clair si sélectionné
       Rectangle {
         anchors.fill: parent; radius: 7
         visible: checked; color: "white"; opacity: 0.15
       }
+
+      // Contenu : ✓ + abréviation
       Row {
         anchors.centerIn: parent; spacing: 4
         Rectangle {
@@ -190,12 +232,42 @@ Item {
           anchors.verticalCenter: parent.verticalCenter
         }
       }
+
+      // Clic principal = toggle suivi
       MouseArea {
         anchors.fill: parent; cursorShape: Qt.PointingHandCursor
-        onClicked: {
+        z: 1
+        onClicked: function(mouse) {
           var s = selected; s[abbr] = !s[abbr]
+          if (!s[abbr] && page.soundSet[abbr]) page.toggleSound(abbr)
           selected = {}; selected = s
           rebuildFavString()
+        }
+      }
+
+      // 🎵 icône son — visible seulement si équipe suivie
+      Rectangle {
+        visible: checked
+        anchors { top: parent.top; right: parent.right }
+        anchors.topMargin: -4; anchors.rightMargin: -4
+        width: 18; height: 18; radius: 9
+        color: hasSnd ? "#ffcc00" : Qt.rgba(0,0,0,0.55)
+        border.color: "white"; border.width: 1.5
+        z: 10
+        Text {
+          anchors.centerIn: parent
+          text: "🎵"
+          font.pixelSize: 9
+        }
+        MouseArea {
+          anchors.fill: parent
+          anchors.margins: -4
+          cursorShape: Qt.PointingHandCursor
+          z: 20
+          onClicked: function(mouse) {
+            mouse.accepted = true
+            page.toggleSound(abbr)
+          }
         }
       }
     }
@@ -401,38 +473,7 @@ Item {
         QQC2.Label { text: i18n("sec. (0 = disabled)"); opacity: 0.6 }
       }
 
-      // Équipe favorite pour les notifications sonores
-      RowLayout {
-        Layout.alignment: Qt.AlignHCenter
-        spacing: 8
-        QQC2.Label {
-          text: i18n("Sound notification for team:")
-          verticalAlignment: Text.AlignVCenter
-        }
-        QQC2.ComboBox {
-          id: favSoundCombo
-          property var teams: ['', 'ANA','UTA','BOS','BUF','CAR','CBJ','CGY','CHI',
-                               'COL','DAL','DET','EDM','FLA','LAK','MIN','MTL',
-                               'NJD','NSH','NYI','NYR','OTT','PHI','PIT','SEA',
-                               'SJS','STL','TBL','TOR','VAN','VGK','WPG','WSH']
-          model: {
-            var labels = [i18n("Disabled")]
-            for (var i = 1; i < teams.length; i++) labels.push(teams[i])
-            return labels
-          }
-          currentIndex: {
-            var idx = teams.indexOf(cfg_favoriteTeamSound || '')
-            return idx >= 0 ? idx : 0
-          }
-          onActivated: cfg_favoriteTeamSound = teams[currentIndex] || ''
-          implicitWidth: 90
-        }
-        QQC2.Label {
-          text: i18n("🚨 siren on goal")
-          opacity: 0.6
-          visible: (cfg_favoriteTeamSound || '') !== ''
-        }
-      }
+      // Note : la sélection sonore se fait directement sur les pastilles d'équipes (🎵)
 
       Item { implicitHeight: 8 }
     }
