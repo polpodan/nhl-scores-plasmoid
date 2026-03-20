@@ -453,3 +453,36 @@ msgstr "Divisions"
 
 msgid "League"
 msgstr "Ligue"
+
+msgid "just now"
+msgstr "à l'instant"
+
+msgid "1 min ago"
+msgstr "il y a 1 min"
+
+msgid "min ago"
+msgstr "min"
+
+msgid "arena"
+msgstr "aréna"
+
+msgid "local"
+msgstr "local"
+
+msgid "NHL Total"
+msgstr "Total NHL"
+
+msgid "Season"
+msgstr "Saison"
+
+msgid "Season history"
+msgstr "Historique"
+
+msgid "Season stats"
+msgstr "Stats de la saison"
+
+msgid "‹ Leaders"
+msgstr "‹ Meneurs"
+
+msgid "‹ Stats"
+msgstr "‹ Statistiques"

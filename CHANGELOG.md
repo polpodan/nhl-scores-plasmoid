@@ -4,6 +4,44 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [4.2.0] — 2026-03-20
+
+### Added
+
+- **Manual refresh button** — a 🔄 button has been added to both the game detail popup (next to NHL.com) and the desktop widget header (next to Leaders). Clicking it triggers an immediate data refresh.
+- **"Updated X min ago" indicator** — the desktop widget header now shows a relative time label ("just now", "1 min ago", "5 min ago") instead of a static clock time. The label refreshes automatically every minute.
+- **Timezone indicator in day view** — each upcoming game in the full day view now shows a second line under the start time indicating whether the time is displayed in local timezone ("local") or arena timezone ("arena"), respecting the Date mode setting configured in Display.
+- **Player profile view** — clicking any player in the League Leaders view opens a full player profile page containing:
+  - Full-width headshot photo with the player's name overlaid at the bottom
+  - Team, sweater number, position, height, weight, and birth date/city below the photo
+  - Current season stats (PJ / Goals / Assists / PTS / +/-) with labels above values, centered and spaced
+  - Complete season-by-season history table with columns: Season, League, Team, GP, G, A, PTS, +/- (or GP, W, GAA, SV%, SO for goalies)
+  - NHL team rows show a colored team badge; other leagues show the team name truncated
+  - NHL career totals row highlighted in accent color at the bottom of the history table
+- **Player profile accessible from team stats** — clicking any skater or goalie row in the team statistics view (Schedule → Stats tab) also opens the player profile. The back button contextually shows `‹ Leaders` or `‹ Stats` depending on the entry point.
+- **`resolveNHLAbbrev()` function** — resolves a team's common name (e.g. "Oilers") to its abbreviation (e.g. "EDM") using a static lookup table of all current and historical NHL franchises, without requiring standings data to be loaded.
+
+### Changed
+
+- **`openPlayer(id, from)`** — the function now accepts a second parameter (`'leaders'` or `'teamstats'`) to control the back button label in the player profile view.
+- **`scheduleSkaters` and `scheduleGoalies`** — both now include a `playerId` field sourced from the NHL API, enabling navigation to the player profile.
+- **Player profile back button** — shows `‹ Leaders` when opened from the leaders view, and `‹ Stats` when opened from team statistics.
+- **Season history `+/-`** — displays `–` for seasons in leagues that don't track plus/minus (junior leagues, international tournaments, etc.) instead of `0`.
+- **Season history team column** — uses `teamName.default` (full team name, truncated) for non-NHL teams, and a colored badge resolved via `resolveNHLAbbrev()` for NHL seasons.
+
+### Fixed
+
+- **NHL career total row showing no data** — the row used `visible: false` with conditional `Layout.preferredWidth` to switch between skater and goalie columns, but QML `RowLayout` does not remove invisible items from layout. Replaced with a `Repeater` that builds the correct column set in JavaScript, eliminating the visibility issue entirely.
+- **Season history column misalignment** — `Layout.fillWidth: true` with `visible: false` labels left invisible items occupying space. Fixed by using explicit `Layout.preferredWidth: 0` when hidden and fixed widths for all columns, matching headers and data rows exactly.
+- **`teamAbbrev` undefined in `seasonTotals`** — the NHL API does not include `teamAbbrev` in `seasonTotals` entries; only `teamCommonName` and `teamName` are present. Fixed by resolving the abbreviation via `resolveNHLAbbrev()`.
+- **`standingsData` empty when opening player profile** — `resolveNHLAbbrev()` previously depended on `standingsData` being loaded, which is not guaranteed when navigating from Leaders. Replaced with a self-contained static lookup table.
+
+### Localization
+
+- **fr.po updated** — 6 new entries: `NHL Total` → `Total NHL`, `Season` → `Saison`, `Season history` → `Historique`, `Season stats` → `Stats de la saison`, `‹ Leaders` → `‹ Meneurs`, `‹ Stats` → `‹ Statistiques`. Total: 145 entries.
+
+---
+
 ## [4.1.0] — 2026-03-19
 
 ### Added
