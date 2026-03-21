@@ -26,6 +26,14 @@ PlasmoidItem {
         id: sirenSound
         source: Qt.resolvedUrl("../sounds/siren.wav")
         audioOutput: AudioOutput { volume: 1.0 }
+        onErrorOccurred: {
+            // Si le fichier d'équipe est introuvable → fallback sirène
+            var fallback = Qt.resolvedUrl("../sounds/siren.wav")
+            if (sirenSound.source !== fallback) {
+                sirenSound.source = fallback
+                sirenSound.play()
+            }
+        }
     }
     property bool showAllTeams: Plasmoid.configuration.showAllTeams || false
     property int  maxGames:     Plasmoid.configuration.maxGames || 10
