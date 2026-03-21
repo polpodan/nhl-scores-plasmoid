@@ -21,6 +21,10 @@ Item {
   property string cfg_scoreLayoutDefault
   property string cfg_favoriteTeamSound
   property string cfg_favoriteTeamSoundDefault
+  property bool   cfg_showToday
+  property bool   cfg_showTodayDefault
+  property int    cfg_pastDays
+  property int    cfg_pastDaysDefault
   property string cfg_soundTeams
   property string cfg_soundTeamsDefault
   property bool   cfg_ultraCompact

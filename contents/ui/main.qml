@@ -30,7 +30,8 @@ PlasmoidItem {
     property bool showAllTeams: Plasmoid.configuration.showAllTeams || false
     property int  maxGames:     Plasmoid.configuration.maxGames || 10
     property bool ultraCompact: Plasmoid.configuration.ultraCompact || false
-    property int lookaheadDays: Plasmoid.configuration.lookaheadDays || 2
+    property int lookaheadDays: Plasmoid.configuration.lookaheadDays !== undefined
+                                 ? Plasmoid.configuration.lookaheadDays : 2
     function updateFavoriteTeams() {
         let f = Plasmoid.configuration.favorites || ""
         favoriteTeams = f.split(/\s*,\s*/).filter(function(s){
@@ -44,8 +45,8 @@ PlasmoidItem {
     property string scoreLayout: Plasmoid.configuration.scoreLayout || 'stack'
     property bool showUpcomingTime: (Plasmoid.configuration.showUpcomingTime !== false)
     property string dateMode: Plasmoid.configuration.dateMode || 'local'
-    property bool showYesterday: Plasmoid.configuration.showYesterday
-    property bool showTwoDaysAgo: Plasmoid.configuration.showTwoDaysAgo
+    property bool showToday:    Plasmoid.configuration.showToday
+    property int  pastDays:     Plasmoid.configuration.pastDays || 0
 
     // Action contextuelle (menu clic-droit)
     function action_refreshNow() { refresh() }
@@ -393,7 +394,6 @@ PlasmoidItem {
 
     function isSameDay(a, b) { return a.getFullYear()===b.getFullYear() && a.getMonth()===b.getMonth() && a.getDate()===b.getDate() }
     function localTimeStr(ms) { var d = new Date(ms); return Qt.formatTime(d, Qt.DefaultLocaleShortDate) }
-    function localDateStr(ms) { return Qt.formatDate(new Date(ms), "dd'/'MM") }
     function localeDateLong(ms) {
         var d = new Date(ms)
         var days   = [i18n('Sunday'),i18n('Monday'),i18n('Tuesday'),i18n('Wednesday'),
@@ -457,6 +457,11 @@ PlasmoidItem {
     property bool   dayViewLoading: false
     property string dayViewError:   ''
     property var    dayViewGames:   []
+
+    // Calendrier
+    property bool   calendarOpen:   false
+    property int    calYear:        new Date().getFullYear()
+    property int    calMonth:       new Date().getMonth()  // 0-11
     property bool   bracketLoading: false
     property string bracketError:  ''
     property var    bracketData:   null
@@ -479,7 +484,14 @@ PlasmoidItem {
     property bool   playerLoading: false
     property string playerError:   ''
     property var    playerData:    null
-    property string playerFrom:    'leaders'  // 'leaders' | 'teamstats'
+    property string playerFrom:    'leaders'  // 'leaders' | 'teamstats' | 'search'
+
+    // Recherche de joueurs
+    property bool   searchOpen:    false
+    property bool   searchLoading: false
+    property string searchError:   ''
+    property string searchQuery:   ''
+    property var    searchResults: []
 
     // ── Hub d'équipe ────────────────────────────────────────────────
     property bool   teamHubOpen:    false
@@ -493,6 +505,12 @@ PlasmoidItem {
     property string teamHubRecord:      ''   // ex: "32-28-5"
     property string teamHubCoach:       ''
     property string teamHubStanding:    ''   // ex: "3rd Atlantic"
+    property string teamHubFullName:    ''   // ex: "Maple Leafs de Toronto"
+    property int    teamHubW:           0
+    property int    teamHubL:           0
+    property int    teamHubOT:          0
+    property int    teamHubPts:         0
+    property int    teamHubGP:          0
     property var    teamHubLastGames:   []   // 5 derniers matchs
     property var    teamHubNextGame:    null // prochain match
 
@@ -597,20 +615,7 @@ PlasmoidItem {
         return pad(h) + ':' + pad(m)
     }
 
-    function venueDateStrUTC(msUTC, homeTeam){
-        var zone = teamZone(homeTeam)
-        var dStd = new Date(msUTC + zoneBaseOffsetHours(zone)*3600*1000)
-        var y = dStd.getUTCFullYear()
-        var m0 = dStd.getUTCMonth()
-        var d = dStd.getUTCDate()
-        var dst = isDstDateLocalLike(y, m0, d, zone)
-        var off = zoneBaseOffsetHours(zone) + (dst ? 1 : 0)
-        var shifted = new Date(msUTC + off*3600*1000)
-        var dd = shifted.getUTCDate()
-        var mm = shifted.getUTCMonth()+1
-        function pad(n){ return (n<10?'0':'')+n }
-        return pad(dd)+'/'+pad(mm)
-    }
+
 
     // ---- Networking ----
     function httpGet(url, cb){
@@ -705,15 +710,12 @@ PlasmoidItem {
         let base = new Date()
         base.setHours(0, 0, 0, 0)
 
-        // passé
-        if (showTwoDaysAgo) {
-            days.push(new Date(base.getTime() - 2*24*3600*1000))
-        }
-        if (showYesterday) {
-            days.push(new Date(base.getTime() - 1*24*3600*1000))
+        // jours précédents (pastDays = 1..4)
+        for (let pd = pastDays; pd >= 1; pd--) {
+            days.push(new Date(base.getTime() - pd*24*3600*1000))
         }
 
-        // aujourd'hui
+        // aujourd'hui (toujours inclus)
         days.push(new Date(base))
 
         // futur
@@ -915,12 +917,42 @@ PlasmoidItem {
         teamHubOpen    = false
         detailOpen     = false
         scheduleOpen   = false
-        httpGet("https://api-web.nhle.com/v1/score/" + dateISO,
-            function(err, data) {
+        playerOpen     = false
+        searchOpen     = false
+        calendarOpen   = false
+
+        // Choisir l'endpoint selon la date
+        var todayISO = root.dateISO(new Date())
+        var isFuture = dateISO > todayISO
+        var url = isFuture
+            ? "https://api-web.nhle.com/v1/schedule/" + dateISO
+            : "https://api-web.nhle.com/v1/score/" + dateISO
+
+        httpGet(url, function(err, data) {
                 dayViewLoading = false
                 if (err) { dayViewError = String(err); return }
-                if (!data || !data.games) { dayViewError = "No data"; return }
-                dayViewGames = data.games.map(function(g) {
+
+                // /v1/schedule/{date} → data.gameWeek[0].games
+                // /v1/score/{date}    → data.games
+                var games = []
+                if (isFuture) {
+                    var week = data.gameWeek || []
+                    for (var wi = 0; wi < week.length; wi++) {
+                        if (week[wi].date === dateISO) {
+                            games = week[wi].games || []
+                            break
+                        }
+                    }
+                    // Fallback si la date exacte n'est pas trouvée
+                    if (games.length === 0 && week.length > 0)
+                        games = week[0].games || []
+                } else {
+                    games = data.games || []
+                }
+
+                if (games.length === 0) { dayViewError = "No data"; return }
+
+                dayViewGames = games.map(function(g) {
                     var st = statusFromGame(g)
                     var per = g.periodDescriptor || {}
                     var clk = g.clock || {}
@@ -944,6 +976,45 @@ PlasmoidItem {
                     return new Date(a.start) - new Date(b.start)
                 })
             })
+    }
+
+    // ── Recherche de joueurs ─────────────────────────────────────────
+    function openSearch() {
+        searchOpen    = true
+        searchResults = []
+        searchError   = ''
+        searchQuery   = ''
+        // Fermer les autres vues sauf detailOpen
+        standingsOpen = false
+        leadersOpen   = false
+        playerOpen    = false
+    }
+
+    function fetchSearch(query) {
+        if (!query || query.length < 2) return
+        searchLoading = true
+        searchError   = ''
+        searchResults = []
+        var url = "https://search.d3.nhle.com/api/v1/search/player?q="
+                  + encodeURIComponent(query)
+                  + "&culture=fr-CA&limit=20"
+        httpGet(url, function(err, data) {
+            searchLoading = false
+            if (err) { searchError = String(err); return }
+            var players = data.players || data || []
+            if (!Array.isArray(players)) { searchError = "No results"; return }
+            searchResults = players.map(function(p) {
+                return {
+                    id:       p.playerId || 0,
+                    name:     (p.name || p.fullName || ''),
+                    team:     p.currentTeamAbbrev || '',
+                    position: p.positionCode || p.position || '',
+                    active:   p.isActive !== false,
+                    headshot: p.headshot || ''
+                }
+            })
+            if (searchResults.length === 0) searchError = i18n("No results")
+        })
     }
 
     // ── Leaders de la ligue ─────────────────────────────────────────
@@ -1068,6 +1139,12 @@ PlasmoidItem {
         teamHubError   = ''
         teamHubRecord  = ''
         teamHubCoach   = ''
+        teamHubFullName = ''
+        teamHubW       = 0
+        teamHubL       = 0
+        teamHubOT      = 0
+        teamHubPts     = 0
+        teamHubGP      = 0
         teamHubStanding = ''
         teamHubLastGames = []
         teamHubNextGame  = null
@@ -1120,6 +1197,14 @@ PlasmoidItem {
                     })
                     if (team) {
                         teamHubRecord   = (team.wins || 0) + "-" + (team.losses || 0) + "-" + (team.otLosses || 0)
+                        var cn = team.teamCommonName ? (team.teamCommonName.default || team.teamCommonName) : ''
+                        var pn = team.teamPlaceNameWithPreposition ? (team.teamPlaceNameWithPreposition.fr || team.teamPlaceNameWithPreposition.default || '') : ''
+                        teamHubFullName = cn + (pn ? ' ' + pn : '')
+                        teamHubW        = team.wins        || 0
+                        teamHubL        = team.losses      || 0
+                        teamHubOT       = team.otLosses    || 0
+                        teamHubPts      = team.points      || 0
+                        teamHubGP       = team.gamesPlayed || 0
                         let div   = team.divisionName || ''
                         let rank  = team.divisionSequence || team.wildcardSequence || ''
                         teamHubStanding = rank + (rank ? " · " : "") + div
@@ -1172,14 +1257,15 @@ PlasmoidItem {
         const now = new Date()
         const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0)
         let cutoff
-        if (showTwoDaysAgo) {
-            // 48 heures en arrière, mais jamais après minuit d'avant-hier
-            cutoff = new Date(now.getTime() - 48 * 3600000)
-        } else if (showYesterday) {
-            // 24 heures en arrière, mais jamais après minuit d'hier
-            cutoff = new Date(now.getTime() - 24 * 3600000)
+
+        if (pastDays > 0) {
+            // Minuit du premier jour précédent demandé
+            cutoff = new Date(todayStart.getTime() - pastDays * 24 * 3600000)
+        } else if (showToday) {
+            // Aujourd'hui : maintenant - 15h (pour couvrir les matchs en soirée d'hier soir)
+            cutoff = new Date(now.getTime() - 15 * 3600000)
         } else {
-            // Début d'aujourd'hui seulement
+            // Par défaut : minuit aujourd'hui
             cutoff = todayStart
         }
         const endWin = new Date(now.getFullYear(), now.getMonth(), now.getDate() + lookaheadDays, 23, 59, 59, 999)
@@ -1340,8 +1426,7 @@ PlasmoidItem {
         function onShowAllTeamsChanged(){ refresh() }
         function onMaxGamesChanged(){ refresh() }
         function onLookaheadDaysChanged(){ refresh() }
-        function onShowYesterdayChanged(){ refresh() }
-        function onShowTwoDaysAgoChanged(){ refresh() }
+
         function onScoreLayoutChanged(){ root.scoreLayout = Plasmoid.configuration.scoreLayout || 'stack' }
         function onUltraCompactChanged(){
             root.ultraCompact = Plasmoid.configuration.ultraCompact || false
@@ -1879,11 +1964,11 @@ PlasmoidItem {
                         cursorShape: Qt.PointingHandCursor
                         onTapped: {
                             if (isDateSep) {
-                                // Utiliser la date du premier match en UTC pour éviter décalage timezone
+                                // Utiliser la date locale (pas UTC) — l'API NHL utilise l'heure locale
                                 var d = new Date(start)
-                                var iso = d.getUTCFullYear() + "-"
-                                        + root.pad2(d.getUTCMonth() + 1) + "-"
-                                        + root.pad2(d.getUTCDate())
+                                var iso = d.getFullYear() + "-"
+                                        + root.pad2(d.getMonth() + 1) + "-"
+                                        + root.pad2(d.getDate())
                                 if (root.dayViewOpen && root.dayViewDate === iso) {
                                     root.dayViewOpen = false
                                     root.expanded = false
@@ -2135,8 +2220,8 @@ PlasmoidItem {
     property bool   scheduleStatsLoading: false
     property string scheduleStatsError:   ''
 
-    function openSchedule(team) {
-        scheduleShowStats    = false
+    function openSchedule(team, showStats) {
+        scheduleShowStats    = showStats === true
         scheduleSkaters      = []
         scheduleGoalies      = []
         scheduleStatsError   = ''
@@ -2147,6 +2232,7 @@ PlasmoidItem {
         scheduleLoading = true
         scheduleOpen    = true
         fetchSchedule(team)
+        if (showStats === true) fetchTeamStats(team)
     }
 
     function fetchSchedule(team) {
@@ -2342,6 +2428,7 @@ PlasmoidItem {
                     result.push({ isPeriodHeader: false, label: '',
                                   period: gobj.period, time: gobj.time,
                                   team: gobj.team, scorer: gobj.scorer,
+                                  scorerId: gobj.scorerId || 0,
                                   goalsToDate: gobj.goalsToDate,
                                   assists: gobj.assists,
                                   ppg: gobj.ppg, shg: gobj.shg, en: gobj.en })
@@ -2390,6 +2477,8 @@ PlasmoidItem {
         leadersOpen       = false
         dayViewOpen       = false
         playerOpen        = false
+        searchOpen        = false
+        calendarOpen      = false
         detailGameId  = gid
         detailAway    = away
         detailHome    = home
@@ -2609,6 +2698,7 @@ PlasmoidItem {
                                         ? (a.firstName.default || '') + ' ' + (a.lastName.default || '')
                                         : (a.name && a.name.default ? a.name.default : '?')
                                     assists.push({
+                                        id:            a.playerId || 0,
                                         name:          aName,
                                         assistsToDate: a.assistsToDate !== undefined ? a.assistsToDate : -1
                                     })
@@ -2618,6 +2708,7 @@ PlasmoidItem {
                                 period:       pname,
                                 time:         gl.timeInPeriod || '',
                                 team:         gl.teamAbbrev ? (gl.teamAbbrev.default || gl.teamAbbrev) : '',
+                                scorerId:     gl.playerId || 0,
                                 scorer:       scorer,
                                 goalsToDate:  gl.goalsToDate !== undefined ? gl.goalsToDate : -1,
                                 assists:      assists,
@@ -2957,7 +3048,7 @@ PlasmoidItem {
         ScrollView {
             id: detailScrollView
             anchors.fill: parent
-            visible: root.detailOpen && !root.scheduleOpen && !root.standingsOpen && !root.bracketOpen && !root.teamHubOpen && !root.leadersOpen && !root.dayViewOpen
+            visible: root.detailOpen && !root.scheduleOpen && !root.standingsOpen && !root.bracketOpen && !root.teamHubOpen && !root.leadersOpen && !root.dayViewOpen && !root.searchOpen && !(root.playerOpen && root.playerFrom === 'detail') && !root.playerOpen
             contentWidth: availableWidth
 
             Item {
@@ -2997,6 +3088,13 @@ PlasmoidItem {
                             root.leadersOpen = true
                             fetchLeaders()
                         }
+                    }
+                    Item { Layout.fillWidth: true }
+                    Button {
+                        text: i18n('Search')
+                        icon.name: 'search'
+                        flat: true
+                        onClicked: root.openSearch()
                     }
                     Item { Layout.fillWidth: true }
                     Button {
@@ -3065,6 +3163,7 @@ PlasmoidItem {
                         spacing: 4
                         Layout.fillWidth: true
                         Layout.alignment: Qt.AlignVCenter
+
                         // Pastille : seulement pour les matchs terminés (FINAL)
                         Rectangle {
                             anchors.horizontalCenter: parent.horizontalCenter
@@ -3151,6 +3250,17 @@ PlasmoidItem {
                             color: Kirigami.Theme.textColor
                         }
                     }
+                }
+
+                // Date du match — sous les logos, centrée
+                Label {
+                    visible: root.detailStart > 0 && root.detailStatus !== 'UPCOMING'
+                    Layout.alignment: Qt.AlignHCenter
+                    text: root.detailStart > 0
+                          ? Qt.formatDateTime(new Date(root.detailStart), "hh:mm  ·  ddd d MMM yyyy")
+                          : ""
+                    font.pixelSize: 13; font.bold: true
+                    color: Kirigami.Theme.textColor
                 }
 
                 // Chargement / erreur
@@ -3941,31 +4051,81 @@ PlasmoidItem {
                                 visible: !(modelData.isEmpty || false)
                                 spacing: 1
                                 Layout.fillWidth: true
-                                Label {
-                                    text: (modelData.goalsToDate > 0
-                                              ? modelData.scorer + ' (' + modelData.goalsToDate + ')'
-                                              : modelData.scorer)
-                                        + (modelData.ppg ? '  🔵 PP' : '')
-                                        + (modelData.shg ? '  🔴 SH' : '')
-                                        + (modelData.en  ? '  🥅 EN' : '')
-                                    font.pixelSize: 15; font.bold: true
-                                    color: Kirigami.Theme.textColor; wrapMode: Text.Wrap
-                                }
-                                Label {
-                                    visible: modelData.assists && modelData.assists.length > 0
-                                    text: {
-                                        if (!modelData.assists || modelData.assists.length === 0) return ''
-                                        var parts = []
-                                        for (var ai = 0; ai < modelData.assists.length; ai++) {
-                                            var a = modelData.assists[ai]
-                                            parts.push(a.assistsToDate > 0
-                                                ? a.name + ' (' + a.assistsToDate + ')'
-                                                : a.name)
+                                // Stocker les valeurs ici — modelData accessible à ce niveau
+                                property int goalScorerID: modelData.scorerId || 0
+                                property string goalScorerName: modelData.scorer || ''
+                                property int goalScorerGtd: modelData.goalsToDate || 0
+                                property bool goalPpg: modelData.ppg || false
+                                property bool goalShg: modelData.shg || false
+                                property bool goalEn:  modelData.en  || false
+                                property var goalAssists: modelData.assists || []
+                                // Buteur cliquable
+                                Item {
+                                    id: scorerDelegate
+                                    width: parent.width
+                                    implicitHeight: scorerLbl.implicitHeight + 4
+                                    property int sid: parent.goalScorerID
+                                    property var sassists: parent.goalAssists
+                                    Label {
+                                        id: scorerLbl
+                                        width: parent.width
+                                        text: {
+                                            var col = parent.parent
+                                            var t = col.goalScorerGtd > 0
+                                                ? col.goalScorerName + ' (' + col.goalScorerGtd + ')'
+                                                : col.goalScorerName
+                                            if (col.goalPpg) t += '  🔵 PP'
+                                            if (col.goalShg) t += '  🔴 SH'
+                                            if (col.goalEn)  t += '  🥅 EN'
+                                            return t
                                         }
-                                        return i18n('Assists: ') + parts.join(', ')
+                                        font.pixelSize: 15; font.bold: true
+                                        color: parent.sid > 0
+                                               ? Kirigami.Theme.highlightColor
+                                               : Kirigami.Theme.textColor
+                                        wrapMode: Text.Wrap
                                     }
-                                    font.pixelSize: 12; color: Kirigami.Theme.disabledTextColor
-                                    wrapMode: Text.Wrap
+                                    HoverHandler { cursorShape: parent.sid > 0 ? Qt.PointingHandCursor : Qt.ArrowCursor }
+                                    TapHandler {
+                                        acceptedButtons: Qt.LeftButton
+                                        gesturePolicy: TapHandler.ReleaseWithinBounds
+                                        onTapped: {
+                                            var sid = scorerDelegate.sid
+                                                if (sid > 0) root.openPlayer(sid, 'detail')
+                                        }
+                                    }
+                                }
+
+                                // Passeurs cliquables
+                                Repeater {
+                                    model: scorerDelegate.sassists
+                                    delegate: Item {
+                                        id: assistDelegate
+                                        width: parent.width
+                                        implicitHeight: assistLbl.implicitHeight + 2
+                                        property int aid: modelData.id || 0
+                                        Label {
+                                            id: assistLbl
+                                            width: parent.width
+                                            text: (index === 0 ? i18n('Assists: ') : '  ')
+                                                + (modelData.assistsToDate > 0
+                                                   ? modelData.name + ' (' + modelData.assistsToDate + ')'
+                                                   : modelData.name)
+                                            font.pixelSize: 12
+                                            color: assistDelegate.aid > 0
+                                                   ? Kirigami.Theme.highlightColor
+                                                   : Kirigami.Theme.disabledTextColor
+                                            opacity: 0.85
+                                            wrapMode: Text.Wrap
+                                        }
+                                        HoverHandler { cursorShape: assistDelegate.aid > 0 ? Qt.PointingHandCursor : Qt.ArrowCursor }
+                                        TapHandler {
+                                            enabled: assistDelegate.aid > 0
+                                            acceptedButtons: Qt.LeftButton
+                                            gesturePolicy: TapHandler.ReleaseWithinBounds
+                                            onTapped: root.openPlayer(assistDelegate.aid, 'detail')
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -4038,11 +4198,9 @@ PlasmoidItem {
                         flat: true
                         onClicked: {
                             root.scheduleShowStats = !root.scheduleShowStats
-                            // Charger les stats si pas encore fait
                             if (root.scheduleShowStats
                                     && root.scheduleSkaters.length === 0
-                                    && !root.scheduleStatsLoading
-                                    && root.scheduleStatsError === '') {
+                                    && !root.scheduleStatsLoading) {
                                 root.fetchTeamStats(root.scheduleTeam)
                             }
                         }
@@ -4411,10 +4569,10 @@ PlasmoidItem {
             }
         }
 
-        // ── Vue hub d'équipe ─────────────────────────────────────────
+        // ── Vue recherche de joueurs ─────────────────────────────────
         Item {
             anchors.fill: parent
-            visible: root.teamHubOpen && !root.scheduleOpen
+            visible: root.searchOpen && !root.playerOpen
 
             ColumnLayout {
                 anchors.fill: parent
@@ -4425,263 +4583,130 @@ PlasmoidItem {
                     Layout.fillWidth: true
                     Layout.leftMargin: 8; Layout.topMargin: 4; Layout.bottomMargin: 2
                     Button {
-                        text: root.teamHubFrom === 'standings'
-                              ? i18n("‹ Standings")
-                              : i18n("‹ Match")
+                        text: i18n("‹ Match")
                         icon.name: "go-previous"; flat: true
                         onClicked: {
-                            root.teamHubOpen = false
-                            if (root.teamHubFrom === 'standings')
-                                root.standingsOpen = true
+                            root.searchOpen = false
                         }
                     }
                     Item { Layout.fillWidth: true }
-                    // Logo + nom équipe
-                    Row {
-                        spacing: 8
-                        Item {
-                            width: 100; height: 100
-                            anchors.verticalCenter: parent.verticalCenter
-                            Image {
-                                anchors.fill: parent
-                                source: root.teamLogoUrl(root.teamHubCode)
-                                fillMode: Image.PreserveAspectFit; smooth: true
-                            }
-                        }
-                        Label {
-                            text: root.teamHubCode
-                            font.bold: true; font.pixelSize: 18
-                            color: root.teamColorAdapted(root.teamHubCode)
-                            anchors.verticalCenter: parent.verticalCenter
-                        }
+                    Label {
+                        text: i18n("Search")
+                        font.bold: true; font.pixelSize: 16
                     }
                     Item { Layout.fillWidth: true }
                 }
 
-                // Chargement
+                // Champ de recherche
+                RowLayout {
+                    Layout.fillWidth: true
+                    Layout.leftMargin: 12; Layout.rightMargin: 12; Layout.bottomMargin: 6
+                    spacing: 8
+
+                    TextField {
+                        id: searchField
+                        Layout.fillWidth: true
+                        placeholderText: i18n("Player name…")
+                        text: root.searchQuery
+                        onTextChanged: root.searchQuery = text
+                        Keys.onReturnPressed: root.fetchSearch(text)
+                        Keys.onEnterPressed: root.fetchSearch(text)
+                    }
+                    Button {
+                        text: i18n("🔍")
+                        onClicked: root.fetchSearch(searchField.text)
+                        enabled: searchField.text.length >= 2
+                    }
+                }
+
+                // États
                 Label {
                     Layout.alignment: Qt.AlignHCenter; Layout.topMargin: 20
-                    visible: root.teamHubLoading
+                    visible: root.searchLoading
                     text: i18n("Loading…"); opacity: 0.6; font.italic: true
                 }
+                Label {
+                    Layout.alignment: Qt.AlignHCenter; Layout.topMargin: 20
+                    visible: !root.searchLoading && root.searchError !== ''
+                    text: root.searchError
+                    color: Kirigami.Theme.negativeTextColor
+                }
 
+                // Résultats
                 ScrollView {
                     Layout.fillWidth: true; Layout.fillHeight: true
                     contentWidth: availableWidth
-                    visible: !root.teamHubLoading
+                    ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
+                    visible: !root.searchLoading && root.searchResults.length > 0
 
                     ColumnLayout {
-                        width: parent.width
-                        spacing: 0
-
-                        // ── Fiche + classement ──────────────────────────
-                        RowLayout {
-                            Layout.fillWidth: true
-                            Layout.margins: 12
-                            spacing: 16
-
-                            // Fiche
-                            ColumnLayout {
-                                spacing: 2
-                                Label {
-                                    text: root.teamHubRecord || '–'
-                                    font.pixelSize: 22; font.bold: true
-                                    color: root.teamColorAdapted(root.teamHubCode)
-                                }
-                                Label {
-                                    text: i18n("Record")
-                                    font.pixelSize: 11; opacity: 0.6
-                                    color: Kirigami.Theme.disabledTextColor
-                                }
-                            }
-
-                            Item { Layout.fillWidth: true }
-
-                            // Position
-                            ColumnLayout {
-                                spacing: 2
-                                Label {
-                                    Layout.alignment: Qt.AlignHCenter
-                                    text: root.teamHubStanding || '–'
-                                    font.pixelSize: 13; font.bold: true
-                                    color: Kirigami.Theme.textColor
-                                }
-                                Label {
-                                    Layout.alignment: Qt.AlignHCenter
-                                    text: i18n("Standing")
-                                    font.pixelSize: 11; opacity: 0.6
-                                    color: Kirigami.Theme.disabledTextColor
-                                }
-                            }
-                        }
-
-                        // ── Entraîneur ──────────────────────────────────
-                        RowLayout {
-                            Layout.leftMargin: 12
-                            visible: root.teamHubCoach !== ''
-                            spacing: 6
-                            Label {
-                                text: i18n("Head coach") + ":"
-                                font.pixelSize: 12; opacity: 0.6
-                                color: Kirigami.Theme.disabledTextColor
-                            }
-                            Label {
-                                text: "🧑‍💼 " + root.teamHubCoach
-                                font.pixelSize: 13; font.bold: true
-                                color: Kirigami.Theme.textColor
-                            }
-                        }
-
-                        // ── Séparateur ──────────────────────────────────
-                        Rectangle {
-                            Layout.fillWidth: true; Layout.margins: 8
-                            height: 1; radius: 1
-                            gradient: Gradient {
-                                orientation: Gradient.Horizontal
-                                GradientStop { position: 0.0; color: root.teamColor(root.teamHubCode) }
-                                GradientStop { position: 1.0; color: "transparent" }
-                            }
-                            opacity: 0.6
-                        }
-
-                        // ── Derniers matchs ─────────────────────────────
-                        Label {
-                            Layout.leftMargin: 12; Layout.topMargin: 4
-                            text: i18n("Last games")
-                            font.pixelSize: 12; font.bold: true; opacity: 0.6
-                            color: Kirigami.Theme.disabledTextColor
-                        }
+                        width: Math.min(360, parent.width)
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        spacing: 2
 
                         Repeater {
-                            model: root.teamHubLastGames
-                            delegate: RowLayout {
+                            model: root.searchResults
+                            delegate: ItemDelegate {
                                 Layout.fillWidth: true
-                                Layout.leftMargin: 12; Layout.rightMargin: 12
-                                spacing: 8
+                                topPadding: 6; bottomPadding: 6
+                                leftPadding: 12; rightPadding: 12
+                                HoverHandler { cursorShape: Qt.PointingHandCursor }
+                                onClicked: root.openPlayer(modelData.id, 'search')
 
-                                // Résultat W/L/OT
-                                Rectangle {
-                                    width: wlLbl.implicitWidth + 8
-                                    height: wlLbl.implicitHeight + 4
-                                    radius: 3
-                                    color: modelData.win ? "#2a7a2a" : "#7a2a2a"
+                                contentItem: RowLayout {
+                                    spacing: 10
+
+                                    // Pastille équipe (si actif)
+                                    Rectangle {
+                                        visible: modelData.team !== ''
+                                        radius: 3
+                                        color: root.teamColor(modelData.team)
+                                        width: srchTeamLbl.implicitWidth + 6
+                                        height: srchTeamLbl.implicitHeight + 4
+                                        Label {
+                                            id: srchTeamLbl; anchors.centerIn: parent
+                                            text: modelData.team
+                                            color: root.teamTextColor(modelData.team)
+                                            font.pixelSize: 10; font.bold: true; font.family: "monospace"
+                                        }
+                                    }
+                                    // Icône retraité
                                     Label {
-                                        id: wlLbl
-                                        anchors.centerIn: parent
-                                        text: modelData.win
-                                              ? (modelData.ot ? "OTW" : "W")
-                                              : (modelData.ot ? "OTL" : "L")
-                                        color: 'white'; font.bold: true; font.pixelSize: 11
+                                        visible: modelData.team === ''
+                                        text: "🏒"
+                                        font.pixelSize: 14; opacity: 0.5
+                                    }
+
+                                    // Nom + position
+                                    ColumnLayout {
+                                        spacing: 1; Layout.fillWidth: true
+                                        Label {
+                                            text: modelData.name
+                                            font.pixelSize: 13; font.bold: true
+                                            color: Kirigami.Theme.textColor
+                                            elide: Text.ElideRight
+                                            Layout.fillWidth: true
+                                        }
+                                        Label {
+                                            text: (modelData.position || '')
+                                                  + (modelData.active ? '' : '  ·  ' + i18n("Retired"))
+                                            font.pixelSize: 11; opacity: 0.6
+                                            color: Kirigami.Theme.disabledTextColor
+                                        }
                                     }
                                 }
-
-                                // @ ou vs
-                                Label {
-                                    text: modelData.home ? i18n("vs") : i18n("@")
-                                    font.pixelSize: 11; opacity: 0.6
-                                    color: Kirigami.Theme.textColor
-                                }
-
-                                // Adversaire
-                                Rectangle {
-                                    radius: 3
-                                    color: root.teamColor(modelData.opp || '')
-                                    width: oppHubLbl.implicitWidth + 8
-                                    height: oppHubLbl.implicitHeight + 4
-                                    Label {
-                                        id: oppHubLbl
-                                        anchors.centerIn: parent
-                                        text: modelData.opp || '?'
-                                        color: root.teamTextColor(modelData.opp || '')
-                                        font.bold: true; font.pixelSize: 11
-                                        font.family: "monospace"
-                                    }
-                                }
-
-                                Item { Layout.fillWidth: true }
-
-                                // Score
-                                Label {
-                                    text: (modelData.gf || 0) + " – " + (modelData.ga || 0)
-                                    font.pixelSize: 13; font.bold: true
-                                    color: Kirigami.Theme.textColor
-                                }
                             }
                         }
-
-                        // ── Prochain match ──────────────────────────────
-                        Rectangle {
-                            Layout.fillWidth: true; Layout.margins: 8
-                            height: 1; radius: 1; color: Kirigami.Theme.textColor; opacity: 0.1
-                        }
-
-                        RowLayout {
-                            Layout.fillWidth: true
-                            Layout.leftMargin: 12; Layout.rightMargin: 12; Layout.topMargin: 4
-                            visible: root.teamHubNextGame !== null
-                            spacing: 8
-
-                            Label {
-                                text: i18n("Next:")
-                                font.pixelSize: 12; font.bold: true; opacity: 0.6
-                                color: Kirigami.Theme.disabledTextColor
-                            }
-                            Label {
-                                text: root.teamHubNextGame
-                                      ? ((root.teamHubNextGame.home ? i18n("vs") : i18n("@"))
-                                         + " " + (root.teamHubNextGame.opp || ''))
-                                      : ''
-                                font.pixelSize: 13; font.bold: true
-                                color: Kirigami.Theme.textColor
-                            }
-                            Item { Layout.fillWidth: true }
-                            Label {
-                                text: root.teamHubNextGame && root.teamHubNextGame.start
-                                      ? Qt.formatDateTime(new Date(root.teamHubNextGame.start), "ddd d MMM · h:mm AP")
-                                      : ''
-                                font.pixelSize: 12; opacity: 0.7
-                                color: Kirigami.Theme.disabledTextColor
-                            }
-                        }
-
-                        // ── Séparateur ──────────────────────────────────
-                        Rectangle {
-                            Layout.fillWidth: true; Layout.margins: 8
-                            height: 1; radius: 1; color: Kirigami.Theme.textColor; opacity: 0.1
-                        }
-
-                        // ── Boutons Calendrier / Stats ──────────────────
-                        RowLayout {
-                            Layout.fillWidth: true
-                            Layout.leftMargin: 12; Layout.rightMargin: 12
-                            Layout.topMargin: 4; Layout.bottomMargin: 4
-                            spacing: 8
-                            Button {
-                                text: i18n("📅 Schedule")
-                                flat: false; Layout.fillWidth: true
-                                onClicked: root.openSchedule(root.teamHubCode)
-                            }
-                            Button {
-                                text: i18n("📊 Stats")
-                                flat: false; Layout.fillWidth: true
-                                onClicked: {
-                                    root.openSchedule(root.teamHubCode)
-                                    root.scheduleShowStats = true
-                                    root.fetchTeamStats(root.teamHubCode)
-                                }
-                            }
-                        }
-
                         Item { implicitHeight: 8 }
                     }
                 }
             }
         }
 
-        // ── Vue leaders de la ligue ─────────────────────────────────
+        // ── Vue calendrier ───────────────────────────────────────────
         Item {
             anchors.fill: parent
-            visible: root.leadersOpen && !root.playerOpen
+            visible: root.calendarOpen
 
             ColumnLayout {
                 anchors.fill: parent
@@ -4690,187 +4715,200 @@ PlasmoidItem {
                 // Barre navigation
                 RowLayout {
                     Layout.fillWidth: true
-                    Layout.leftMargin: 8; Layout.topMargin: 4; Layout.bottomMargin: 2
+                    Layout.leftMargin: 8; Layout.topMargin: 4; Layout.bottomMargin: 4
                     Button {
-                        text: root.detailOpen ? i18n("‹ Match") : i18n("‹ Back")
-                        icon.name: "go-previous"; flat: true
-                        onClicked: root.leadersOpen = false
+                        text: i18n("‹ Back"); icon.name: "go-previous"; flat: true
+                        onClicked: root.calendarOpen = false
                     }
                     Item { Layout.fillWidth: true }
+                    // Mois/Année + navigation
+                    Button {
+                        text: "‹"; flat: true
+                        onClicked: {
+                            root.calMonth--
+                            if (root.calMonth < 0) { root.calMonth = 11; root.calYear-- }
+                        }
+                    }
                     Label {
-                        text: "🏅 " + i18n("Leaders")
-                        font.bold: true; font.pixelSize: 16
-                        rightPadding: 12
+                        text: {
+                            var months = [i18n("January"),i18n("February"),i18n("March"),i18n("April"),
+                                          i18n("May"),i18n("June"),i18n("July"),i18n("August"),
+                                          i18n("September"),i18n("October"),i18n("November"),i18n("December")]
+                            return months[root.calMonth]
+                        }
+                        font.bold: true; font.pixelSize: 14
+                        Layout.preferredWidth: 90
+                        horizontalAlignment: Text.AlignHCenter
+                    }
+                    // Menu déroulant année
+                    ComboBox {
+                        id: yearCombo
+                        model: {
+                            var years = []
+                            for (var y = new Date().getFullYear(); y >= 2006; y--)
+                                years.push(String(y))
+                            return years
+                        }
+                        currentIndex: new Date().getFullYear() - root.calYear
+                        onActivated: root.calYear = parseInt(currentText)
+                        implicitWidth: 90
+                        font.pixelSize: 13
+                    }
+                    Button {
+                        text: "›"; flat: true
+                        onClicked: {
+                            root.calMonth++
+                            if (root.calMonth > 11) { root.calMonth = 0; root.calYear++ }
+                        }
+                    }
+                    Item { Layout.fillWidth: true }
+                    // Revenir au mois courant
+                    Button {
+                        text: i18n("Today"); flat: true; font.pixelSize: 11
+                        onClicked: {
+                            root.calYear  = new Date().getFullYear()
+                            root.calMonth = new Date().getMonth()
+                            yearCombo.currentIndex = 0
+                        }
                     }
                 }
 
-                // Chargement / erreur
-                Label {
-                    Layout.alignment: Qt.AlignHCenter; Layout.topMargin: 20
-                    visible: root.leadersLoading
-                    text: i18n("Loading…"); opacity: 0.6; font.italic: true
-                }
-                Label {
-                    Layout.alignment: Qt.AlignHCenter; Layout.topMargin: 20
-                    visible: !root.leadersLoading && root.leadersError !== ''
-                    text: root.leadersError
-                    color: Kirigami.Theme.negativeTextColor
+                // En-têtes jours semaine
+                RowLayout {
+                    Layout.fillWidth: true
+                    Layout.leftMargin: 8; Layout.rightMargin: 8
+                    spacing: 0
+                    Repeater {
+                        model: [i18n("Su"),i18n("Mo"),i18n("Tu"),i18n("We"),i18n("Th"),i18n("Fr"),i18n("Sa")]
+                        delegate: Label {
+                            text: modelData
+                            font.pixelSize: 11; font.bold: true; opacity: 0.5
+                            Layout.fillWidth: true
+                            horizontalAlignment: Text.AlignHCenter
+                            color: (index === 0 || index === 6)
+                                   ? Kirigami.Theme.highlightColor
+                                   : Kirigami.Theme.disabledTextColor
+                        }
+                    }
                 }
 
+                Rectangle {
+                    Layout.fillWidth: true; height: 1
+                    color: Kirigami.Theme.textColor; opacity: 0.1
+                }
+
+                // Grille des jours
                 ScrollView {
-                    id: leadersScrollView
                     Layout.fillWidth: true; Layout.fillHeight: true
                     contentWidth: availableWidth
                     ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
-                    visible: !root.leadersLoading && root.leadersError === ''
 
-                    ColumnLayout {
-                        width: Math.min(340, leadersScrollView.availableWidth)
-                        anchors.horizontalCenter: parent.horizontalCenter
-                        spacing: 0
+                    GridLayout {
+                        id: calGrid
+                        width: parent.width
+                        columns: 7
+                        columnSpacing: 0; rowSpacing: 0
 
-                        // ── Composant réutilisable : section de leaders ──
-                        component LeaderSection: ColumnLayout {
-                            property string title: ''
-                            property var    model: []
-                            property bool   isGoalie: false
-                            property int    decimals: 0
+                        property int firstDow: {
+                            var d = new Date(root.calYear, root.calMonth, 1)
+                            return d.getDay()  // 0=dim
+                        }
+                        property int daysInMonth: new Date(root.calYear, root.calMonth + 1, 0).getDate()
+                        property int todayY: new Date().getFullYear()
+                        property int todayM: new Date().getMonth()
+                        property int todayD: new Date().getDate()
 
-                            Layout.fillWidth: true
-                            spacing: 0
-
-                            // Titre de section
-                            RowLayout {
+                        // Cellules vides avant le 1er
+                        Repeater {
+                            model: calGrid.firstDow
+                            delegate: Item {
                                 Layout.fillWidth: true
-                                Layout.leftMargin: 12; Layout.topMargin: 8; Layout.bottomMargin: 2
-                                Label {
-                                    text: title
-                                    font.bold: true; font.pixelSize: 13
-                                    color: Kirigami.Theme.disabledTextColor
-                                }
-                                Rectangle {
-                                    Layout.fillWidth: true; height: 1
-                                    color: Kirigami.Theme.textColor; opacity: 0.15
-                                    Layout.alignment: Qt.AlignVCenter
-                                    Layout.rightMargin: 12
-                                }
+                                implicitHeight: 38
                             }
+                        }
 
-                            // Lignes joueurs
-                            Repeater {
-                                model: parent.model
-                                delegate: ItemDelegate {
-                                    Layout.fillWidth: true
-                                    topPadding: 2; bottomPadding: 2
-                                    leftPadding: 12; rightPadding: 12
-                                    HoverHandler { cursorShape: Qt.PointingHandCursor }
-                                    onClicked: if (modelData.id) root.openPlayer(modelData.id, 'leaders')
-                                    contentItem: RowLayout {
-                                        spacing: 8
+                        // Jours du mois
+                        Repeater {
+                            model: calGrid.daysInMonth
+                            delegate: Item {
+                                id: dayCell
+                                Layout.fillWidth: true
+                                implicitHeight: 38
 
-                                        // Rang
-                                        Label {
-                                            text: (index + 1) + "."
-                                            font.pixelSize: 12; opacity: 0.45
-                                            color: Kirigami.Theme.textColor
-                                            Layout.preferredWidth: 20
-                                        }
+                                property int day: index + 1
+                                property bool isToday: day === calGrid.todayD
+                                    && root.calMonth === calGrid.todayM
+                                    && root.calYear  === calGrid.todayY
+                                property bool isFuture: {
+                                    var d = new Date(root.calYear, root.calMonth, day)
+                                    return d > new Date()
+                                }
+                                property string iso: root.calYear + "-"
+                                    + root.pad2(root.calMonth + 1) + "-"
+                                    + root.pad2(day)
+                                property bool isSelected: iso === root.dayViewDate
 
-                                        // Pastille équipe
-                                        Rectangle {
-                                            radius: 2
-                                            color: root.teamColor(modelData.team || '')
-                                            width: teamLdrLbl.implicitWidth + 6
-                                            height: teamLdrLbl.implicitHeight + 2
-                                            Label {
-                                                id: teamLdrLbl
-                                                anchors.centerIn: parent
-                                                text: modelData.team || ''
-                                                color: root.teamTextColor(modelData.team || '')
-                                                font.pixelSize: 10; font.bold: true
-                                                font.family: "monospace"
-                                            }
-                                        }
+                                // Fond
+                                Rectangle {
+                                    anchors.centerIn: parent
+                                    width: 32; height: 32; radius: 16
+                                    color: isToday    ? root.teamColor('MTL')
+                                         : isSelected ? Kirigami.Theme.highlightColor
+                                         : "transparent"
+                                    opacity: isToday ? 0.85 : isSelected ? 0.7 : 1.0
+                                }
 
-                                        // Nom du joueur
-                                        Label {
-                                            text: modelData.name || ''
-                                            font.pixelSize: 12
-                                            color: Kirigami.Theme.textColor
-                                            Layout.fillWidth: true
-                                            elide: Text.ElideRight
-                                        }
+                                Label {
+                                    anchors.centerIn: parent
+                                    text: String(day)
+                                    font.pixelSize: 13
+                                    font.bold: isToday || isSelected
+                                    color: isToday || isSelected
+                                           ? "white"
+                                           : isFuture
+                                           ? Kirigami.Theme.disabledTextColor
+                                           : Kirigami.Theme.textColor
+                                    opacity: isFuture ? 0.5 : 1.0
+                                }
 
-                                        // Valeur
-                                        Label {
-                                            text: decimals > 0
-                                                  ? Number(modelData.value).toFixed(decimals)
-                                                  : String(modelData.value || 0)
-                                            font.pixelSize: 13; font.bold: true
-                                            color: index === 0
-                                                   ? Kirigami.Theme.highlightColor
-                                                   : Kirigami.Theme.textColor
-                                            Layout.preferredWidth: 40
-                                            horizontalAlignment: Text.AlignRight
-                                        }
+                                HoverHandler { cursorShape: Qt.PointingHandCursor }
+                                TapHandler {
+                                    acceptedButtons: Qt.LeftButton
+                                    gesturePolicy: TapHandler.ReleaseWithinBounds
+                                    onTapped: {
+                                        var iso = root.calYear + "-"
+                                            + root.pad2(root.calMonth + 1) + "-"
+                                            + root.pad2(index + 1)
+                                        root.calendarOpen = false
+                                        root.openDayView(iso)
                                     }
                                 }
                             }
                         }
-
-                        // ── Patineurs ────────────────────────────────────
-                        LeaderSection { title: "🏒 " + i18n("Points");  model: root.leadersPoints  }
-                        LeaderSection { title: "🎯 " + i18n("Goals");   model: root.leadersGoals   }
-                        LeaderSection { title: "🍎 " + i18n("Assists"); model: root.leadersAssists }
-                        LeaderSection { title: "👊 " + i18n("PIM");     model: root.leadersPim     }
-
-                        // ── Gardiens ─────────────────────────────────────
-                        Rectangle {
-                            Layout.fillWidth: true; Layout.margins: 8; Layout.topMargin: 6
-                            height: 1; radius: 1; color: Kirigami.Theme.textColor; opacity: 0.15
-                        }
-                        Label {
-                            Layout.leftMargin: 12; Layout.topMargin: 4
-                            text: i18n("Goalies")
-                            font.bold: true; font.pixelSize: 14
-                            color: Kirigami.Theme.textColor
-                        }
-                        LeaderSection { title: "🥅 " + i18n("Wins");       model: root.leadersWins }
-                        LeaderSection { title: "🔒 " + i18n("Shutouts");   model: root.leadersSho  }
-                        LeaderSection { title: "📉 " + i18n("GAA");        model: root.leadersGaa; decimals: 2 }
-                        LeaderSection { title: "🛡️ " + i18n("SV%");        model: root.leadersSvp; decimals: 3 }
-
-                        Item { implicitHeight: 12 }
                     }
                 }
             }
         }
 
-        // ── Vue journée complète ────────────────────────────────────
+        // ── Vue journée complète ─────────────────────────────────────
         Item {
             anchors.fill: parent
-            visible: root.dayViewOpen && !root.detailOpen
+            visible: root.dayViewOpen && !root.detailOpen && !root.calendarOpen
 
             ColumnLayout {
                 anchors.fill: parent
                 spacing: 0
 
-                // Barre navigation
                 RowLayout {
                     Layout.fillWidth: true
                     Layout.leftMargin: 8; Layout.topMargin: 4; Layout.bottomMargin: 2
                     Button {
-                        text: i18n('✕')
-                        flat: true
-                        onClicked: {
-                            root.dayViewOpen = false
-                            root.expanded = false
-                        }
+                        text: i18n('✕'); flat: true
+                        onClicked: { root.dayViewOpen = false; root.expanded = false }
                     }
                     Item { Layout.fillWidth: true }
                     Label {
                         text: {
-                            // Parser la date ISO directement sans conversion timezone
                             var parts = root.dayViewDate.split('-')
                             if (parts.length === 3) {
                                 var d = new Date(parseInt(parts[0]), parseInt(parts[1])-1, parseInt(parts[2]))
@@ -4879,11 +4917,18 @@ PlasmoidItem {
                             return root.dayViewDate
                         }
                         font.bold: true; font.pixelSize: 15
-                        rightPadding: 12
+                        Layout.alignment: Qt.AlignHCenter
+                    }
+                    Item { Layout.fillWidth: true }
+                    Button {
+                        text: "📅"
+                        flat: true
+                        ToolTip.text: i18n("Calendar")
+                        ToolTip.visible: hovered
+                        onClicked: root.calendarOpen = true
                     }
                 }
 
-                // Chargement / erreur
                 Label {
                     Layout.alignment: Qt.AlignHCenter; Layout.topMargin: 20
                     visible: root.dayViewLoading
@@ -4892,8 +4937,7 @@ PlasmoidItem {
                 Label {
                     Layout.alignment: Qt.AlignHCenter; Layout.topMargin: 20
                     visible: !root.dayViewLoading && root.dayViewError !== ''
-                    text: root.dayViewError
-                    color: Kirigami.Theme.negativeTextColor
+                    text: root.dayViewError; color: Kirigami.Theme.negativeTextColor
                 }
                 Label {
                     Layout.alignment: Qt.AlignHCenter; Layout.topMargin: 20
@@ -4918,25 +4962,20 @@ PlasmoidItem {
                             delegate: ItemDelegate {
                                 Layout.fillWidth: true
                                 Layout.leftMargin: 4; Layout.rightMargin: 4
-                                padding: 0
+                                topPadding: 6; bottomPadding: 6
+                                leftPadding: 10; rightPadding: 10
+                                implicitHeight: 52
 
                                 background: Rectangle {
                                     radius: 6
-                                    color: {
-                                        if (modelData.status === 'LIVE')     return Qt.rgba(0.0, 0.55, 0.1, 0.13)
-                                        if (modelData.status === 'FINAL')    return Qt.rgba(0.5, 0.5, 0.5, 0.08)
-                                        return Qt.rgba(0.3, 0.5, 0.9, 0.10)
-                                    }
-                                    border.color: {
-                                        if (modelData.status === 'LIVE')     return Qt.rgba(0.0, 0.7, 0.1, 0.35)
-                                        if (modelData.status === 'FINAL')    return Qt.rgba(0.5, 0.5, 0.5, 0.2)
-                                        return Qt.rgba(0.3, 0.5, 0.9, 0.25)
-                                    }
+                                    color: modelData.status === 'LIVE'  ? Qt.rgba(0.0, 0.55, 0.1, 0.13)
+                                         : modelData.status === 'FINAL' ? Qt.rgba(0.5, 0.5, 0.5, 0.08)
+                                         : Qt.rgba(0.3, 0.5, 0.9, 0.10)
+                                    border.color: modelData.status === 'LIVE'  ? Qt.rgba(0.0, 0.7, 0.1, 0.35)
+                                                : modelData.status === 'FINAL' ? Qt.rgba(0.5, 0.5, 0.5, 0.2)
+                                                : Qt.rgba(0.3, 0.5, 0.9, 0.25)
                                     border.width: 1
                                 }
-
-                                topPadding: 6; bottomPadding: 6
-                                implicitHeight: 52
 
                                 contentItem: Item {
                                     implicitHeight: 52
@@ -4944,7 +4983,6 @@ PlasmoidItem {
                                         anchors.centerIn: parent
                                         spacing: 12
 
-                                        // Pastille visiteur
                                         Rectangle {
                                             radius: 3; color: root.teamColor(modelData.away)
                                             width: awDayLbl.implicitWidth + 10; height: awDayLbl.implicitHeight + 6
@@ -4956,10 +4994,8 @@ PlasmoidItem {
                                             }
                                         }
 
-                                        // Score / heure
                                         ColumnLayout {
                                             spacing: 1
-
                                             Label {
                                                 Layout.alignment: Qt.AlignHCenter
                                                 text: modelData.status === 'UPCOMING'
@@ -4977,7 +5013,6 @@ PlasmoidItem {
                                                 font.pixelSize: 10; opacity: 0.5
                                                 color: Kirigami.Theme.disabledTextColor
                                             }
-
                                             Label {
                                                 Layout.alignment: Qt.AlignHCenter
                                                 visible: modelData.status !== 'UPCOMING'
@@ -4988,12 +5023,10 @@ PlasmoidItem {
                                                            + (modelData.remain ? "  " + modelData.remain : "")
                                                 }
                                                 font.pixelSize: 11; opacity: 0.7
-                                                color: modelData.status === 'LIVE'
-                                                       ? "#44cc44" : Kirigami.Theme.disabledTextColor
+                                                color: modelData.status === 'LIVE' ? "#44cc44" : Kirigami.Theme.disabledTextColor
                                             }
                                         }
 
-                                        // Pastille local
                                         Rectangle {
                                             radius: 3; color: root.teamColor(modelData.home)
                                             width: hmDayLbl.implicitWidth + 10; height: hmDayLbl.implicitHeight + 6
@@ -5011,7 +5044,8 @@ PlasmoidItem {
                                     modelData.gameId, modelData.away, modelData.home,
                                     modelData.ag, modelData.hg, modelData.status,
                                     modelData.periodType, modelData.period,
-                                    modelData.remain, modelData.start,
+                                    modelData.remain,
+                                    modelData.start ? new Date(modelData.start).getTime() : 0,
                                     modelData.inIntermission, '1551')
                                 HoverHandler { cursorShape: Qt.PointingHandCursor }
                             }
@@ -5022,7 +5056,845 @@ PlasmoidItem {
             }
         }
 
-        // ── Vue fiche joueur ─────────────────────────────────────────
+        // ── Vue meneurs de la ligue ───────────────────────────────────
+        Item {
+            anchors.fill: parent
+            visible: root.leadersOpen && !root.playerOpen
+
+            ColumnLayout {
+                anchors.fill: parent
+                spacing: 0
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    Layout.leftMargin: 8; Layout.topMargin: 4; Layout.bottomMargin: 2
+                    Button {
+                        text: i18n("‹ Match")
+                        icon.name: "go-previous"; flat: true
+                        onClicked: { root.leadersOpen = false }
+                    }
+                    Item { Layout.fillWidth: true }
+                    Label {
+                        text: i18n("Leaders")
+                        font.bold: true; font.pixelSize: 16
+                        Layout.alignment: Qt.AlignHCenter
+                    }
+                    Item { Layout.fillWidth: true }
+                }
+
+                Label {
+                    Layout.alignment: Qt.AlignHCenter; Layout.topMargin: 20
+                    visible: root.leadersLoading
+                    text: i18n("Loading…"); opacity: 0.6; font.italic: true
+                }
+                Label {
+                    Layout.alignment: Qt.AlignHCenter; Layout.topMargin: 20
+                    visible: !root.leadersLoading && root.leadersError !== ''
+                    text: root.leadersError; color: Kirigami.Theme.negativeTextColor
+                }
+
+                ScrollView {
+                    id: leadersScrollView
+                    Layout.fillWidth: true; Layout.fillHeight: true
+                    contentWidth: availableWidth
+                    ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
+                    visible: !root.leadersLoading && root.leadersError === ''
+
+                    ColumnLayout {
+                        width: Math.min(340, leadersScrollView.availableWidth)
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        spacing: 4
+
+                        // Patineurs
+                        // Section "🏒 " + i18n("Points")
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            spacing: 2
+
+                            Label {
+                                Layout.leftMargin: 12; Layout.topMargin: 4
+                                text: "🏒 " + i18n("Points")
+                                font.pixelSize: 13; font.bold: true
+                                color: Kirigami.Theme.textColor
+                            }
+
+                            Repeater {
+                                model: root.leadersPoints
+                                delegate: ItemDelegate {
+                                    Layout.fillWidth: true
+                                    topPadding: 2; bottomPadding: 2
+                                    leftPadding: 12; rightPadding: 12
+                                    HoverHandler { cursorShape: Qt.PointingHandCursor }
+                                    onClicked: if (modelData.id) root.openPlayer(modelData.id, 'leaders')
+                                    contentItem: RowLayout {
+                                        spacing: 8
+                                        Label {
+                                            text: (index + 1) + "."
+                                            font.pixelSize: 12; opacity: 0.45
+                                            color: Kirigami.Theme.textColor
+                                            Layout.preferredWidth: 20
+                                        }
+                                        Rectangle {
+                                            radius: 2
+                                            color: root.teamColor(modelData.team || '')
+                                            width: ldrTeamLblleadersPoints.implicitWidth + 6
+                                            height: ldrTeamLblleadersPoints.implicitHeight + 2
+                                            Label {
+                                                id: ldrTeamLblleadersPoints;
+                                                anchors.centerIn: parent
+                                                text: modelData.team || ''
+                                                color: root.teamTextColor(modelData.team || '')
+                                                font.pixelSize: 10; font.bold: true; font.family: "monospace"
+                                            }
+                                        }
+                                        Label {
+                                            text: modelData.name || ''
+                                            font.pixelSize: 12
+                                            color: Kirigami.Theme.textColor
+                                            Layout.fillWidth: true
+                                            elide: Text.ElideRight
+                                        }
+                                        Label {
+                                            text: 0 > 0
+                                                  ? Number(modelData.value).toFixed(0)
+                                                  : String(modelData.value || 0)
+                                            font.pixelSize: 13; font.bold: true
+                                            color: index === 0 ? Kirigami.Theme.highlightColor : Kirigami.Theme.textColor
+                                            Layout.preferredWidth: 40
+                                            horizontalAlignment: Text.AlignRight
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        // Section "🎯 " + i18n("Goals")
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            spacing: 2
+
+                            Label {
+                                Layout.leftMargin: 12; Layout.topMargin: 4
+                                text: "🎯 " + i18n("Goals")
+                                font.pixelSize: 13; font.bold: true
+                                color: Kirigami.Theme.textColor
+                            }
+
+                            Repeater {
+                                model: root.leadersGoals
+                                delegate: ItemDelegate {
+                                    Layout.fillWidth: true
+                                    topPadding: 2; bottomPadding: 2
+                                    leftPadding: 12; rightPadding: 12
+                                    HoverHandler { cursorShape: Qt.PointingHandCursor }
+                                    onClicked: if (modelData.id) root.openPlayer(modelData.id, 'leaders')
+                                    contentItem: RowLayout {
+                                        spacing: 8
+                                        Label {
+                                            text: (index + 1) + "."
+                                            font.pixelSize: 12; opacity: 0.45
+                                            color: Kirigami.Theme.textColor
+                                            Layout.preferredWidth: 20
+                                        }
+                                        Rectangle {
+                                            radius: 2
+                                            color: root.teamColor(modelData.team || '')
+                                            width: ldrTeamLblleadersGoals.implicitWidth + 6
+                                            height: ldrTeamLblleadersGoals.implicitHeight + 2
+                                            Label {
+                                                id: ldrTeamLblleadersGoals;
+                                                anchors.centerIn: parent
+                                                text: modelData.team || ''
+                                                color: root.teamTextColor(modelData.team || '')
+                                                font.pixelSize: 10; font.bold: true; font.family: "monospace"
+                                            }
+                                        }
+                                        Label {
+                                            text: modelData.name || ''
+                                            font.pixelSize: 12
+                                            color: Kirigami.Theme.textColor
+                                            Layout.fillWidth: true
+                                            elide: Text.ElideRight
+                                        }
+                                        Label {
+                                            text: 0 > 0
+                                                  ? Number(modelData.value).toFixed(0)
+                                                  : String(modelData.value || 0)
+                                            font.pixelSize: 13; font.bold: true
+                                            color: index === 0 ? Kirigami.Theme.highlightColor : Kirigami.Theme.textColor
+                                            Layout.preferredWidth: 40
+                                            horizontalAlignment: Text.AlignRight
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        // Section "🍎 " + i18n("Assists")
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            spacing: 2
+
+                            Label {
+                                Layout.leftMargin: 12; Layout.topMargin: 4
+                                text: "🍎 " + i18n("Assists")
+                                font.pixelSize: 13; font.bold: true
+                                color: Kirigami.Theme.textColor
+                            }
+
+                            Repeater {
+                                model: root.leadersAssists
+                                delegate: ItemDelegate {
+                                    Layout.fillWidth: true
+                                    topPadding: 2; bottomPadding: 2
+                                    leftPadding: 12; rightPadding: 12
+                                    HoverHandler { cursorShape: Qt.PointingHandCursor }
+                                    onClicked: if (modelData.id) root.openPlayer(modelData.id, 'leaders')
+                                    contentItem: RowLayout {
+                                        spacing: 8
+                                        Label {
+                                            text: (index + 1) + "."
+                                            font.pixelSize: 12; opacity: 0.45
+                                            color: Kirigami.Theme.textColor
+                                            Layout.preferredWidth: 20
+                                        }
+                                        Rectangle {
+                                            radius: 2
+                                            color: root.teamColor(modelData.team || '')
+                                            width: ldrTeamLblleadersAssists.implicitWidth + 6
+                                            height: ldrTeamLblleadersAssists.implicitHeight + 2
+                                            Label {
+                                                id: ldrTeamLblleadersAssists;
+                                                anchors.centerIn: parent
+                                                text: modelData.team || ''
+                                                color: root.teamTextColor(modelData.team || '')
+                                                font.pixelSize: 10; font.bold: true; font.family: "monospace"
+                                            }
+                                        }
+                                        Label {
+                                            text: modelData.name || ''
+                                            font.pixelSize: 12
+                                            color: Kirigami.Theme.textColor
+                                            Layout.fillWidth: true
+                                            elide: Text.ElideRight
+                                        }
+                                        Label {
+                                            text: 0 > 0
+                                                  ? Number(modelData.value).toFixed(0)
+                                                  : String(modelData.value || 0)
+                                            font.pixelSize: 13; font.bold: true
+                                            color: index === 0 ? Kirigami.Theme.highlightColor : Kirigami.Theme.textColor
+                                            Layout.preferredWidth: 40
+                                            horizontalAlignment: Text.AlignRight
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        // Section "👊 " + i18n("PIM")
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            spacing: 2
+
+                            Label {
+                                Layout.leftMargin: 12; Layout.topMargin: 4
+                                text: "👊 " + i18n("PIM")
+                                font.pixelSize: 13; font.bold: true
+                                color: Kirigami.Theme.textColor
+                            }
+
+                            Repeater {
+                                model: root.leadersPim
+                                delegate: ItemDelegate {
+                                    Layout.fillWidth: true
+                                    topPadding: 2; bottomPadding: 2
+                                    leftPadding: 12; rightPadding: 12
+                                    HoverHandler { cursorShape: Qt.PointingHandCursor }
+                                    onClicked: if (modelData.id) root.openPlayer(modelData.id, 'leaders')
+                                    contentItem: RowLayout {
+                                        spacing: 8
+                                        Label {
+                                            text: (index + 1) + "."
+                                            font.pixelSize: 12; opacity: 0.45
+                                            color: Kirigami.Theme.textColor
+                                            Layout.preferredWidth: 20
+                                        }
+                                        Rectangle {
+                                            radius: 2
+                                            color: root.teamColor(modelData.team || '')
+                                            width: ldrTeamLblleadersPim.implicitWidth + 6
+                                            height: ldrTeamLblleadersPim.implicitHeight + 2
+                                            Label {
+                                                id: ldrTeamLblleadersPim;
+                                                anchors.centerIn: parent
+                                                text: modelData.team || ''
+                                                color: root.teamTextColor(modelData.team || '')
+                                                font.pixelSize: 10; font.bold: true; font.family: "monospace"
+                                            }
+                                        }
+                                        Label {
+                                            text: modelData.name || ''
+                                            font.pixelSize: 12
+                                            color: Kirigami.Theme.textColor
+                                            Layout.fillWidth: true
+                                            elide: Text.ElideRight
+                                        }
+                                        Label {
+                                            text: 0 > 0
+                                                  ? Number(modelData.value).toFixed(0)
+                                                  : String(modelData.value || 0)
+                                            font.pixelSize: 13; font.bold: true
+                                            color: index === 0 ? Kirigami.Theme.highlightColor : Kirigami.Theme.textColor
+                                            Layout.preferredWidth: 40
+                                            horizontalAlignment: Text.AlignRight
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // Séparateur gardiens
+                        Rectangle {
+                            Layout.fillWidth: true; Layout.leftMargin: 8; Layout.rightMargin: 8
+                            height: 1; color: Kirigami.Theme.textColor; opacity: 0.15
+                        }
+                        Label {
+                            Layout.leftMargin: 12
+                            text: i18n("Goalies")
+                            font.pixelSize: 13; font.bold: true
+                            color: Kirigami.Theme.disabledTextColor
+                        }
+                        // Section "🏆 " + i18n("Wins")
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            spacing: 2
+
+                            Label {
+                                Layout.leftMargin: 12; Layout.topMargin: 4
+                                text: "🏆 " + i18n("Wins")
+                                font.pixelSize: 13; font.bold: true
+                                color: Kirigami.Theme.textColor
+                            }
+
+                            Repeater {
+                                model: root.leadersWins
+                                delegate: ItemDelegate {
+                                    Layout.fillWidth: true
+                                    topPadding: 2; bottomPadding: 2
+                                    leftPadding: 12; rightPadding: 12
+                                    HoverHandler { cursorShape: Qt.PointingHandCursor }
+                                    onClicked: if (modelData.id) root.openPlayer(modelData.id, 'leaders')
+                                    contentItem: RowLayout {
+                                        spacing: 8
+                                        Label {
+                                            text: (index + 1) + "."
+                                            font.pixelSize: 12; opacity: 0.45
+                                            color: Kirigami.Theme.textColor
+                                            Layout.preferredWidth: 20
+                                        }
+                                        Rectangle {
+                                            radius: 2
+                                            color: root.teamColor(modelData.team || '')
+                                            width: ldrTeamLblleadersWins.implicitWidth + 6
+                                            height: ldrTeamLblleadersWins.implicitHeight + 2
+                                            Label {
+                                                id: ldrTeamLblleadersWins;
+                                                anchors.centerIn: parent
+                                                text: modelData.team || ''
+                                                color: root.teamTextColor(modelData.team || '')
+                                                font.pixelSize: 10; font.bold: true; font.family: "monospace"
+                                            }
+                                        }
+                                        Label {
+                                            text: modelData.name || ''
+                                            font.pixelSize: 12
+                                            color: Kirigami.Theme.textColor
+                                            Layout.fillWidth: true
+                                            elide: Text.ElideRight
+                                        }
+                                        Label {
+                                            text: 0 > 0
+                                                  ? Number(modelData.value).toFixed(0)
+                                                  : String(modelData.value || 0)
+                                            font.pixelSize: 13; font.bold: true
+                                            color: index === 0 ? Kirigami.Theme.highlightColor : Kirigami.Theme.textColor
+                                            Layout.preferredWidth: 40
+                                            horizontalAlignment: Text.AlignRight
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        // Section "🥅 " + i18n("Shutouts")
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            spacing: 2
+
+                            Label {
+                                Layout.leftMargin: 12; Layout.topMargin: 4
+                                text: "🥅 " + i18n("Shutouts")
+                                font.pixelSize: 13; font.bold: true
+                                color: Kirigami.Theme.textColor
+                            }
+
+                            Repeater {
+                                model: root.leadersSho
+                                delegate: ItemDelegate {
+                                    Layout.fillWidth: true
+                                    topPadding: 2; bottomPadding: 2
+                                    leftPadding: 12; rightPadding: 12
+                                    HoverHandler { cursorShape: Qt.PointingHandCursor }
+                                    onClicked: if (modelData.id) root.openPlayer(modelData.id, 'leaders')
+                                    contentItem: RowLayout {
+                                        spacing: 8
+                                        Label {
+                                            text: (index + 1) + "."
+                                            font.pixelSize: 12; opacity: 0.45
+                                            color: Kirigami.Theme.textColor
+                                            Layout.preferredWidth: 20
+                                        }
+                                        Rectangle {
+                                            radius: 2
+                                            color: root.teamColor(modelData.team || '')
+                                            width: ldrTeamLblleadersSho.implicitWidth + 6
+                                            height: ldrTeamLblleadersSho.implicitHeight + 2
+                                            Label {
+                                                id: ldrTeamLblleadersSho;
+                                                anchors.centerIn: parent
+                                                text: modelData.team || ''
+                                                color: root.teamTextColor(modelData.team || '')
+                                                font.pixelSize: 10; font.bold: true; font.family: "monospace"
+                                            }
+                                        }
+                                        Label {
+                                            text: modelData.name || ''
+                                            font.pixelSize: 12
+                                            color: Kirigami.Theme.textColor
+                                            Layout.fillWidth: true
+                                            elide: Text.ElideRight
+                                        }
+                                        Label {
+                                            text: 0 > 0
+                                                  ? Number(modelData.value).toFixed(0)
+                                                  : String(modelData.value || 0)
+                                            font.pixelSize: 13; font.bold: true
+                                            color: index === 0 ? Kirigami.Theme.highlightColor : Kirigami.Theme.textColor
+                                            Layout.preferredWidth: 40
+                                            horizontalAlignment: Text.AlignRight
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        // Section "📉 " + i18n("GAA")
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            spacing: 2
+
+                            Label {
+                                Layout.leftMargin: 12; Layout.topMargin: 4
+                                text: "📉 " + i18n("GAA")
+                                font.pixelSize: 13; font.bold: true
+                                color: Kirigami.Theme.textColor
+                            }
+
+                            Repeater {
+                                model: root.leadersGaa
+                                delegate: ItemDelegate {
+                                    Layout.fillWidth: true
+                                    topPadding: 2; bottomPadding: 2
+                                    leftPadding: 12; rightPadding: 12
+                                    HoverHandler { cursorShape: Qt.PointingHandCursor }
+                                    onClicked: if (modelData.id) root.openPlayer(modelData.id, 'leaders')
+                                    contentItem: RowLayout {
+                                        spacing: 8
+                                        Label {
+                                            text: (index + 1) + "."
+                                            font.pixelSize: 12; opacity: 0.45
+                                            color: Kirigami.Theme.textColor
+                                            Layout.preferredWidth: 20
+                                        }
+                                        Rectangle {
+                                            radius: 2
+                                            color: root.teamColor(modelData.team || '')
+                                            width: ldrTeamLblleadersGaa.implicitWidth + 6
+                                            height: ldrTeamLblleadersGaa.implicitHeight + 2
+                                            Label {
+                                                id: ldrTeamLblleadersGaa;
+                                                anchors.centerIn: parent
+                                                text: modelData.team || ''
+                                                color: root.teamTextColor(modelData.team || '')
+                                                font.pixelSize: 10; font.bold: true; font.family: "monospace"
+                                            }
+                                        }
+                                        Label {
+                                            text: modelData.name || ''
+                                            font.pixelSize: 12
+                                            color: Kirigami.Theme.textColor
+                                            Layout.fillWidth: true
+                                            elide: Text.ElideRight
+                                        }
+                                        Label {
+                                            text: 2 > 0
+                                                  ? Number(modelData.value).toFixed(2)
+                                                  : String(modelData.value || 0)
+                                            font.pixelSize: 13; font.bold: true
+                                            color: index === 0 ? Kirigami.Theme.highlightColor : Kirigami.Theme.textColor
+                                            Layout.preferredWidth: 40
+                                            horizontalAlignment: Text.AlignRight
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        // Section "🛡️ " + i18n("SV%")
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            spacing: 2
+
+                            Label {
+                                Layout.leftMargin: 12; Layout.topMargin: 4
+                                text: "🛡️ " + i18n("SV%")
+                                font.pixelSize: 13; font.bold: true
+                                color: Kirigami.Theme.textColor
+                            }
+
+                            Repeater {
+                                model: root.leadersSvp
+                                delegate: ItemDelegate {
+                                    Layout.fillWidth: true
+                                    topPadding: 2; bottomPadding: 2
+                                    leftPadding: 12; rightPadding: 12
+                                    HoverHandler { cursorShape: Qt.PointingHandCursor }
+                                    onClicked: if (modelData.id) root.openPlayer(modelData.id, 'leaders')
+                                    contentItem: RowLayout {
+                                        spacing: 8
+                                        Label {
+                                            text: (index + 1) + "."
+                                            font.pixelSize: 12; opacity: 0.45
+                                            color: Kirigami.Theme.textColor
+                                            Layout.preferredWidth: 20
+                                        }
+                                        Rectangle {
+                                            radius: 2
+                                            color: root.teamColor(modelData.team || '')
+                                            width: ldrTeamLblleadersSvp.implicitWidth + 6
+                                            height: ldrTeamLblleadersSvp.implicitHeight + 2
+                                            Label {
+                                                id: ldrTeamLblleadersSvp;
+                                                anchors.centerIn: parent
+                                                text: modelData.team || ''
+                                                color: root.teamTextColor(modelData.team || '')
+                                                font.pixelSize: 10; font.bold: true; font.family: "monospace"
+                                            }
+                                        }
+                                        Label {
+                                            text: modelData.name || ''
+                                            font.pixelSize: 12
+                                            color: Kirigami.Theme.textColor
+                                            Layout.fillWidth: true
+                                            elide: Text.ElideRight
+                                        }
+                                        Label {
+                                            text: 3 > 0
+                                                  ? Number(modelData.value).toFixed(3)
+                                                  : String(modelData.value || 0)
+                                            font.pixelSize: 13; font.bold: true
+                                            color: index === 0 ? Kirigami.Theme.highlightColor : Kirigami.Theme.textColor
+                                            Layout.preferredWidth: 40
+                                            horizontalAlignment: Text.AlignRight
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        Item { implicitHeight: 8 }
+                    }
+                }
+            }
+        }
+
+                // ── Vue hub d'équipe ─────────────────────────────────────────
+        Item {
+            anchors.fill: parent
+            visible: root.teamHubOpen && !root.scheduleOpen
+
+            ColumnLayout {
+                anchors.fill: parent
+                spacing: 0
+
+                // ── Barre navigation ─────────────────────────────────
+                RowLayout {
+                    Layout.fillWidth: true
+                    Layout.leftMargin: 8; Layout.topMargin: 4; Layout.bottomMargin: 2
+                    Button {
+                        text: root.teamHubFrom === 'standings'
+                              ? i18n("‹ Standings") : i18n("‹ Match")
+                        icon.name: "go-previous"; flat: true
+                        onClicked: {
+                            root.teamHubOpen = false
+                            if (root.teamHubFrom === 'standings')
+                                root.standingsOpen = true
+                        }
+                    }
+                    Item { Layout.fillWidth: true }
+                }
+
+                Label {
+                    Layout.alignment: Qt.AlignHCenter; Layout.topMargin: 20
+                    visible: root.teamHubLoading
+                    text: i18n("Loading…"); opacity: 0.6; font.italic: true
+                }
+
+                ScrollView {
+                    Layout.fillWidth: true; Layout.fillHeight: true
+                    contentWidth: availableWidth
+                    ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
+                    visible: !root.teamHubLoading
+
+                    ColumnLayout {
+                        width: Math.min(340, parent.width)
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        spacing: 10
+
+                        // ── En-tête : logo + nom + entraîneur ────────
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            Layout.topMargin: 6
+                            spacing: 4
+
+                            // Logo centré, plus grand
+                            Image {
+                                Layout.alignment: Qt.AlignHCenter
+                                source: root.teamLogoUrl(root.teamHubCode)
+                                width: 72; height: 72
+                                fillMode: Image.PreserveAspectFit
+                                smooth: true
+                                sourceSize.width: 144
+                                sourceSize.height: 144
+                            }
+
+                            // Nom complet de l'équipe
+                            Label {
+                                Layout.alignment: Qt.AlignHCenter
+                                Layout.fillWidth: true
+                                text: root.teamHubFullName !== ''
+                                      ? root.teamHubFullName
+                                      : root.teamHubCode
+                                font.bold: true; font.pixelSize: 17
+                                color: root.teamColorAdapted(root.teamHubCode)
+                                horizontalAlignment: Text.AlignHCenter
+                                wrapMode: Text.WordWrap
+                            }
+
+                            // Entraîneur centré
+                            Label {
+                                Layout.alignment: Qt.AlignHCenter
+                                visible: root.teamHubCoach !== ''
+                                text: "🧑‍💼 " + root.teamHubCoach
+                                font.pixelSize: 11; opacity: 0.7
+                                color: Kirigami.Theme.disabledTextColor
+                                horizontalAlignment: Text.AlignHCenter
+                            }
+                        }
+
+                        // ── Grille stats centrée ──────────────────────
+                        Rectangle {
+                            Layout.fillWidth: true; Layout.leftMargin: 8; Layout.rightMargin: 8
+                            height: 1; color: root.teamColor(root.teamHubCode); opacity: 0.4
+                        }
+
+                        // 5 colonnes GP W L OT PTS — espacées uniformément
+                        Row {
+                            anchors.horizontalCenter: undefined
+                            Layout.alignment: Qt.AlignHCenter
+                            spacing: 20
+
+                            Repeater {
+                                model: [
+                                    { v: String(root.teamHubGP),  l: "GP"  },
+                                    { v: String(root.teamHubW),   l: "W"   },
+                                    { v: String(root.teamHubL),   l: "L"   },
+                                    { v: String(root.teamHubOT),  l: "OT"  },
+                                    { v: String(root.teamHubPts), l: "PTS" }
+                                ]
+                                delegate: Column {
+                                    spacing: 2; width: 40
+                                    Label {
+                                        width: parent.width
+                                        text: modelData.l
+                                        font.pixelSize: 10; opacity: 0.55
+                                        color: Kirigami.Theme.disabledTextColor
+                                        horizontalAlignment: Text.AlignHCenter
+                                    }
+                                    Label {
+                                        width: parent.width
+                                        text: modelData.v
+                                        font.pixelSize: 18; font.bold: true
+                                        color: Kirigami.Theme.textColor
+                                        horizontalAlignment: Text.AlignHCenter
+                                    }
+                                }
+                            }
+                        }
+
+                        // Position classement sous les stats
+                        Label {
+                            Layout.alignment: Qt.AlignHCenter
+                            visible: root.teamHubStanding !== ''
+                            text: root.teamHubStanding
+                            font.pixelSize: 11; opacity: 0.6
+                            color: Kirigami.Theme.disabledTextColor
+                        }
+
+                        // ── Derniers matchs ───────────────────────────
+                        Rectangle {
+                            Layout.fillWidth: true; Layout.leftMargin: 8; Layout.rightMargin: 8
+                            height: 1; color: Kirigami.Theme.textColor; opacity: 0.12
+                        }
+                        Label {
+                            Layout.leftMargin: 12
+                            text: i18n("Last games")
+                            font.pixelSize: 11; font.bold: true; opacity: 0.55
+                            color: Kirigami.Theme.disabledTextColor
+                        }
+
+                        Repeater {
+                            model: root.teamHubLastGames
+                            delegate: RowLayout {
+                                Layout.fillWidth: true
+                                Layout.leftMargin: 12; Layout.rightMargin: 12
+                                spacing: 6
+
+                                // Badge W/L/OT — largeur fixe
+                                Rectangle {
+                                    radius: 3
+                                    color: modelData.win
+                                           ? (modelData.ot ? "#1a6a3a" : "#1a7a2a")
+                                           : (modelData.ot ? "#5a3a1a" : "#7a1a1a")
+                                    width: 38; height: wlLbl.implicitHeight + 4
+                                    Label {
+                                        id: wlLbl; anchors.centerIn: parent
+                                        text: modelData.win
+                                              ? (modelData.ot ? "OTW" : "W")
+                                              : (modelData.ot ? "OTL" : "L")
+                                        color: "white"; font.bold: true; font.pixelSize: 11
+                                    }
+                                }
+
+                                // @/vs — largeur fixe
+                                Label {
+                                    text: modelData.home ? i18n("vs") : i18n("@")
+                                    font.pixelSize: 11; opacity: 0.55
+                                    Layout.preferredWidth: 18
+                                    horizontalAlignment: Text.AlignHCenter
+                                    color: Kirigami.Theme.textColor
+                                }
+
+                                // Pastille adversaire
+                                Rectangle {
+                                    radius: 3
+                                    color: root.teamColor(modelData.opp || '')
+                                    width: oppHubLbl.implicitWidth + 8
+                                    height: oppHubLbl.implicitHeight + 4
+                                    Label {
+                                        id: oppHubLbl; anchors.centerIn: parent
+                                        text: modelData.opp || '?'
+                                        color: root.teamTextColor(modelData.opp || '')
+                                        font.bold: true; font.pixelSize: 11
+                                        font.family: "monospace"
+                                    }
+                                }
+
+                                Item { Layout.fillWidth: true }
+
+                                // Score
+                                Label {
+                                    text: (modelData.gf || 0) + " – " + (modelData.ga || 0)
+                                    font.pixelSize: 13; font.bold: true
+                                    color: modelData.win ? "#44bb44" : Kirigami.Theme.textColor
+                                }
+                            }
+                        }
+
+                        // ── Prochain match ────────────────────────────
+                        Rectangle {
+                            Layout.fillWidth: true; Layout.leftMargin: 8; Layout.rightMargin: 8
+                            height: 1; color: Kirigami.Theme.textColor; opacity: 0.12
+                        }
+
+                        RowLayout {
+                            visible: root.teamHubNextGame !== null
+                            Layout.fillWidth: true
+                            Layout.leftMargin: 12; Layout.rightMargin: 12
+                            spacing: 6
+
+                            Label {
+                                text: i18n("Next:")
+                                font.pixelSize: 11; font.bold: true; opacity: 0.55
+                                color: Kirigami.Theme.disabledTextColor
+                            }
+
+                            Label {
+                                text: root.teamHubNextGame
+                                      ? (root.teamHubNextGame.home ? i18n("vs") : i18n("@"))
+                                      : ''
+                                font.pixelSize: 12; opacity: 0.7
+                                color: Kirigami.Theme.textColor
+                            }
+
+                            // Pastille adversaire prochain match
+                            Rectangle {
+                                radius: 3
+                                visible: root.teamHubNextGame !== null
+                                color: root.teamColor(root.teamHubNextGame ? (root.teamHubNextGame.opp || '') : '')
+                                width: nextOppLbl.implicitWidth + 8
+                                height: nextOppLbl.implicitHeight + 4
+                                Label {
+                                    id: nextOppLbl; anchors.centerIn: parent
+                                    text: root.teamHubNextGame ? (root.teamHubNextGame.opp || '?') : ''
+                                    color: root.teamTextColor(root.teamHubNextGame ? (root.teamHubNextGame.opp || '') : '')
+                                    font.bold: true; font.pixelSize: 11; font.family: "monospace"
+                                }
+                            }
+
+                            Item { Layout.fillWidth: true }
+
+                            Label {
+                                text: root.teamHubNextGame && root.teamHubNextGame.start
+                                      ? Qt.formatDateTime(new Date(root.teamHubNextGame.start), "ddd d MMM · hh:mm")
+                                      : ''
+                                font.pixelSize: 11; opacity: 0.7
+                                color: Kirigami.Theme.disabledTextColor
+                            }
+                        }
+
+                        // ── Boutons ───────────────────────────────────
+                        Rectangle {
+                            Layout.fillWidth: true; Layout.leftMargin: 8; Layout.rightMargin: 8
+                            height: 1; color: Kirigami.Theme.textColor; opacity: 0.12
+                        }
+
+                        RowLayout {
+                            Layout.fillWidth: true
+                            Layout.leftMargin: 12; Layout.rightMargin: 12
+                            Layout.bottomMargin: 8
+                            spacing: 8
+                            Button {
+                                text: i18n("📅 Schedule"); flat: true; Layout.fillWidth: true
+                                onClicked: root.openSchedule(root.teamHubCode, false)
+                            }
+                            Button {
+                                text: i18n("📊 Stats"); flat: true; Layout.fillWidth: true
+                                onClicked: root.openSchedule(root.teamHubCode, true)
+                            }
+                        }
+                        Item { implicitHeight: 4 }
+                    }
+                }
+            }
+        }
+
+                // ── Vue fiche joueur ─────────────────────────────────────────
         Item {
             anchors.fill: parent
             visible: root.playerOpen
@@ -5036,8 +5908,10 @@ PlasmoidItem {
                     Layout.fillWidth: true
                     Layout.leftMargin: 8; Layout.topMargin: 4; Layout.bottomMargin: 2
                     Button {
-                        text: root.playerFrom === 'teamstats'
-                              ? i18n("‹ Stats") : i18n("‹ Leaders")
+                        text: root.playerFrom === 'teamstats' ? i18n("‹ Stats")
+                              : root.playerFrom === 'search'   ? i18n("‹ Search")
+                              : root.playerFrom === 'detail'   ? i18n("‹ Match")
+                              : i18n("‹ Leaders")
                         icon.name: "go-previous"; flat: true
                         onClicked: root.playerOpen = false
                     }
@@ -5167,23 +6041,26 @@ PlasmoidItem {
                                 && root.playerData.featuredStats.regularSeason
                                 && root.playerData.featuredStats.regularSeason.subSeason || null
 
-                            component StatBox: ColumnLayout {
-                                property string val: "–"; property string lbl: ""
-                                spacing: 2; Layout.fillWidth: true
-                                // Légende AU-DESSUS
-                                Label { Layout.alignment: Qt.AlignHCenter; text: parent.lbl
-                                    font.pixelSize: 11; opacity: 0.6; color: Kirigami.Theme.disabledTextColor }
-                                Label { Layout.alignment: Qt.AlignHCenter; text: parent.val
-                                    font.pixelSize: 22; font.bold: true; color: Kirigami.Theme.textColor }
-                            }
-                            StatBox { val: parent.ss ? String(parent.ss.gamesPlayed || 0) : "–"; lbl: i18n("PJ") }
-                            StatBox { val: parent.ss ? String(parent.ss.goals       || 0) : "–"; lbl: i18n("Goals") }
-                            StatBox { val: parent.ss ? String(parent.ss.assists     || 0) : "–"; lbl: i18n("Assists") }
-                            StatBox { val: parent.ss ? String(parent.ss.points      || 0) : "–"; lbl: i18n("PTS") }
-                            StatBox {
-                                property int pm: parent.ss ? (parent.ss.plusMinus || 0) : 0
-                                val: parent.ss ? (pm >= 0 ? '+'+pm : String(pm)) : "–"
-                                lbl: i18n("+/-")
+                            Repeater {
+                                model: {
+                                    var ss = parent.ss
+                                    if (!ss) return [{l:i18n("PJ"),v:"–"},{l:i18n("Goals"),v:"–"},{l:i18n("Assists"),v:"–"},{l:i18n("PTS"),v:"–"},{l:i18n("+/-"),v:"–"}]
+                                    var pm = ss.plusMinus || 0
+                                    return [
+                                        { l: i18n("PJ"),      v: String(ss.gamesPlayed || 0) },
+                                        { l: i18n("Goals"),   v: String(ss.goals || 0) },
+                                        { l: i18n("Assists"), v: String(ss.assists || 0) },
+                                        { l: i18n("PTS"),     v: String(ss.points || 0) },
+                                        { l: i18n("+/-"),     v: pm >= 0 ? '+'+pm : String(pm) }
+                                    ]
+                                }
+                                delegate: ColumnLayout {
+                                    spacing: 2; Layout.fillWidth: true
+                                    Label { Layout.alignment: Qt.AlignHCenter; text: modelData.l
+                                        font.pixelSize: 11; opacity: 0.6; color: Kirigami.Theme.disabledTextColor }
+                                    Label { Layout.alignment: Qt.AlignHCenter; text: modelData.v
+                                        font.pixelSize: 22; font.bold: true; color: Kirigami.Theme.textColor }
+                                }
                             }
                         }
 
@@ -5199,22 +6076,26 @@ PlasmoidItem {
                                 && root.playerData.featuredStats.regularSeason
                                 && root.playerData.featuredStats.regularSeason.subSeason || null
 
-                            component GoalieBox: ColumnLayout {
-                                property string val: "–"; property string lbl: ""
-                                spacing: 2; Layout.fillWidth: true
-                                // Légende AU-DESSUS
-                                Label { Layout.alignment: Qt.AlignHCenter; text: parent.lbl
-                                    font.pixelSize: 11; opacity: 0.6; color: Kirigami.Theme.disabledTextColor }
-                                Label { Layout.alignment: Qt.AlignHCenter; text: parent.val
-                                    font.pixelSize: 20; font.bold: true; color: Kirigami.Theme.textColor }
+                            Repeater {
+                                model: {
+                                    var ss = parent.ss
+                                    if (!ss) return [{l:i18n("PJ"),v:"–"},{l:i18n("Wins"),v:"–"},{l:i18n("GAA"),v:"–"},{l:i18n("SV%"),v:"–"},{l:i18n("Shutouts"),v:"–"}]
+                                    return [
+                                        { l: i18n("PJ"),       v: String(ss.gamesPlayed || 0) },
+                                        { l: i18n("Wins"),     v: String(ss.wins || 0) },
+                                        { l: i18n("GAA"),      v: ss.goalsAgainstAverage !== undefined ? Number(ss.goalsAgainstAverage).toFixed(2) : "–" },
+                                        { l: i18n("SV%"),      v: ss.savePctg !== undefined ? Number(ss.savePctg).toFixed(3) : "–" },
+                                        { l: i18n("Shutouts"), v: String(ss.shutouts || 0) }
+                                    ]
+                                }
+                                delegate: ColumnLayout {
+                                    spacing: 2; Layout.fillWidth: true
+                                    Label { Layout.alignment: Qt.AlignHCenter; text: modelData.l
+                                        font.pixelSize: 11; opacity: 0.6; color: Kirigami.Theme.disabledTextColor }
+                                    Label { Layout.alignment: Qt.AlignHCenter; text: modelData.v
+                                        font.pixelSize: 20; font.bold: true; color: Kirigami.Theme.textColor }
+                                }
                             }
-                            GoalieBox { val: parent.ss ? String(parent.ss.gamesPlayed || 0) : "–"; lbl: i18n("PJ") }
-                            GoalieBox { val: parent.ss ? String(parent.ss.wins        || 0) : "–"; lbl: i18n("Wins") }
-                            GoalieBox { val: parent.ss && parent.ss.goalsAgainstAverage !== undefined
-                                ? Number(parent.ss.goalsAgainstAverage).toFixed(2) : "–"; lbl: i18n("GAA") }
-                            GoalieBox { val: parent.ss && parent.ss.savePctg !== undefined
-                                ? Number(parent.ss.savePctg).toFixed(3) : "–"; lbl: i18n("SV%") }
-                            GoalieBox { val: parent.ss ? String(parent.ss.shutouts || 0) : "–"; lbl: i18n("Shutouts") }
                         }
 
                         // ── Historique par saison ─────────────────────────
@@ -5234,20 +6115,14 @@ PlasmoidItem {
                             Layout.fillWidth: true; Layout.leftMargin: 12; Layout.rightMargin: 12
                             visible: root.playerData && root.playerData.position !== 'G'
                             spacing: 0
-                            component HdrLbl: Label {
-                                property string t: ""
-                                text: t; font.pixelSize: 10; font.bold: true; opacity: 0.5
-                                color: Kirigami.Theme.disabledTextColor
-                                horizontalAlignment: Text.AlignHCenter
-                            }
-                            HdrLbl { t: i18n("Season"); Layout.preferredWidth: 52; horizontalAlignment: Text.AlignLeft }
-                            HdrLbl { t: i18n("League"); Layout.preferredWidth: 36 }
-                            HdrLbl { t: i18n("Team"); Layout.preferredWidth: 60 }
-                            HdrLbl { t: "GP";  Layout.preferredWidth: 30 }
-                            HdrLbl { t: "G";   Layout.preferredWidth: 28 }
-                            HdrLbl { t: "A";   Layout.preferredWidth: 28 }
-                            HdrLbl { t: "PTS"; Layout.preferredWidth: 32 }
-                            HdrLbl { t: "+/-"; Layout.preferredWidth: 32 }
+                            Label { text: i18n("Season"); font.pixelSize: 10; font.bold: true; opacity: 0.5; color: Kirigami.Theme.disabledTextColor; Layout.preferredWidth: 52; horizontalAlignment: Text.AlignLeft }
+                            Label { text: i18n("League"); font.pixelSize: 10; font.bold: true; opacity: 0.5; color: Kirigami.Theme.disabledTextColor; Layout.preferredWidth: 36; horizontalAlignment: Text.AlignHCenter }
+                            Label { text: i18n("Team");   font.pixelSize: 10; font.bold: true; opacity: 0.5; color: Kirigami.Theme.disabledTextColor; Layout.preferredWidth: 60; horizontalAlignment: Text.AlignHCenter }
+                            Label { text: "GP";  font.pixelSize: 10; font.bold: true; opacity: 0.5; color: Kirigami.Theme.disabledTextColor; Layout.preferredWidth: 30; horizontalAlignment: Text.AlignHCenter }
+                            Label { text: "G";   font.pixelSize: 10; font.bold: true; opacity: 0.5; color: Kirigami.Theme.disabledTextColor; Layout.preferredWidth: 28; horizontalAlignment: Text.AlignHCenter }
+                            Label { text: "A";   font.pixelSize: 10; font.bold: true; opacity: 0.5; color: Kirigami.Theme.disabledTextColor; Layout.preferredWidth: 28; horizontalAlignment: Text.AlignHCenter }
+                            Label { text: "PTS"; font.pixelSize: 10; font.bold: true; opacity: 0.5; color: Kirigami.Theme.disabledTextColor; Layout.preferredWidth: 32; horizontalAlignment: Text.AlignHCenter }
+                            Label { text: "+/-"; font.pixelSize: 10; font.bold: true; opacity: 0.5; color: Kirigami.Theme.disabledTextColor; Layout.preferredWidth: 32; horizontalAlignment: Text.AlignHCenter }
                         }
 
                         // En-têtes gardien
@@ -5255,20 +6130,14 @@ PlasmoidItem {
                             Layout.fillWidth: true; Layout.leftMargin: 12; Layout.rightMargin: 12
                             visible: root.playerData && root.playerData.position === 'G'
                             spacing: 0
-                            component GHdrLbl: Label {
-                                property string t: ""
-                                text: t; font.pixelSize: 10; font.bold: true; opacity: 0.5
-                                color: Kirigami.Theme.disabledTextColor
-                                horizontalAlignment: Text.AlignHCenter
-                            }
-                            GHdrLbl { t: i18n("Season"); Layout.preferredWidth: 52; horizontalAlignment: Text.AlignLeft }
-                            GHdrLbl { t: i18n("League"); Layout.preferredWidth: 36 }
-                            GHdrLbl { t: i18n("Team"); Layout.preferredWidth: 60 }
-                            GHdrLbl { t: "GP";  Layout.preferredWidth: 30 }
-                            GHdrLbl { t: "W";   Layout.preferredWidth: 28 }
-                            GHdrLbl { t: "GAA"; Layout.preferredWidth: 36 }
-                            GHdrLbl { t: "SV%"; Layout.preferredWidth: 38 }
-                            GHdrLbl { t: "SO";  Layout.preferredWidth: 28 }
+                            Label { text: i18n("Season"); font.pixelSize: 10; font.bold: true; opacity: 0.5; color: Kirigami.Theme.disabledTextColor; Layout.preferredWidth: 52; horizontalAlignment: Text.AlignLeft }
+                            Label { text: i18n("League"); font.pixelSize: 10; font.bold: true; opacity: 0.5; color: Kirigami.Theme.disabledTextColor; Layout.preferredWidth: 36; horizontalAlignment: Text.AlignHCenter }
+                            Label { text: i18n("Team");   font.pixelSize: 10; font.bold: true; opacity: 0.5; color: Kirigami.Theme.disabledTextColor; Layout.preferredWidth: 60; horizontalAlignment: Text.AlignHCenter }
+                            Label { text: "GP";  font.pixelSize: 10; font.bold: true; opacity: 0.5; color: Kirigami.Theme.disabledTextColor; Layout.preferredWidth: 30; horizontalAlignment: Text.AlignHCenter }
+                            Label { text: "W";   font.pixelSize: 10; font.bold: true; opacity: 0.5; color: Kirigami.Theme.disabledTextColor; Layout.preferredWidth: 28; horizontalAlignment: Text.AlignHCenter }
+                            Label { text: "GAA"; font.pixelSize: 10; font.bold: true; opacity: 0.5; color: Kirigami.Theme.disabledTextColor; Layout.preferredWidth: 36; horizontalAlignment: Text.AlignHCenter }
+                            Label { text: "SV%"; font.pixelSize: 10; font.bold: true; opacity: 0.5; color: Kirigami.Theme.disabledTextColor; Layout.preferredWidth: 38; horizontalAlignment: Text.AlignHCenter }
+                            Label { text: "SO";  font.pixelSize: 10; font.bold: true; opacity: 0.5; color: Kirigami.Theme.disabledTextColor; Layout.preferredWidth: 28; horizontalAlignment: Text.AlignHCenter }
                         }
 
                         // Lignes saisons
@@ -5825,43 +6694,48 @@ PlasmoidItem {
                                           leftMargin: 4; rightMargin: 4 }
                                 visible: rType === "leagueHeader"
                                 spacing: 0
-
-                                component SortHdr: Label {
-                                    property string skey: ""
-                                    text: ""
-                                    font.pixelSize: 10; font.bold: true
-                                    opacity: root.standingsSortKey === skey ? 1.0 : 0.55
-                                    color: root.standingsSortKey === skey
-                                           ? Kirigami.Theme.highlightColor
-                                           : Kirigami.Theme.textColor
-                                    horizontalAlignment: Text.AlignHCenter
-                                    // Flèche de tri
-                                    property string arrow: root.standingsSortKey === skey
-                                        ? (root.standingsSortAsc ? " ↑" : " ↓") : ""
-                                    HoverHandler { cursorShape: Qt.PointingHandCursor }
-                                    TapHandler {
-                                        acceptedButtons: Qt.LeftButton
-                                        onTapped: {
-                                            if (root.standingsSortKey === parent.skey)
-                                                root.standingsSortAsc = !root.standingsSortAsc
-                                            else {
-                                                root.standingsSortKey = parent.skey
-                                                root.standingsSortAsc = false
+                                Repeater {
+                                    model: [
+                                        {k:"gp", t:"GP", w:26},{k:"w", t:"W", w:24},{k:"l", t:"L", w:24},
+                                        {k:"ot", t:"OT", w:24},{k:"pts", t:"PTS", w:28},{k:"gf", t:"GF", w:28},{k:"ga", t:"GA", w:28}
+                                    ]
+                                    delegate: Label {
+                                        text: modelData.t + (root.standingsSortKey === modelData.k ? (root.standingsSortAsc ? " ↑" : " ↓") : "")
+                                        font.pixelSize: 10; font.bold: true
+                                        opacity: root.standingsSortKey === modelData.k ? 1.0 : 0.55
+                                        color: root.standingsSortKey === modelData.k ? Kirigami.Theme.highlightColor : Kirigami.Theme.textColor
+                                        horizontalAlignment: Text.AlignHCenter
+                                        Layout.preferredWidth: modelData.w
+                                        HoverHandler { cursorShape: Qt.PointingHandCursor }
+                                        TapHandler {
+                                            acceptedButtons: Qt.LeftButton
+                                            onTapped: {
+                                                if (root.standingsSortKey === modelData.k)
+                                                    root.standingsSortAsc = !root.standingsSortAsc
+                                                else { root.standingsSortKey = modelData.k; root.standingsSortAsc = false }
+                                                root.buildStandingsModel()
                                             }
-                                            root.buildStandingsModel()
                                         }
                                     }
                                 }
-
-                                Item { width: 36 }  // pastille
-                                Item { Layout.fillWidth: true }
-                                SortHdr { skey:"gp";  text: "GP"   + arrow; Layout.preferredWidth: 26 }
-                                SortHdr { skey:"w";   text: "W"    + arrow; Layout.preferredWidth: 24 }
-                                SortHdr { skey:"l";   text: "L"    + arrow; Layout.preferredWidth: 24 }
-                                SortHdr { skey:"ot";  text: "OT"   + arrow; Layout.preferredWidth: 24 }
-                                SortHdr { skey:"pts"; text: "PTS"  + arrow; Layout.preferredWidth: 28 }
-                                SortHdr { skey:"gf";  text: "GF"   + arrow; Layout.preferredWidth: 28 }
-                                SortHdr { skey:"ga";  text: "GA"   + arrow; Layout.preferredWidth: 28 }
+                                Label {
+                                    text: "GF" + (root.standingsSortKey === "gf" ? (root.standingsSortAsc ? " ↑" : " ↓") : "")
+                                    font.pixelSize: 10; font.bold: true
+                                    opacity: root.standingsSortKey === "gf" ? 1.0 : 0.55
+                                    color: root.standingsSortKey === "gf" ? Kirigami.Theme.highlightColor : Kirigami.Theme.textColor
+                                    horizontalAlignment: Text.AlignHCenter; Layout.preferredWidth: 28
+                                    HoverHandler { cursorShape: Qt.PointingHandCursor }
+                                    TapHandler { acceptedButtons: Qt.LeftButton; onTapped: { if (root.standingsSortKey === "gf") root.standingsSortAsc = !root.standingsSortAsc; else { root.standingsSortKey = "gf"; root.standingsSortAsc = false }; root.buildStandingsModel() } }
+                                }
+                                Label {
+                                    text: "GA" + (root.standingsSortKey === "ga" ? (root.standingsSortAsc ? " ↑" : " ↓") : "")
+                                    font.pixelSize: 10; font.bold: true
+                                    opacity: root.standingsSortKey === "ga" ? 1.0 : 0.55
+                                    color: root.standingsSortKey === "ga" ? Kirigami.Theme.highlightColor : Kirigami.Theme.textColor
+                                    horizontalAlignment: Text.AlignHCenter; Layout.preferredWidth: 28
+                                    HoverHandler { cursorShape: Qt.PointingHandCursor }
+                                    TapHandler { acceptedButtons: Qt.LeftButton; onTapped: { if (root.standingsSortKey === "ga") root.standingsSortAsc = !root.standingsSortAsc; else { root.standingsSortKey = "ga"; root.standingsSortAsc = false }; root.buildStandingsModel() } }
+                                }
                                 Label { text: "S/O";  font.pixelSize: 10; font.bold: true; opacity: 0.55; Layout.preferredWidth: 30;  horizontalAlignment: Text.AlignHCenter }
                                 Label { text: "HOME"; font.pixelSize: 10; font.bold: true; opacity: 0.55; Layout.preferredWidth: 44;  horizontalAlignment: Text.AlignHCenter; Layout.leftMargin: 6 }
                                 Label { text: "AWAY"; font.pixelSize: 10; font.bold: true; opacity: 0.55; Layout.preferredWidth: 44;  horizontalAlignment: Text.AlignHCenter; Layout.leftMargin: 6 }
@@ -6092,9 +6966,9 @@ PlasmoidItem {
                             gesturePolicy: TapHandler.ReleaseWithinBounds
                             onTapped: {
                                 var d = new Date(start)
-                                var iso = d.getUTCFullYear() + "-"
-                                        + root.pad2(d.getUTCMonth() + 1) + "-"
-                                        + root.pad2(d.getUTCDate())
+                                var iso = d.getFullYear() + "-"
+                                        + root.pad2(d.getMonth() + 1) + "-"
+                                        + root.pad2(d.getDate())
                                 if (root.dayViewOpen && root.dayViewDate === iso) {
                                     root.dayViewOpen = false
                                 } else {

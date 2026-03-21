@@ -486,3 +486,57 @@ msgstr "‹ Meneurs"
 
 msgid "‹ Stats"
 msgstr "‹ Statistiques"
+
+msgid "Show today's games"
+msgstr "Afficher les parties d'aujourd'hui"
+
+msgid "Previous days:"
+msgstr "Jours précédents :"
+
+msgid "(0 = disabled)"
+msgstr "(0 = désactivé)"
+
+msgid "Search"
+msgstr "Recherche"
+
+msgid "Player name…"
+msgstr "Nom du joueur…"
+
+msgid "No results"
+msgstr "Aucun résultat"
+
+msgid "Retired"
+msgstr "Retraité"
+
+msgid "‹ Search"
+msgstr "‹ Recherche"
+
+msgid "Calendar"
+msgstr "Calendrier"
+
+msgid "Today"
+msgstr "Aujourd'hui"
+
+msgid "Su"
+msgstr "Di"
+
+msgid "Mo"
+msgstr "Lu"
+
+msgid "Tu"
+msgstr "Ma"
+
+msgid "We"
+msgstr "Me"
+
+msgid "Th"
+msgstr "Je"
+
+msgid "Fr"
+msgstr "Ve"
+
+msgid "Sa"
+msgstr "Sa"
+
+msgid "🔍"
+msgstr "🔍"

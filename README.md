@@ -23,6 +23,10 @@ A real-time NHL scores applet for KDE Plasma 6. Displays live scores, schedules,
 - **Full day view** — click a date separator to see all games for that day (not just followed teams), with live scores, periods and final results
 - **Playoff mode** — automatic detection; series score, round label, game number, and full bracket view via 🏆 button
 - **Goal notification** — sound (siren) + visual banner in the favorite team's colors on every goal; no external install required
+- **Player search** — 🔍 Search button in the game popup searches any NHL player (active or retired) by name; results link to the full player profile
+- **Full-day calendar** — click 📅 in the day view to open a monthly calendar with month/year navigation; click any date to view its games
+- **Clickable scorers & assistants** — in completed games, scorer and assist names are clickable links to the player profile
+- **Match date in game popup** — date and time shown below logos for completed and live games
 - **Three display modes** (panel only):
   - *Score below* — uniform cards with team badges, score and status
   - *Score next to name* — compact inline row layout
@@ -32,7 +36,7 @@ A real-time NHL scores applet for KDE Plasma 6. Displays live scores, schedules,
 - **Colored popup separators** — horizontal dividers use a team color gradient
 - **Desktop widget** — enriched card view with clickable date separators, Standings and Leaders buttons
 - **Vertical panel** — stacked tile layout adapts automatically
-- **French translation** — full `fr.po` with 136 entries
+- **French translation** — full `fr.po` with 169 entries
 
 ---
 
@@ -186,7 +190,7 @@ Un applet de scores NHL en temps réel pour KDE Plasma 6. Affiche les scores en 
 - **Séparateurs colorés dans les popups** — les séparateurs horizontaux utilisent un dégradé aux couleurs des équipes
 - **Widget bureau** — vue enrichie en cartes avec séparateurs de dates cliquables, boutons Classement et Meneurs
 - **Panneau vertical** — disposition en tuiles empilées adaptée automatiquement
-- **Traduction française** — `fr.po` complet avec 136 entrées
+- **Traduction française** — `fr.po` complet avec 169 entrées
 
 ---
 

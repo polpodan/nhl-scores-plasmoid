@@ -4,6 +4,43 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [4.3.0] — 2026-03-21
+
+### Added
+
+- **Player search** — a 🔍 Search button has been added to the game detail popup navigation bar (between Leaders and NHL.com). The search view provides a text field to search for any NHL player, active or retired, using the `search.d3.nhle.com` API. Results show a colored team badge (active players) or 🏒 icon (retired), player name, position, and retired status. Clicking any result opens the full player profile view.
+- **Full-day calendar** — clicking the 📅 button in the day view header opens a monthly calendar. Navigation uses ‹ › arrows for month-by-month browsing and a year dropdown (2006–present) for quick year jumps. Today's date is highlighted with a colored circle; the currently displayed date is highlighted in accent color. Clicking any day opens the full day view for that date. Future dates are shown dimmed.
+- **Clickable scorers and assistants** — in the game detail popup goals section, scorer names and assist names are now displayed in accent color and are clickable. Clicking opens the full player profile. The back button returns to the match popup (`‹ Match`).
+- **Date displayed in game detail popup** — for completed and live games (FINAL / LIVE), the game date and time are now shown below the team logos, centered, in the format `hh:mm  ·  Day D Mon YYYY`.
+- **‹ Match back button in Leaders view** — replaced the ✕ close button with a `‹ Match` back button consistent with the Standings view navigation.
+
+### Changed
+
+- **Day view header** — the date label is now centered between the ✕ button and the new 📅 calendar button.
+- **`openSchedule(team, showStats)`** — now accepts a second parameter. When `showStats = true`, `fetchTeamStats` is called immediately alongside `fetchSchedule`, fixing the blank statistics view when opening Stats directly from the team hub.
+- **`openDayView` uses local date** — date ISO strings are now built using `getFullYear/Month/Date` (local time) instead of UTC variants, fixing the off-by-one day issue for evening games when navigating from the panel applet.
+- **Hub team name** — the team hub now shows the full team name resolved from `teamCommonName + teamPlaceNameWithPreposition` (e.g. "Maple Leafs de Toronto" in French).
+- **All inline `component` declarations removed** — QML `component` blocks nested inside `ScrollView` or `ColumnLayout` caused silent rendering failures in Plasma 6. Replaced with `Repeater` delegates, direct `Label` elements, and explicit property storage on parent items.
+
+### Fixed
+
+- **Day view and Leaders view disappeared** — both views were accidentally removed during the team hub refactoring. Reinserted before the hub view with correct `visible` conditions.
+- **`LeaderSection` not a type** — the `LeaderSection` component was defined in a separate file that no longer existed. Replaced with 8 inline `ColumnLayout` + `Repeater` sections directly in the leaders view.
+- **Stats blank when opening from hub** — `openSchedule` reset `scheduleShowStats = false` unconditionally, then the Stats button set it back to `true` — but the reset happened last. Fixed by passing `showStats` as a parameter and calling `fetchTeamStats` immediately when `true`.
+- **Calendar overlay on day view** — `calendarOpen` was not included in the `visible` condition of the day view. Added `&& !root.calendarOpen`.
+- **`calendarOpen` not reset** — opening a game detail from the calendar left `calendarOpen = true`, causing the popup to appear behind the calendar. Added `calendarOpen = false` to `openDetail` and `openDayView`.
+- **`scorerId = 0` for scorers** — `scorerId` was stored in `detailGoals` but not propagated to `detailGoalsByPeriod` (the flat list used by the Repeater). Added `scorerId: gobj.scorerId || 0` to the flat list push.
+- **`dayCell is not defined`** — the empty-cell delegate in the calendar referenced `dayCell.implicitHeight` from a different `Repeater`. Replaced with a fixed height of `38`.
+- **`fetchTeamStats` called twice** — the toggle button called it once directly and once inside a duplicate `if` block. Consolidated into a single guarded call.
+- **Player profile overlapping game detail** — `playerOpen` from `'detail'` context was not excluded from the detail popup's `visible` condition. Added `&& !(root.playerOpen && root.playerFrom === 'detail')`.
+- **Search debug logs removed** — 4 `console.log` calls left from the search endpoint debugging were cleaned up.
+
+### Localization
+
+- **fr.po** — 169 entries. New strings: `Search` → `Recherche`, `Player name…` → `Nom du joueur…`, `No results` → `Aucun résultat`, `Retired` → `Retraité`, `‹ Search` → `‹ Recherche`, `Calendar` → `Calendrier`, `Today` → `Aujourd'hui`, day abbreviations (Di/Lu/Ma/Me/Je/Ve/Sa).
+
+---
+
 ## [4.2.0] — 2026-03-20
 
 ### Added

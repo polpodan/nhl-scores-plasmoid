@@ -22,8 +22,8 @@ Item {
   property bool   cfg_showAllTeams
   property int    cfg_maxGames
   property int    cfg_lookaheadDays
-  property bool   cfg_showYesterday
-  property bool   cfg_showTwoDaysAgo
+  property bool   cfg_showToday
+  property int    cfg_pastDays
   property int    cfg_blinkDuration
   // cfg_ Display (injectées par Plasma dans tous les fichiers de config)
   property bool   cfg_ultraCompact
@@ -43,8 +43,8 @@ Item {
   property bool   cfg_showAllTeamsDefault
   property int    cfg_maxGamesDefault
   property int    cfg_lookaheadDaysDefault
-  property bool   cfg_showYesterdayDefault
-  property bool   cfg_showTwoDaysAgoDefault
+  property bool   cfg_showTodayDefault
+  property int    cfg_pastDaysDefault
   property int    cfg_blinkDurationDefault
   property string cfg_scoreLayoutDefault
   property string cfg_liveColorDefault
@@ -409,51 +409,64 @@ Item {
       // ════════════════════════════════════════════════════
       SectionTitle { text: i18n("Display") }
 
-      // Max parties
-      RowLayout {
+      // Grille de paramètres d'affichage — 2 colonnes label/contrôle
+      GridLayout {
         Layout.alignment: Qt.AlignHCenter
-        spacing: 12
+        columns: 2
+        columnSpacing: 16
+        rowSpacing: 10
+
+        // Ligne 1 : Max parties
         QQC2.Label {
           text: i18n("Max games to display:")
-                    verticalAlignment: Text.AlignVCenter
+          Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
         }
         QQC2.SpinBox {
           from: 1; to: 20
           value: cfg_maxGames || 10
           onValueChanged: cfg_maxGames = value
+          Layout.alignment: Qt.AlignLeft
         }
-      }
 
-      // Jours à venir
-      RowLayout {
-        Layout.alignment: Qt.AlignHCenter
-        spacing: 12
+        // Ligne 2 : Jours à venir
         QQC2.Label {
           text: i18n("Days ahead:")
-                    verticalAlignment: Text.AlignVCenter
+          Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
         }
         QQC2.SpinBox {
           from: 0; to: 14
-          value: cfg_lookaheadDays || 2
+          value: cfg_lookaheadDays
           onValueChanged: cfg_lookaheadDays = value
-        }
-      }
-
-      // Cases à cocher : hier / avant-hier + mode ultra-compact
-      ColumnLayout {
-        Layout.alignment: Qt.AlignHCenter
-        spacing: 6
-        QQC2.CheckBox {
-          text: i18n("Show yesterday's games")
-          checked: cfg_showYesterday
-          onToggled: cfg_showYesterday = checked
-        }
-        QQC2.CheckBox {
-          text: i18n("Show games from two days ago")
-          checked: cfg_showTwoDaysAgo
-          onToggled: cfg_showTwoDaysAgo = checked
+          Layout.alignment: Qt.AlignLeft
         }
 
+        // Ligne 3 : Jours précédents
+        QQC2.Label {
+          text: i18n("Previous days:")
+          Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
+        }
+        RowLayout {
+          spacing: 8
+          Layout.alignment: Qt.AlignLeft
+          QQC2.SpinBox {
+            from: 0; to: 4; value: cfg_pastDays
+            onValueModified: cfg_pastDays = value
+          }
+          QQC2.Label {
+            text: i18n("(0 = disabled)")
+            opacity: 0.55; font.pixelSize: 11
+          }
+        }
+
+        // Ligne 4 : Aujourd'hui (pleine largeur)
+        Item { Layout.columnSpan: 2; implicitHeight: 2 }
+        QQC2.CheckBox {
+          Layout.columnSpan: 2
+          Layout.alignment: Qt.AlignHCenter
+          text: i18n("Show today's games")
+          checked: cfg_showToday
+          onToggled: cfg_showToday = checked
+        }
       }
 
       // ════════════════════════════════════════════════════
