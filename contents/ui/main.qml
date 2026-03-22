@@ -20,12 +20,13 @@ PlasmoidItem {
     property var favoriteTeams: []
     property string favoriteTeamSound: Plasmoid.configuration.favoriteTeamSound || ''  // legacy
     property var    soundTeams: (Plasmoid.configuration.soundTeams || '').split(',').filter(function(s){return s.length>0})
+    property real   soundVolume: Plasmoid.configuration.soundVolume !== undefined ? Plasmoid.configuration.soundVolume : 1.0
 
     // ── Son + bannière custom pour un but de l'équipe favorite ─────
     MediaPlayer {
         id: sirenSound
         source: Qt.resolvedUrl("../sounds/siren.wav")
-        audioOutput: AudioOutput { volume: 1.0 }
+        audioOutput: AudioOutput { volume: root.soundVolume }
         onErrorOccurred: {
             // Si le fichier d'équipe est introuvable → fallback sirène
             var fallback = Qt.resolvedUrl("../sounds/siren.wav")
@@ -54,7 +55,9 @@ PlasmoidItem {
     property bool showUpcomingTime: (Plasmoid.configuration.showUpcomingTime !== false)
     property string dateMode: Plasmoid.configuration.dateMode || 'local'
     property bool showToday:    Plasmoid.configuration.showToday
-    property int  pastDays:     Plasmoid.configuration.pastDays || 0
+    property int  pastDays:     Plasmoid.configuration.pastDays !== undefined
+                                ? Plasmoid.configuration.pastDays : 0
+    property int  pollInterval:  Plasmoid.configuration.pollInterval || 20
 
     // Action contextuelle (menu clic-droit)
     function action_refreshNow() { refresh() }
@@ -261,7 +264,7 @@ PlasmoidItem {
 
     Timer {
         id: pollTimer
-        interval: hasActiveGames() ? 20000 : 300000  // 20s si actif, 5min sinon
+        interval: hasActiveGames() ? root.pollInterval * 1000 : 300000
         running: true
         repeat: true
         triggeredOnStart: true
@@ -470,6 +473,8 @@ PlasmoidItem {
     property bool   calendarOpen:   false
     property int    calYear:        new Date().getFullYear()
     property int    calMonth:       new Date().getMonth()  // 0-11
+    property var    calGameCounts:  ({})  // { "2026-03-15": 12, ... }
+    property bool   calLoading:     false
     property bool   bracketLoading: false
     property string bracketError:  ''
     property var    bracketData:   null
@@ -493,6 +498,10 @@ PlasmoidItem {
     property string playerError:   ''
     property var    playerData:    null
     property string playerFrom:    'leaders'  // 'leaders' | 'teamstats' | 'search'
+    property var    detailThreeStars:  []
+    property var    detailPenalties:   []
+    property var    penaltyPlayerMap:  ({})  // "TEAM-sweater" → playerId   // [{period, time, team, player, duration, type, descKey, drawnBy}]
+    property string detailView:        'goals'  // 'goals' | 'penalties' | 'stars'
 
     // Recherche de joueurs
     property bool   searchOpen:    false
@@ -986,6 +995,113 @@ PlasmoidItem {
             })
     }
 
+    // ── Résolution des playerIds pour les pénalités ─────────────────
+    function resolvePenaltyIds(pmap) {
+        if (!pmap || Object.keys(pmap).length === 0) return
+        if (!detailPenalties || detailPenalties.length === 0) return
+        var updated = []
+        for (var i = 0; i < detailPenalties.length; i++) {
+            var pen = detailPenalties[i]
+            var key = pen.team + '-' + pen.number
+            updated.push({
+                period:   pen.period,
+                time:     pen.time,
+                team:     pen.team,
+                player:   pen.player,
+                playerId: pmap[key] || pen.playerId || 0,
+                number:   pen.number,
+                duration: pen.duration,
+                type:     pen.type,
+                descKey:  pen.descKey,
+                drawnBy:  pen.drawnBy
+            })
+        }
+        detailPenalties = updated
+    }
+
+    // ── Traduction des infractions ───────────────────────────────────
+    function penaltyDesc(key) {
+        var map = {
+            'slashing':               i18n('Slashing'),
+            'hooking':                i18n('Hooking'),
+            'roughing':               i18n('Roughing'),
+            'high-sticking':          i18n('High sticking'),
+            'tripping':               i18n('Tripping'),
+            'interference':           i18n('Interference'),
+            'holding':                i18n('Holding'),
+            'holding-the-stick':      i18n('Holding the stick'),
+            'elbowing':               i18n('Elbowing'),
+            'charging':               i18n('Charging'),
+            'boarding':               i18n('Boarding'),
+            'cross-checking':         i18n('Cross-checking'),
+            'delay-of-game':          i18n('Delay of game'),
+            'unsportsmanlike-conduct':i18n('Unsportsmanlike conduct'),
+            'too-many-men':           i18n('Too many men'),
+            'goalie-interference':    i18n('Goalie interference'),
+            'misconduct':             i18n('Misconduct'),
+            'game-misconduct':        i18n('Game misconduct'),
+            'fighting':               i18n('Fighting'),
+            'instigating':            i18n('Instigating'),
+            'diving':                 i18n('Diving'),
+            'embellishment':          i18n('Embellishment'),
+            'kneeing':                i18n('Kneeing'),
+            'spearing':               i18n('Spearing'),
+            'butt-ending':            i18n('Butt-ending'),
+            'checking-from-behind':   i18n('Checking from behind'),
+            'head-contact':           i18n('Head contact'),
+            'match-penalty':          i18n('Match penalty'),
+        }
+        return map[key] || key.replace(/-/g, ' ')
+    }
+
+    // ── Calendrier — nombre de matchs par jour ───────────────────────
+    function fetchCalendarMonth(year, month) {
+        calLoading = true
+        var counts = {}
+        var pending = 0
+        var daysInMonth = new Date(year, month + 1, 0).getDate()
+
+        // Calculer les dates de début de chaque semaine du mois
+        // On fait des requêtes tous les 7 jours pour couvrir tout le mois
+        var fetchDates = []
+        for (var d = 1; d <= daysInMonth; d += 7) {
+            fetchDates.push(year + "-" + root.pad2(month + 1) + "-" + root.pad2(d))
+        }
+
+        pending = fetchDates.length
+        function done() {
+            pending--
+            if (pending <= 0) {
+                calLoading = false
+                root.calGameCounts = counts
+            }
+        }
+
+        for (var fi = 0; fi < fetchDates.length; fi++) {
+            (function(isoDate) {
+                httpGet("https://api-web.nhle.com/v1/schedule/" + isoDate,
+                    function(err, data) {
+                        if (!err && data) {
+                            var week = data.gameWeek || []
+                            for (var wi = 0; wi < week.length; wi++) {
+                                var day = week[wi]
+                                // Inclure seulement les jours du mois demandé
+                                if (day.date) {
+                                    var parts = day.date.split('-')
+                                    if (parseInt(parts[1]) - 1 === month
+                                            && parseInt(parts[0]) === year) {
+                                        counts[day.date] = day.numberOfGames
+                                            || (day.games ? day.games.length : 0)
+                                    }
+                                }
+                            }
+                        }
+                        done()
+                    })
+            })(fetchDates[fi])
+        }
+    }
+
     // ── Recherche de joueurs ─────────────────────────────────────────
     function openSearch() {
         searchOpen    = true
@@ -1431,9 +1547,13 @@ PlasmoidItem {
         function onFavoritesChanged(){ root.favoriteTeams = (Plasmoid.configuration.favorites||'').split(/\s*,\s*/).filter(function(s){return s.length>0}); refresh() }
         function onFavoriteTeamSoundChanged(){ root.favoriteTeamSound = Plasmoid.configuration.favoriteTeamSound || '' }
         function onSoundTeamsChanged(){ root.soundTeams = (Plasmoid.configuration.soundTeams||'').split(',').filter(function(s){return s.length>0}) }
+        function onSoundVolumeChanged(){ root.soundVolume = Plasmoid.configuration.soundVolume !== undefined ? Plasmoid.configuration.soundVolume : 1.0 }
         function onShowAllTeamsChanged(){ refresh() }
         function onMaxGamesChanged(){ refresh() }
         function onLookaheadDaysChanged(){ refresh() }
+        function onPastDaysChanged(){ refresh() }
+        function onShowTodayChanged(){ refresh() }
+        function onPollIntervalChanged(){ root.pollInterval = Plasmoid.configuration.pollInterval || 20 }
 
         function onScoreLayoutChanged(){ root.scoreLayout = Plasmoid.configuration.scoreLayout || 'stack' }
         function onUltraCompactChanged(){
@@ -2385,6 +2505,51 @@ PlasmoidItem {
     // Liste plate pour affichage par période :
     // éléments de type { isPeriodHeader: true, label: "1re période" }
     // ou               { isPeriodHeader: false, ...données but... }
+    readonly property var detailPenaltiesByPeriod: {
+        var result = []
+        var seenPeriods = []
+        for (var i = 0; i < detailPenalties.length; i++) {
+            var p = detailPenalties[i].period
+            if (seenPeriods.indexOf(p) === -1) seenPeriods.push(p)
+        }
+        seenPeriods.sort(function(a, b) {
+            var order = { '1':1, '2':2, '3':3, 'OT':4, 'SO':99 }
+            function rank(p) {
+                if (order[p] !== undefined) return order[p]
+                var m = p.match(/^(\d+)OT$/)
+                return m ? 3 + parseInt(m[1]) : 98
+            }
+            return rank(a) - rank(b)
+        })
+        for (var pi = 0; pi < seenPeriods.length; pi++) {
+            var period = seenPeriods[pi]
+            var label = period === 'SO' ? i18n('Shootout')
+                      : period === 'OT' ? i18n('Overtime')
+                      : /^\d+OT$/.test(period) ? (period.replace('OT','') + 'e ' + i18n('Overtime'))
+                      : period === '1'  ? i18n('1st period')
+                      : period === '2'  ? i18n('2nd period')
+                      : period === '3'  ? i18n('3rd period')
+                      : i18n('Period') + ' ' + period
+            result.push({ isPeriodHeader: true, label: label })
+            for (var gi = 0; gi < detailPenalties.length; gi++) {
+                if (detailPenalties[gi].period === period) {
+                    var pen = detailPenalties[gi]
+                    result.push({
+                        isPeriodHeader: false,
+                        time:     pen.time,
+                        team:     pen.team,
+                        player:   pen.player,
+                        number:   pen.number,
+                        duration: pen.duration,
+                        descKey:  pen.descKey,
+                        playerId: pen.playerId || 0
+                    })
+                }
+            }
+        }
+        return result
+    }
+
     readonly property var detailGoalsByPeriod: {
         var result = []
         var seenPeriods = []
@@ -2487,6 +2652,10 @@ PlasmoidItem {
         playerOpen        = false
         searchOpen        = false
         calendarOpen      = false
+        detailThreeStars    = []
+        detailPenalties     = []
+        penaltyPlayerMap    = {}
+        detailView          = 'goals'
         detailGameId  = gid
         detailAway    = away
         detailHome    = home
@@ -2727,6 +2896,65 @@ PlasmoidItem {
                         }
                     }
                     detailGoals = g
+
+                    // ── Pénalités ──────────────────────────────────
+                    var penData = d.summary && d.summary.penalties
+                    if (penData && Array.isArray(penData)) {
+                        var penList = []
+                        for (var pi = 0; pi < penData.length; pi++) {
+                            var pperiod = penData[pi]
+                            var pd2 = pperiod.periodDescriptor || {}
+                            var pnum = pd2.number || 1
+                            var ptype = (pd2.periodType || '').toUpperCase()
+                            var pname = ptype === 'SO' ? 'SO'
+                                      : ptype === 'OT' ? (pnum === 4 ? 'OT' : (pnum - 3) + 'OT')
+                                      : String(pnum)
+                            var ppens = pperiod.penalties || []
+                            for (var pj = 0; pj < ppens.length; pj++) {
+                                var pen = ppens[pj]
+                                var cb = pen.committedByPlayer || {}
+                                var pfn = cb.firstName ? (cb.firstName.default || '') : ''
+                                var pln = cb.lastName  ? (cb.lastName.default  || '') : ''
+                                var db = pen.drawnBy || {}
+                                var dfn = db.firstName ? (db.firstName.default || '') : ''
+                                var dln = db.lastName  ? (db.lastName.default  || '') : ''
+                                penList.push({
+                                    period:   pname,
+                                    time:     pen.timeInPeriod || '',
+                                    team:     pen.teamAbbrev ? (pen.teamAbbrev.default || pen.teamAbbrev) : '',
+                                    player:   pfn + ' ' + pln,
+                                    playerId: cb.playerId || 0,
+                                    number:   cb.sweaterNumber || 0,
+                                    duration: pen.duration || 2,
+                                    type:     pen.type || '',
+                                    descKey:  pen.descKey || '',
+                                    drawnBy:  dfn ? dfn + ' ' + dln : ''
+                                })
+                            }
+                        }
+                        root.detailPenalties = penList
+                        // Si boxscore déjà arrivé, enrichir immédiatement
+                        if (Object.keys(root.penaltyPlayerMap).length > 0)
+                            root.resolvePenaltyIds(root.penaltyPlayerMap)
+                    }
+
+                    // ── 3 étoiles ────────────────────────────────
+                    var stars = d.summary && d.summary.threeStars
+                    if (stars && Array.isArray(stars)) {
+                        root.detailThreeStars = stars.map(function(s) {
+                            var name = s.name ? (s.name.default || s.name) : ''
+                            return {
+                                star:     s.star      || 0,
+                                id:       s.playerId  || 0,
+                                name:     name,
+                                team:     s.teamAbbrev ? (s.teamAbbrev.default || s.teamAbbrev) : '',
+                                position: s.position  || '',
+                                goals:    s.goals     !== undefined ? s.goals     : -1,
+                                assists:  s.assists   !== undefined ? s.assists   : -1,
+                                toi:      s.toi       || ''
+                            }
+                        })
+                    }
                 } catch(e) { detailError = 'landing: ' + e }
             } else {
                 detailError = 'HTTP ' + xhrL.status + ' (landing)'
@@ -2760,6 +2988,22 @@ PlasmoidItem {
                     }
                     // Agréger les stats d'équipe depuis playerByGameStats
                     let pg = d.playerByGameStats || {}
+                    // Construire map sweater → playerId pour les pénalités
+                    var pmap = {}
+                    function indexTeamPlayers(team, abbrev) {
+                        var all = (team.forwards||[]).concat(team.defense||[]).concat(team.goalies||[])
+                        for (var pi2 = 0; pi2 < all.length; pi2++) {
+                            var pl = all[pi2]
+                            if (pl.playerId && pl.sweaterNumber)
+                                pmap[abbrev + '-' + pl.sweaterNumber] = pl.playerId
+                        }
+                    }
+                    // Trouver les abréviations depuis detailAway/detailHome
+                    indexTeamPlayers(pg.awayTeam || {}, root.detailAway)
+                    indexTeamPlayers(pg.homeTeam || {}, root.detailHome)
+                    root.penaltyPlayerMap = pmap
+                    // Enrichir les pénalités avec playerIds (si landing déjà arrivé)
+                    root.resolvePenaltyIds(pmap)
                     function sumTeam(team) {
                         let all = (team.forwards||[]).concat(team.defense||[])
                         let r = {hits:0, pim:0, blockedShots:0, giveaways:0, takeaways:0}
@@ -3633,12 +3877,73 @@ PlasmoidItem {
                         opacity: 0.6
                 }
 
-                Label {
+                // ── Toggle Buts / Pénalités / 3 étoiles ─────────────────
+                RowLayout {
                     visible: !root.detailLoading && root.detailStatus !== 'UPCOMING'
-                    text: i18n('Goals')
-                    font.bold: true; font.pixelSize: 15
-                    color: Kirigami.Theme.textColor
                     Layout.alignment: Qt.AlignHCenter
+                    spacing: 6
+
+                    // Buts
+                    Label {
+                        text: i18n("Goals")
+                        font.bold: root.detailView === 'goals'
+                        font.pixelSize: 14
+                        color: root.detailView === 'goals'
+                               ? Kirigami.Theme.textColor
+                               : Kirigami.Theme.disabledTextColor
+                        opacity: root.detailView === 'goals' ? 1.0 : 0.45
+                        HoverHandler { cursorShape: root.detailView !== 'goals' ? Qt.PointingHandCursor : Qt.ArrowCursor }
+                        TapHandler {
+                            enabled: root.detailView !== 'goals'
+                            onTapped: root.detailView = 'goals'
+                        }
+                    }
+
+                    Label {
+                        text: "·"; font.pixelSize: 14; opacity: 0.3
+                        color: Kirigami.Theme.textColor
+                        visible: root.detailPenalties.length > 0
+                    }
+
+                    // Pénalités
+                    Label {
+                        visible: root.detailPenalties.length > 0
+                        text: i18n("Penalties")
+                        font.bold: root.detailView === 'penalties'
+                        font.pixelSize: 14
+                        color: root.detailView === 'penalties'
+                               ? Kirigami.Theme.textColor
+                               : Kirigami.Theme.disabledTextColor
+                        opacity: root.detailView === 'penalties' ? 1.0 : 0.45
+                        HoverHandler { cursorShape: root.detailView !== 'penalties' ? Qt.PointingHandCursor : Qt.ArrowCursor }
+                        TapHandler {
+                            enabled: root.detailView !== 'penalties'
+                            onTapped: root.detailView = 'penalties'
+                        }
+                    }
+
+                    Label {
+                        text: "·"; font.pixelSize: 14; opacity: 0.3
+                        color: Kirigami.Theme.textColor
+                        visible: root.detailThreeStars.length > 0
+                    }
+
+                    // 3 étoiles
+                    Label {
+                        visible: root.detailThreeStars.length > 0
+                        text: "⭐ " + i18n("Stars")
+                        font.bold: root.detailView === 'stars'
+                        font.pixelSize: 14
+                        color: root.detailView === 'stars'
+                               ? Kirigami.Theme.textColor
+                               : Kirigami.Theme.disabledTextColor
+                        opacity: root.detailView === 'stars' ? 1.0 : 0.45
+                        HoverHandler { cursorShape: root.detailView !== 'stars' ? Qt.PointingHandCursor : Qt.ArrowCursor }
+                        TapHandler {
+                            enabled: root.detailView !== 'stars'
+                            onTapped: root.detailView = 'stars'
+                        }
+                    }
                 }
 
                 // ── Preview match à venir ────────────────────────────
@@ -3988,9 +4293,10 @@ PlasmoidItem {
                     Item { height: 4 }
                 }
 
-                // Liste des buts groupés par période
+                // Liste des buts groupés par période (masqué si pénalités)
                 Repeater {
-                    model: root.detailStatus !== 'UPCOMING' ? root.detailGoalsByPeriod : []
+                    model: root.detailStatus !== 'UPCOMING' && root.detailView === 'goals'
+                           ? root.detailGoalsByPeriod : []
                     delegate: Item {
                         Layout.fillWidth: true
                         implicitHeight: modelData.isPeriodHeader ? periodRow.implicitHeight + 10
@@ -4141,6 +4447,175 @@ PlasmoidItem {
                 }
 
                 Item { height: 8 }
+
+                // ── Liste des pénalités ──────────────────────────────────
+                Repeater {
+                    model: root.detailView === 'penalties' ? root.detailPenaltiesByPeriod : []
+                    delegate: Item {
+                        Layout.fillWidth: true
+                        implicitHeight: modelData.isPeriodHeader
+                                        ? penPeriodRow.implicitHeight + 10
+                                        : penRow.implicitHeight + 6
+
+                        // En-tête de période
+                        RowLayout {
+                            id: penPeriodRow
+                            visible: modelData.isPeriodHeader
+                            anchors { left: parent.left; right: parent.right; verticalCenter: parent.verticalCenter }
+                            anchors.leftMargin: 8; anchors.rightMargin: 8
+                            spacing: 8
+                            Rectangle { height: 1; Layout.fillWidth: true; color: Kirigami.Theme.textColor; opacity: 0.2 }
+                            Label {
+                                text: modelData.label || ''
+                                font.pixelSize: 12; font.bold: true; opacity: 0.6
+                                color: Kirigami.Theme.disabledTextColor
+                            }
+                            Rectangle { height: 1; Layout.fillWidth: true; color: Kirigami.Theme.textColor; opacity: 0.2 }
+                        }
+
+                        // Ligne de pénalité
+                        RowLayout {
+                            id: penRow
+                            visible: !modelData.isPeriodHeader
+                            anchors { left: parent.left; right: parent.right; verticalCenter: parent.verticalCenter }
+                            anchors.leftMargin: 8; anchors.rightMargin: 8
+                            spacing: 6
+
+                            // Pastille équipe
+                            Rectangle {
+                                radius: 3
+                                color: root.teamColor(modelData.team || '')
+                                width: 34; height: 20
+                                Label {
+                                    anchors.centerIn: parent
+                                    text: modelData.team || ''
+                                    color: root.teamTextColor(modelData.team || '')
+                                    font.pixelSize: 10; font.bold: true; font.family: "monospace"
+                                }
+                            }
+
+                            // Temps
+                            Label {
+                                text: modelData.time || ''
+                                font.pixelSize: 11
+                                color: Kirigami.Theme.disabledTextColor
+                                Layout.preferredWidth: 42
+                            }
+
+                            // Joueur + infraction
+                            Column {
+                                spacing: 1; Layout.fillWidth: true
+
+                                // Nom cliquable
+                                Item {
+                                    width: parent.width
+                                    implicitHeight: penPlayerLbl.implicitHeight
+                                    property int pid: modelData.playerId || 0
+                                    Label {
+                                        id: penPlayerLbl
+                                        width: parent.width
+                                        text: (modelData.player || '')
+                                              + (modelData.number > 0 ? " #" + modelData.number : '')
+                                        font.pixelSize: 13; font.bold: true
+                                        color: parent.pid > 0
+                                               ? Kirigami.Theme.highlightColor
+                                               : Kirigami.Theme.textColor
+                                        elide: Text.ElideRight
+                                    }
+                                    HoverHandler { cursorShape: parent.pid > 0 ? Qt.PointingHandCursor : Qt.ArrowCursor }
+                                    TapHandler {
+                                        enabled: parent.pid > 0
+                                        acceptedButtons: Qt.LeftButton
+                                        gesturePolicy: TapHandler.ReleaseWithinBounds
+                                        onTapped: root.openPlayer(parent.pid, 'detail')
+                                    }
+                                }
+
+                                // Infraction traduite
+                                Label {
+                                    width: parent.width
+                                    text: root.penaltyDesc(modelData.descKey || '')
+                                    font.pixelSize: 11; opacity: 0.65
+                                    color: Kirigami.Theme.disabledTextColor
+                                    elide: Text.ElideRight
+                                }
+                            }
+
+                            // Durée
+                            Label {
+                                text: modelData.duration + " " + i18n("min")
+                                font.pixelSize: 12; font.bold: true
+                                color: Kirigami.Theme.highlightColor
+                            }
+                        }
+                    }
+                }
+
+                // ── 3 étoiles ────────────────────────────────────────────
+                Repeater {
+                    model: root.detailView === 'stars' ? root.detailThreeStars : []
+                    delegate: Item {
+                        Layout.fillWidth: true
+                        implicitHeight: starRow.implicitHeight + 8
+
+                        HoverHandler { cursorShape: modelData.id > 0 ? Qt.PointingHandCursor : Qt.ArrowCursor }
+                        TapHandler {
+                            enabled: modelData.id > 0
+                            acceptedButtons: Qt.LeftButton
+                            gesturePolicy: TapHandler.ReleaseWithinBounds
+                            onTapped: root.openPlayer(modelData.id, 'detail')
+                        }
+
+                            RowLayout {
+                                id: starRow
+                                anchors { left: parent.left; right: parent.right; verticalCenter: parent.verticalCenter }
+                                anchors.leftMargin: 12; anchors.rightMargin: 12
+                                spacing: 10
+
+                                // Étoiles colorées
+                                Label {
+                                    text: modelData.star === 1 ? "★★★"
+                                        : modelData.star === 2 ? "★★☆" : "★☆☆"
+                                    font.pixelSize: 12
+                                    color: modelData.star === 1 ? "#FFD700"
+                                         : modelData.star === 2 ? "#C0C0C0" : "#CD7F32"
+                                }
+
+                                // Pastille équipe
+                                Rectangle {
+                                    radius: 3
+                                    color: root.teamColor(modelData.team)
+                                    width: 34; height: 20
+                                    Label {
+                                        anchors.centerIn: parent
+                                        text: modelData.team
+                                        color: root.teamTextColor(modelData.team)
+                                        font.pixelSize: 10; font.bold: true; font.family: "monospace"
+                                    }
+                                }
+
+                                // Nom du joueur
+                                Label {
+                                    text: modelData.name || ''
+                                    font.pixelSize: 13; font.bold: true
+                                    color: modelData.id > 0
+                                           ? Kirigami.Theme.highlightColor
+                                           : Kirigami.Theme.textColor
+                                    Layout.fillWidth: true
+                                    elide: Text.ElideRight
+                                }
+
+                                // Stats
+                                Label {
+                                    text: modelData.goals >= 0 && modelData.assists >= 0
+                                          ? modelData.goals + "G " + modelData.assists + "A"
+                                          : modelData.toi || ''
+                                    font.pixelSize: 11; opacity: 0.7
+                                    color: Kirigami.Theme.disabledTextColor
+                                }
+                            }
+                        }
+                    }
                 } // ColumnLayout
             } // Item wrapper
         }
@@ -4728,6 +5203,19 @@ PlasmoidItem {
                         text: i18n("‹ Back"); icon.name: "go-previous"; flat: true
                         onClicked: root.calendarOpen = false
                     }
+                    // Charger les counts quand le calendrier s'ouvre ou change de mois
+                    Connections {
+                        target: root
+                        function onCalendarOpenChanged() {
+                            if (root.calendarOpen) root.fetchCalendarMonth(root.calYear, root.calMonth)
+                        }
+                        function onCalYearChanged() {
+                            if (root.calendarOpen) root.fetchCalendarMonth(root.calYear, root.calMonth)
+                        }
+                        function onCalMonthChanged() {
+                            if (root.calendarOpen) root.fetchCalendarMonth(root.calYear, root.calMonth)
+                        }
+                    }
                     Item { Layout.fillWidth: true }
                     // Mois/Année + navigation
                     Button {
@@ -4879,6 +5367,28 @@ PlasmoidItem {
                                     opacity: isFuture ? 0.5 : 1.0
                                 }
 
+                                // Pastille nombre de matchs
+                                Rectangle {
+                                    visible: !isFuture && (root.calGameCounts[iso] || 0) > 0
+                                    anchors.bottom: parent.bottom
+                                    anchors.horizontalCenter: parent.horizontalCenter
+                                    anchors.bottomMargin: 1
+                                    width: Math.max(14, String(root.calGameCounts[iso] || 0).length * 7 + 6)
+                                    height: 14; radius: 7
+                                    color: isSelected
+                                           ? "white"
+                                           : Kirigami.Theme.highlightColor
+                                    opacity: 0.85
+                                    Label {
+                                        anchors.centerIn: parent
+                                        text: String(root.calGameCounts[iso] || 0)
+                                        font.pixelSize: 9; font.bold: true
+                                        color: isSelected
+                                               ? Kirigami.Theme.highlightColor
+                                               : "white"
+                                    }
+                                }
+
                                 HoverHandler { cursorShape: Qt.PointingHandCursor }
                                 TapHandler {
                                     acceptedButtons: Qt.LeftButton
@@ -4929,10 +5439,8 @@ PlasmoidItem {
                     }
                     Item { Layout.fillWidth: true }
                     Button {
-                        text: "📅"
+                        text: "📅  " + i18n("Calendar")
                         flat: true
-                        ToolTip.text: i18n("Calendar")
-                        ToolTip.visible: hovered
                         onClicked: root.calendarOpen = true
                     }
                 }

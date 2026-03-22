@@ -19,11 +19,13 @@ Item {
   property string cfg_favorites
   property string cfg_favoriteTeamSound
   property string cfg_soundTeams
+  property real   cfg_soundVolume
   property bool   cfg_showAllTeams
   property int    cfg_maxGames
   property int    cfg_lookaheadDays
   property bool   cfg_showToday
   property int    cfg_pastDays
+  property int    cfg_pollInterval
   property int    cfg_blinkDuration
   // cfg_ Display (injectées par Plasma dans tous les fichiers de config)
   property bool   cfg_ultraCompact
@@ -40,11 +42,13 @@ Item {
   property string cfg_favoritesDefault
   property string cfg_favoriteTeamSoundDefault
   property string cfg_soundTeamsDefault
+  property real   cfg_soundVolumeDefault
   property bool   cfg_showAllTeamsDefault
   property int    cfg_maxGamesDefault
   property int    cfg_lookaheadDaysDefault
   property bool   cfg_showTodayDefault
   property int    cfg_pastDaysDefault
+  property int    cfg_pollIntervalDefault
   property int    cfg_blinkDurationDefault
   property string cfg_scoreLayoutDefault
   property string cfg_liveColorDefault
@@ -458,7 +462,27 @@ Item {
           }
         }
 
-        // Ligne 4 : Aujourd'hui (pleine largeur)
+        // Ligne 4 : Intervalle de rafraîchissement
+        QQC2.Label {
+          text: i18n("Refresh interval:")
+          Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
+        }
+        QQC2.ComboBox {
+          id: pollIntervalCombo
+          model: [10, 20, 30, 45, 60]
+          property bool ready: false
+          Component.onCompleted: {
+            var vals = [10, 20, 30, 45, 60]
+            var idx = vals.indexOf(cfg_pollInterval || 20)
+            currentIndex = idx >= 0 ? idx : 1
+            ready = true
+          }
+          onCurrentIndexChanged: if (ready) cfg_pollInterval = model[currentIndex]
+          Layout.alignment: Qt.AlignLeft
+          displayText: currentText + i18n(" sec")
+        }
+
+        // Ligne 5 : Aujourd'hui (pleine largeur)
         Item { Layout.columnSpan: 2; implicitHeight: 2 }
         QQC2.CheckBox {
           Layout.columnSpan: 2
@@ -487,6 +511,27 @@ Item {
       }
 
       // Note : la sélection sonore se fait directement sur les pastilles d'équipes (🎵)
+
+      // Slider volume
+      RowLayout {
+        Layout.alignment: Qt.AlignHCenter
+        spacing: 12
+        QQC2.Label {
+          text: i18n("Goal sound volume:")
+          verticalAlignment: Text.AlignVCenter
+        }
+        QQC2.Slider {
+          id: volumeSlider
+          from: 0.0; to: 1.0; stepSize: 0.05
+          value: cfg_soundVolume > 0 ? cfg_soundVolume : 1.0
+          Layout.preferredWidth: 150
+          onValueChanged: cfg_soundVolume = value
+        }
+        QQC2.Label {
+          text: Math.round(volumeSlider.value * 100) + "%"
+          Layout.preferredWidth: 36
+        }
+      }
 
       Item { implicitHeight: 8 }
     }

@@ -21,40 +21,39 @@ Item {
   property string cfg_scoreLayoutDefault
   property string cfg_favoriteTeamSound
   property string cfg_favoriteTeamSoundDefault
-  property bool   cfg_showToday
-  property bool   cfg_showTodayDefault
-  property int    cfg_pastDays
-  property int    cfg_pastDaysDefault
   property string cfg_soundTeams
   property string cfg_soundTeamsDefault
-  property bool   cfg_ultraCompact
-  property bool   cfg_ultraCompactDefault
+  property real   cfg_soundVolume
+  property real   cfg_soundVolumeDefault
   property string cfg_liveColor
   property string cfg_liveColorDefault
   property string cfg_upcomingColor
   property string cfg_upcomingColorDefault
   property string cfg_finalColor
   property string cfg_finalColorDefault
+  property string cfg_dateMode
+  property string cfg_dateModeDefault
+  property string cfg_favorites
+  property string cfg_favoritesDefault
+  property bool   cfg_showAllTeams
+  property bool   cfg_showAllTeamsDefault
+  property bool   cfg_ultraCompact
+  property bool   cfg_ultraCompactDefault
   property bool   cfg_showOvertimeSuffix
   property bool   cfg_showOvertimeSuffixDefault
   property bool   cfg_showUpcomingTime
   property bool   cfg_showUpcomingTimeDefault
-  property string cfg_dateMode
-  property string cfg_dateModeDefault
-  // cfg_ General (injectées par Plasma dans tous les fichiers de config)
-  property string cfg_favorites
-  property bool   cfg_showAllTeams
+  property bool   cfg_showToday
+  property bool   cfg_showTodayDefault
   property int    cfg_maxGames
-  property int    cfg_lookaheadDays
-  property bool   cfg_showYesterday
-  property bool   cfg_showTwoDaysAgo
-  property int    cfg_blinkDuration
-  property string cfg_favoritesDefault
-  property bool   cfg_showAllTeamsDefault
   property int    cfg_maxGamesDefault
+  property int    cfg_lookaheadDays
   property int    cfg_lookaheadDaysDefault
-  property bool   cfg_showYesterdayDefault
-  property bool   cfg_showTwoDaysAgoDefault
+  property int    cfg_pastDays
+  property int    cfg_pastDaysDefault
+  property int    cfg_pollInterval
+  property int    cfg_pollIntervalDefault
+  property int    cfg_blinkDuration
   property int    cfg_blinkDurationDefault
 
   function indexFromValue(v) { return (String(v)==='inline') ? 1 : 0 }

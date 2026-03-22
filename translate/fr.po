@@ -540,3 +540,108 @@ msgstr "Sa"
 
 msgid "🔍"
 msgstr "🔍"
+
+msgid "Goal sound volume:"
+msgstr "Volume du son de but :"
+
+msgid "Three Stars"
+msgstr "3 étoiles"
+
+msgid "Refresh interval:"
+msgstr "Intervalle de rafraîchissement :"
+
+msgid " sec"
+msgstr " sec"
+
+msgid "Penalties"
+msgstr "Pénalités"
+
+msgid "min"
+msgstr "min"
+
+msgid "Slashing"
+msgstr "Bâton élevé frappé"
+
+msgid "Hooking"
+msgstr "Accrocher"
+
+msgid "Roughing"
+msgstr "Rudesse"
+
+msgid "High sticking"
+msgstr "Bâton élevé"
+
+msgid "Tripping"
+msgstr "Faire trébucher"
+
+msgid "Interference"
+msgstr "Obstruction"
+
+msgid "Holding"
+msgstr "Retenir"
+
+msgid "Holding the stick"
+msgstr "Retenir le bâton"
+
+msgid "Elbowing"
+msgstr "Coup de coude"
+
+msgid "Charging"
+msgstr "Charge"
+
+msgid "Boarding"
+msgstr "Mise en échec dans la bande"
+
+msgid "Cross-checking"
+msgstr "Double-échec"
+
+msgid "Delay of game"
+msgstr "Retard de jeu"
+
+msgid "Unsportsmanlike conduct"
+msgstr "Conduite antisportive"
+
+msgid "Too many men"
+msgstr "Trop de joueurs"
+
+msgid "Goalie interference"
+msgstr "Obstruction au gardien"
+
+msgid "Misconduct"
+msgstr "Inconduite"
+
+msgid "Game misconduct"
+msgstr "Inconduite de match"
+
+msgid "Fighting"
+msgstr "Bataille"
+
+msgid "Instigating"
+msgstr "Instigateur"
+
+msgid "Diving"
+msgstr "Simulation"
+
+msgid "Embellishment"
+msgstr "Embellissement"
+
+msgid "Kneeing"
+msgstr "Coup de genou"
+
+msgid "Spearing"
+msgstr "Coup de pointe"
+
+msgid "Butt-ending"
+msgstr "Coup du bout du bâton"
+
+msgid "Checking from behind"
+msgstr "Mise en échec par derrière"
+
+msgid "Head contact"
+msgstr "Contact à la tête"
+
+msgid "Match penalty"
+msgstr "Pénalité de match"
+
+msgid "Stars"
+msgstr "Étoiles"

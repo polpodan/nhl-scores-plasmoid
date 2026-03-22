@@ -27,6 +27,11 @@ A real-time NHL scores applet for KDE Plasma 6. Displays live scores, schedules,
 - **Full-day calendar** — click 📅 in the day view to open a monthly calendar with month/year navigation; click any date to view its games
 - **Clickable scorers & assistants** — in completed games, scorer and assist names are clickable links to the player profile
 - **Match date in game popup** — date and time shown below logos for completed and live games
+- **Penalties view** — toggle between Goals / Penalties / ⭐ Stars in the game detail popup; penalties grouped by period with clickable player names and 28 translated infraction descriptions
+- **Three stars** — accessible directly from the Goals/Penalties/Stars toggle; player names are clickable
+- **Game count badges on calendar** — each day shows a badge with the number of games scheduled
+- **Configurable refresh interval** — choose 10, 20, 30, 45 or 60 seconds in General settings
+- **Goal sound volume** — slider in General settings to control the notification sound level
 - **Three display modes** (panel only):
   - *Score below* — uniform cards with team badges, score and status
   - *Score next to name* — compact inline row layout
@@ -36,7 +41,7 @@ A real-time NHL scores applet for KDE Plasma 6. Displays live scores, schedules,
 - **Colored popup separators** — horizontal dividers use a team color gradient
 - **Desktop widget** — enriched card view with clickable date separators, Standings and Leaders buttons
 - **Vertical panel** — stacked tile layout adapts automatically
-- **French translation** — full `fr.po` with 169 entries
+- **French translation** — full `fr.po` with 204 entries
 
 ---
 
@@ -53,7 +58,7 @@ A real-time NHL scores applet for KDE Plasma 6. Displays live scores, schedules,
 ### From .plasmoid file
 
 ```bash
-kpackagetool6 -t Plasma/Applet -i org.dany.nhlscores-4.0.plasmoid
+kpackagetool6 -t Plasma/Applet -i org.dany.nhlscores-4.4.plasmoid
 ```
 
 ### From source
@@ -190,7 +195,15 @@ Un applet de scores NHL en temps réel pour KDE Plasma 6. Affiche les scores en 
 - **Séparateurs colorés dans les popups** — les séparateurs horizontaux utilisent un dégradé aux couleurs des équipes
 - **Widget bureau** — vue enrichie en cartes avec séparateurs de dates cliquables, boutons Classement et Meneurs
 - **Panneau vertical** — disposition en tuiles empilées adaptée automatiquement
-- **Traduction française** — `fr.po` complet avec 169 entrées
+- **Recherche de joueurs** — bouton 🔍 dans le popup de match pour chercher n'importe quel joueur NHL (actif ou retraité)
+- **Calendrier journalier** — navigation mois par mois avec menu déroulant pour l'année ; pastilles indiquant le nombre de matchs par jour
+- **Buteurs et passeurs cliquables** — noms en surbrillance menant à la fiche du joueur
+- **Date dans le popup de match** — date et heure affichées sous les logos
+- **Vue pénalités** — toggle Buts / Pénalités / ⭐ Étoiles ; pénalités groupées par période, noms cliquables, 28 infractions traduites
+- **3 étoiles** — accessibles depuis le toggle ; noms cliquables
+- **Intervalle de rafraîchissement configurable** — 10, 20, 30, 45 ou 60 secondes
+- **Volume du son de but** — slider dans les paramètres
+- **Traduction française** — `fr.po` complet avec 204 entrées
 
 ---
 
@@ -207,7 +220,7 @@ Un applet de scores NHL en temps réel pour KDE Plasma 6. Affiche les scores en 
 ### Depuis un fichier .plasmoid
 
 ```bash
-kpackagetool6 -t Plasma/Applet -i org.dany.nhlscores-4.0.plasmoid
+kpackagetool6 -t Plasma/Applet -i org.dany.nhlscores-4.4.plasmoid
 ```
 
 ### Depuis les sources

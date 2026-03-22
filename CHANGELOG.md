@@ -4,6 +4,41 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [4.4.0] — 2026-03-22
+
+### Added
+
+- **Penalty view in game detail** — the game detail popup now features a three-way toggle: **Goals · Penalties · ⭐ Stars**. Each tab displays its content while the active tab appears bold; inactive tabs are dimmed. The toggle is only visible for completed and live games.
+- **Penalties grouped by period** — penalty entries are organized under period separators (1st period, 2nd period, etc.) matching the goals section layout. Each row shows: team badge, time, player name and number, infraction description, and duration.
+- **Penalty player names clickable** — player names in the penalty view link to the full player profile. Player IDs are resolved by cross-referencing the boxscore `playerByGameStats` roster (sweater number + team), with a race-condition fix that handles landing and boxscore arriving in any order.
+- **28 penalty infractions translated** — `penaltyDesc()` function maps API `descKey` values to localized strings (e.g. `slashing` → `Bâton élevé frappé`, `hooking` → `Accrocher`).
+- **Three stars moved into toggle** — the three stars section is now part of the Goals/Penalties/Stars toggle instead of a separate section below the goals list. Star player names are clickable.
+- **Game count badges on calendar** — each day in the full-day calendar now shows a small colored badge with the number of games scheduled, loaded by fetching 4–5 weekly schedule requests to cover the entire month.
+- **📅 Calendar label on button** — the calendar button in the day view header now reads `📅  Calendar` instead of just an icon.
+- **Poll timer configurable** — a new `Refresh interval` ComboBox in General settings allows choosing 10, 20, 30, 45, or 60 seconds for the live refresh interval. Default remains 20 seconds.
+- **Goal sound volume slider** — a volume slider (0–100%) has been added to the Notifications section in General settings. The slider controls the `AudioOutput.volume` of the goal sound in real time.
+- **`onErrorOccurred` fallback for goal sound** — if the team-specific MP3 is missing, the `MediaPlayer` automatically falls back to `siren.wav`.
+
+### Changed
+
+- **`detailShowPenalties: bool` → `detailView: string`** — replaced the boolean penalty toggle with a three-state string property (`'goals'` | `'penalties'` | `'stars'`), making it easy to add future tabs.
+- **`resolvePenaltyIds(pmap)`** — penalty player ID resolution is now a standalone function called from both the landing parser and the boxscore parser, ensuring IDs are always resolved regardless of which response arrives first.
+- **`fetchCalendarMonth(year, month)`** — now makes 4–5 parallel requests (one per 7-day window) instead of a single request for the 1st of the month, covering the full month's game counts.
+- **`configDisplay.qml` stubs rebuilt** — all 19 `cfg_*` properties from `main.xml` are now properly declared as stubs in `configDisplay.qml`, eliminating `Setting initial properties failed` errors on config open.
+
+### Fixed
+
+- **`pastDays` not triggering refresh** — `onPastDaysChanged` and `onShowTodayChanged` handlers were missing from the `Connections` block. Adding them ensures the widget refreshes immediately when these options are changed in settings.
+- **`pastDays = 0` not working** — `Plasmoid.configuration.pastDays || 0` treated `0` as falsy and defaulted to the previous value. Fixed with `!== undefined` check.
+- **Config Apply button grayed out** — `onActivated` on `ComboBox` and `onMoved` on `Slider` do not mark the config as dirty in Plasma. Changed to `onCurrentIndexChanged` and `onValueChanged` respectively, with a `ready` flag on the ComboBox to prevent writes during initialization.
+- **Obsolete stubs in `configDisplay.qml`** — `cfg_showYesterday` and `cfg_showTwoDaysAgo` were still declared as stubs after being removed from `main.xml`, causing Plasma config errors.
+
+### Localization
+
+- **fr.po** — 204 entries. Added 28 penalty infraction translations, `Penalties` → `Pénalités`, `Stars` → `Étoiles`, `Refresh interval:`, `Goal sound volume:`, `Calendar`, `Today`, day abbreviations.
+
+---
+
 ## [4.3.0] — 2026-03-21
 
 ### Added
