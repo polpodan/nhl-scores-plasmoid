@@ -1,11 +1,9 @@
-
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Dossier racine du dépôt (celui qui contient 'package/')
+# Dossier racine du dépôt
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-PKG_DIR="$ROOT_DIR/package"
-LOCALE_DIR="$PKG_DIR/contents/locale"
+LOCALE_DIR="$ROOT_DIR/contents/locale"
 
 # Identifiant du plasmoid = "KPackage.Id" défini dans metadata.json
 APPLET_ID="org.dany.nhlscores"
@@ -18,6 +16,11 @@ mkdir -p "$LOCALE_DIR"
 
 for L in "${LANGS[@]}"; do
   PO_FILE="$ROOT_DIR/translate/$L.po"
+  # Support pour fr.po mappé sur fr
+  if [[ "$L" == "fr" && ! -f "$PO_FILE" && -f "$ROOT_DIR/translate/fr.po" ]]; then
+     PO_FILE="$ROOT_DIR/translate/fr.po"
+  fi
+
   OUT_DIR="$LOCALE_DIR/${L}/LC_MESSAGES"
   OUT_MO="$OUT_DIR/${CATALOG}.mo"
   if [[ -f "$PO_FILE" ]]; then

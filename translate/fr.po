@@ -156,8 +156,17 @@ msgstr "Passes"
 msgid "Assists: "
 msgstr "Passes : "
 
+msgid "unassisted"
+msgstr "sans aide"
+
 msgid "PTS"
 msgstr "PTS"
+
+msgid "W"
+msgstr "V"
+
+msgid "L"
+msgstr "D"
 
 msgid "PIM"
 msgstr "PUN"
@@ -243,14 +252,20 @@ msgstr "Points"
 msgid "Wins"
 msgstr "Victoires"
 
+msgid "Losses"
+msgstr "Défaites"
+
 msgid "Shutouts"
 msgstr "Blanchissages"
+
+msgid "SHO"
+msgstr "BL"
 
 msgid "GAA"
 msgstr "MOY"
 
 msgid "SV%"
-msgstr "%ARR"
+msgstr "%SV"
 
 # ── Hub d'équipe ─────────────────────────────────────────────────────
 
@@ -262,6 +277,9 @@ msgstr "Entraîneur"
 
 msgid "Last games"
 msgstr "Derniers matchs"
+
+msgid "Last 5 games"
+msgstr "5 derniers matchs"
 
 msgid "Next:"
 msgstr "Prochain :"
@@ -352,6 +370,9 @@ msgstr "Sélectionner / désélectionner toutes les équipes"
 
 msgid "Max games to display:"
 msgstr "Nombre max de parties :"
+
+msgid "Leaders limit:"
+msgstr "Limite meneurs :"
 
 msgid "Days ahead:"
 msgstr "Jours à venir :"
@@ -472,6 +493,9 @@ msgstr "local"
 msgid "NHL Total"
 msgstr "Total NHL"
 
+msgid "Career Stats"
+msgstr "Stats de carrière"
+
 msgid "Season"
 msgstr "Saison"
 
@@ -501,6 +525,9 @@ msgstr "Recherche"
 
 msgid "Player name…"
 msgstr "Nom du joueur…"
+
+msgid "Searching players…"
+msgstr "Recherche de joueurs…"
 
 msgid "No results"
 msgstr "Aucun résultat"
@@ -645,3 +672,18 @@ msgstr "Pénalité de match"
 
 msgid "Stars"
 msgstr "Étoiles"
+
+msgid "All"
+msgstr "Tous"
+
+msgid "Fwd"
+msgstr "Avants"
+
+msgid "Def"
+msgstr "Défenseurs"
+
+msgid "Rookies"
+msgstr "Recrues"
+
+msgid "Goal"
+msgstr "Gard."

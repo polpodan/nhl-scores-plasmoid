@@ -4,6 +4,43 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [5.0.0] — 2026-03-30
+
+### Added
+
+- **Centralized `ApiService` layer** — introduced a robust API service in `logic.js` that centralizes all NHL API calls (`scoreboard`, `standings`, `gamecenter`, `player`, etc.). This replaces scattered `XMLHttpRequest` calls with clean, named methods, improving maintainability and error handling.
+- **Grouped State Management** — completely refactored the application state in `main.qml`. Over 80 individual properties were moved into logical `QtObject` groups: `nav` (navigation), `glob` (global state), `std` (standings), `lead` (leaders), `ply` (player), `det` (match detail), `sch` (team schedule), and `hub` (team hub).
+- **Redesigned Upcoming Match Popup** — major visual overhaul of the pre-game view in `DetailView.qml`:
+  - **XL Team Logos** — increased logo sizes by 50% (to 150x150).
+  - **Double Colored Separator** — added a thick vertical separator between logos using both team colors.
+  - **Improved Layout** — team records are now placed directly under their respective logos, and match info (time, arena) is centered below the records.
+- **Zebra Striping in Standings** — added alternating background colors (black and dark gray) to the league standings table for significantly better horizontal readability across 32 rows.
+- **Configurable Leaders Limit** — added a new "Leaders limit" option in General settings, allowing users to choose between displaying 10, 20, or 50 players in the Leaders hub.
+- **Detailed Goalie Career Stats** — the player career statistics table now correctly calculates and displays the **NHL TOTAL** moyenne (GAA) using total time on ice or weighted averages.
+
+### Changed
+
+- **Improved Statistical Precision** — updated all goalie statistics (GAA and SV%) to display with **3 decimal places** across all views (Meneurs, Fiche Joueur, Stats d'équipe) for professional-grade accuracy.
+- **Enhanced Player Career Table** — in `PlayerView.qml`, the career stats table was redesigned:
+  - **Centered Layout** — the table is now perfectly centered under the player's photo.
+  - **Aired Out Design** — increased row height and font sizes for better legibility.
+  - **NHL Team Badges** — restored the colored team badges for NHL seasons in the history list.
+- **Robust Navigation** — the "Back" button in the player profile is now context-aware, returning the user to the exact previous view (Leaders, Search, Team Hub, or Match Detail).
+- **Readable Player Names** — player names in goal, penalty, and star lists are now colored using their respective team colors, adapted for theme contrast.
+
+### Fixed
+
+- **Missing Goalie Stats** — fixed a data field discrepancy where goalie GAA and SV% were showing as `0.00` or `---` in certain views.
+- **Navigation Conflicts** — resolved an issue where multiple views could overlap or intercept click events, ensuring the player profile always appears on top and is fully interactive.
+- **Binding Loops and Errors** — eliminated several "Binding loop detected" and "ReferenceError" warnings in the logs, particularly in the `StateLayer` and `fetchSituation` logic.
+- **Truncated League Names** — the "Lge" column in player stats now correctly elides long league names (e.g. "Canada U18") to prevent overlapping the "PJ" column.
+
+### Localization
+
+- **fr.po — 100% Complete** — reached full French translation coverage (215 entries). Added missing strings for `Career Stats`, `Last 5 games`, `Leaders limit`, `Searching players`, and `unassisted`. Updated `SHO` → `BL` and `SV%` → `%SV`.
+
+---
+
 ## [4.4.0] — 2026-03-22
 
 ### Added

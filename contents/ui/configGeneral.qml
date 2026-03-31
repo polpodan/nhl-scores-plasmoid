@@ -12,7 +12,7 @@ Item {
 
   MediaPlayer {
     id: previewSound
-    audioOutput: AudioOutput { volume: 1.0 }
+    audioOutput: AudioOutput { volume: page.cfg_soundVolume > 0 ? page.cfg_soundVolume : 1.0 }
   }
 
   // --- CONFIG ---
@@ -22,6 +22,7 @@ Item {
   property real   cfg_soundVolume
   property bool   cfg_showAllTeams
   property int    cfg_maxGames
+  property int    cfg_leadersLimit
   property int    cfg_lookaheadDays
   property bool   cfg_showToday
   property int    cfg_pastDays
@@ -45,6 +46,7 @@ Item {
   property real   cfg_soundVolumeDefault
   property bool   cfg_showAllTeamsDefault
   property int    cfg_maxGamesDefault
+  property int    cfg_leadersLimitDefault
   property int    cfg_lookaheadDaysDefault
   property bool   cfg_showTodayDefault
   property int    cfg_pastDaysDefault
@@ -429,6 +431,24 @@ Item {
           from: 1; to: 20
           value: cfg_maxGames || 10
           onValueChanged: cfg_maxGames = value
+          Layout.alignment: Qt.AlignLeft
+        }
+
+        // Ligne 1b : Limite meneurs
+        QQC2.Label {
+          text: i18n("Leaders limit:")
+          Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
+        }
+        QQC2.ComboBox {
+          model: [10, 20, 50]
+          property bool ready: false
+          Component.onCompleted: {
+            var vals = [10, 20, 50]
+            var idx = vals.indexOf(cfg_leadersLimit || 10)
+            currentIndex = idx >= 0 ? idx : 0
+            ready = true
+          }
+          onCurrentIndexChanged: if (ready) cfg_leadersLimit = model[currentIndex]
           Layout.alignment: Qt.AlignLeft
         }
 

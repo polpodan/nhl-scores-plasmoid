@@ -7,6 +7,9 @@ import QtMultimedia
 import org.kde.plasma.core 2.0 as PlasmaCore
 import org.kde.kirigami 2.20 as Kirigami
 
+import "logic.js" as Logic
+import "components" as Components
+
 PlasmoidItem {
     id: root
     Plasmoid.title: i18n("NHL Scores")
@@ -15,6 +18,34 @@ PlasmoidItem {
     readonly property bool isVertical: Plasmoid.formFactor === PlasmaCore.Types.Vertical
     // Détection mode desktop : formFactor Planar (0) = posé sur le bureau
     readonly property bool isDesktop: Plasmoid.formFactor === PlasmaCore.Types.Planar
+    
+    // ── Système de Styles Unifié ─────────────────────────────────────
+    readonly property var styles: {
+        "hubWidth": 400,
+        "cardWidth": 480,
+        "badge": {
+            "radius": 4,
+            "fontSize": 10,
+            "smallFontSize": 9,
+            "desktopFontSize": 12,
+            "desktopSmallFontSize": 10
+        },
+        "teamBadge": {
+            "width": 45,
+            "height": 28,
+            "desktopWidth": 50,
+            "desktopHeight": 32,
+            "fontSize": 13,
+            "desktopFontSize": 15
+        },
+        "fonts": {
+            "main": 14,
+            "small": 11,
+            "tiny": 9,
+            "score": 26,
+            "header": 13
+        }
+    }
     // En mode desktop, on affiche directement le fullRepresentation
     preferredRepresentation: isDesktop ? fullRepresentation : compactRepresentation
     property var favoriteTeams: []
@@ -38,6 +69,7 @@ PlasmoidItem {
     }
     property bool showAllTeams: Plasmoid.configuration.showAllTeams || false
     property int  maxGames:     Plasmoid.configuration.maxGames || 10
+    property int  leadersLimit: Plasmoid.configuration.leadersLimit || 10
     property bool ultraCompact: Plasmoid.configuration.ultraCompact || false
     property int lookaheadDays: Plasmoid.configuration.lookaheadDays !== undefined
                                  ? Plasmoid.configuration.lookaheadDays : 2
@@ -59,6 +91,278 @@ PlasmoidItem {
                                 ? Plasmoid.configuration.pastDays : 0
     property int  pollInterval:  Plasmoid.configuration.pollInterval || 20
 
+    // ── GESTION DE L'ÉTAT (Groupée) ──────────────────────────────────
+    
+    readonly property QtObject nav: QtObject {
+        property bool standings: false
+        property bool leaders:   false
+        property bool player:    false
+        property bool search:    false
+        property bool teamHub:   false
+        property bool calendar:  false
+        property bool dayView:   false
+        property bool bracket:   false
+        property bool detail:    false
+        property bool schedule:  false
+        property bool scheduleShowStats: false
+    }
+
+    readonly property QtObject glob: QtObject {
+        property bool initialLoading: true
+        property date lastUpdated
+        property string debugMsg: ""
+        property int    pulse: 0
+        property int    refreshGen: 0
+        property var    penaltiesMap: ({})
+        property var prevScores: ({})
+        property var    blinkingGames: ({})
+        property bool   blinkOn: false
+    }
+
+    readonly property QtObject banner: QtObject {
+        property string team:   ''
+        property string title:  ''
+        property string score:  ''
+        property string scorer: ''
+        property bool   visible: false
+    }
+
+    readonly property QtObject std: QtObject {
+        property string mode:    'wildcard'
+        property string sortKey: 'points'
+        property bool   sortAsc: false
+        property var    data:    []
+        property bool   loading: false
+        property string error:   ""
+    }
+
+    readonly property QtObject lead: QtObject {
+        property bool   loading: false
+        property string error:   ""
+        property var    points:  []
+        property var    goals:   []
+        property var    assists: []
+        property var    pim:     []
+        property var    wins:    []
+        property var    sho:     []
+        property var    gaa:     []
+        property var    svp:     []
+        property bool   filterF: false
+        property bool   filterD: false
+        property bool   filterG: false
+        property bool   filterR: false
+    }
+
+    readonly property QtObject ply: QtObject {
+        property bool   loading: false
+        property string error:   ""
+        property var    data:    null
+        property string from:    'leaders'
+    }
+
+    readonly property QtObject srch: QtObject {
+        property bool   loading: false
+        property string error:   ""
+        property string query:   ""
+        property var    results: []
+    }
+
+    readonly property QtObject hub: QtObject {
+        property string code:      ''
+        property string from:      ''
+        property bool   loading:   false
+        property string error:     ''
+        property string record:    ''
+        property string coach:     ''
+        property string standing:  ''
+        property string fullName:  ''
+        property int    w:         0
+        property int    l:         0
+        property int    ot:        0
+        property int    pts:       0
+        property int    gp:        0
+        property var    lastGames: []
+        property var    nextGame:  null
+    }
+
+    readonly property QtObject day: QtObject {
+        property string date:    ''
+        property bool   loading: false
+        property string error:   ''
+        property var    games:   []
+    }
+
+    readonly property QtObject cal: QtObject {
+        property int    year:    new Date().getFullYear()
+        property int    month:   new Date().getMonth()
+        property var    counts:  ({})
+        property bool   loading: false
+    }
+
+    readonly property QtObject brk: QtObject {
+        property bool   loading: false
+        property string error:   ''
+        property var    data:    null
+    }
+
+    readonly property QtObject det: QtObject {
+        property int    gameId:   0
+        property string away:     ''
+        property string home:     ''
+        property int    ag:       0
+        property int    hg:       0
+        property string status:   ''
+        property string pType:    ''
+        property int    period:   0
+        property string remain:   ''
+        property var    start:    0
+        property bool   interm:   false
+        property string intermRemain: ''
+        property string penaltyBoxAway: '[]'
+        property string penaltyBoxHome: '[]'
+        property var    goals:    []
+        property var    stats:    ({})
+        property var    threeStars: []
+        property var    penalties:  []
+        property string view:     'goals'
+        property string sitCode:  '1551'
+        property bool   isPlayoff: false
+        property string seriesRound: ''
+        property int    seriesGameNum: 0
+        property bool   loading:  false
+        property string error:    ''
+        property string venue:    ''
+        property int    seriesAway: 0
+        property int    seriesHome: 0
+        property bool   seriesTotal: false
+        property var    h2hGames: []
+        property var    awayRecord: ({})
+        property var    homeRecord: ({})
+        property var    awayLeaders: []
+        property var    homeLeaders: []
+        property var    awayGoalie: null
+        property var    homeGoalie: null
+        property var    playerMap:  ({})
+
+        readonly property var goalsByPeriod: {
+            var result = []
+            var seenPeriods = []
+            var maxPeriod = (status === 'LIVE' || status === 'FINAL') ? (period || 0) : 0
+            for (var i = 0; i < goals.length; i++) {
+                var p = goals[i].period
+                if (seenPeriods.indexOf(p) === -1) seenPeriods.push(p)
+            }
+            for (var pn = 1; pn <= Math.min(maxPeriod, 3); pn++) {
+                var pStr = String(pn)
+                if (seenPeriods.indexOf(pStr) === -1) seenPeriods.push(pStr)
+            }
+            seenPeriods.sort(function(a, b) {
+                var order = { '1':1, '2':2, '3':3, 'OT':4, 'SO':99 }
+                function rank(p) {
+                    if (order[p] !== undefined) return order[p]
+                    var m = p.match(/^(\d+)OT$/)
+                    return m ? 3 + parseInt(m[1]) : 98
+                }
+                return rank(a) - rank(b)
+            })
+            for (var pi = 0; pi < seenPeriods.length; pi++) {
+                var per = seenPeriods[pi]
+                var label = per === 'SO' ? i18n('Shootout')
+                          : per === 'OT' ? i18n('Overtime')
+                          : /^\d+OT$/.test(per) ? (per.replace('OT','') + 'e ' + i18n('Overtime'))
+                          : per === '1'  ? i18n('1st period')
+                          : per === '2'  ? i18n('2nd period')
+                          : per === '3'  ? i18n('3rd period')
+                          : i18n('Period') + ' ' + per
+                result.push({ isPeriodHeader: true, label: label, period: per, isEmpty: false })
+                var count = 0
+                for (var gi = 0; gi < goals.length; gi++) {
+                    if (goals[gi].period === per) {
+                        var gobj = goals[gi]
+                        result.push({ isPeriodHeader: false, label: '',
+                                      period: gobj.period, time: gobj.time,
+                                      team: gobj.team, scorer: gobj.scorer,
+                                      scorerId: gobj.scorerId || 0,
+                                      goalsToDate: gobj.goalsToDate,
+                                      assists: gobj.assists,
+                                      ppg: gobj.ppg, shg: gobj.shg, en: gobj.en,
+                                      isEmpty: false })
+                        count++
+                    }
+                }
+                if (count === 0) {
+                    result.push({ isPeriodHeader: false, label: i18n('No goals recorded.'),
+                                  period: per, isEmpty: true })
+                }
+            }
+            return result
+        }
+
+        readonly property var penaltiesByPeriod: {
+            var result = []
+            var seenPeriods = []
+            for (var i = 0; i < penalties.length; i++) {
+                var p = penalties[i].period
+                if (seenPeriods.indexOf(p) === -1) seenPeriods.push(p)
+            }
+            seenPeriods.sort(function(a, b) {
+                var order = { '1':1, '2':2, '3':3, 'OT':4, 'SO':99 }
+                function rank(p) {
+                    if (order[p] !== undefined) return order[p]
+                    var m = p.match(/^(\d+)OT$/)
+                    return m ? 3 + parseInt(m[1]) : 98
+                }
+                return rank(a) - rank(b)
+            })
+            for (var pi = 0; pi < seenPeriods.length; pi++) {
+                var per = seenPeriods[pi]
+                var label = per === 'SO' ? i18n('Shootout')
+                          : per === 'OT' ? i18n('Overtime')
+                          : /^\d+OT$/.test(per) ? (per.replace('OT','') + 'e ' + i18n('Overtime'))
+                          : per === '1'  ? i18n('1st period')
+                          : per === '2'  ? i18n('2nd period')
+                          : per === '3'  ? i18n('3rd period')
+                          : i18n('Period') + ' ' + per
+                result.push({ isPeriodHeader: true, label: label })
+                for (var gi = 0; gi < penalties.length; gi++) {
+                    if (penalties[gi].period === per) {
+                        var pen = penalties[gi]
+                        result.push({
+                            isPeriodHeader: false,
+                            time:     pen.time,
+                            team:     pen.team,
+                            player:   pen.player,
+                            number:   pen.number,
+                            duration: pen.duration,
+                            descKey:  pen.descKey,
+                            playerId: pen.playerId || 0
+                        })
+                    }
+                }
+            }
+            return result
+        }
+    }
+
+    readonly property QtObject sch: QtObject {
+        property string team:      ''
+        property var    games:     []
+        property bool   loading:   false
+        property string error:     ''
+        property var    skaters:   []
+        property var    goalies:   []
+        property bool   statsLoading: false
+        property string statsError:   ''
+    }
+
+    Timer {
+        id: pulseTimer
+        interval: 60000
+        repeat: true
+        running: true
+        onTriggered: glob.pulse++
+    }
+
     // Action contextuelle (menu clic-droit)
     function action_refreshNow() { refresh() }
 
@@ -71,6 +375,12 @@ PlasmoidItem {
         updateFavoriteTeams()
         refresh()
     }
+
+    property alias todayGamesModel: todayGames
+    property alias statusBadgeComponent: statusBadge
+    property alias teamColumnComponent: teamColumn
+    property alias teamRowInlineComponent: teamRowInline
+    property alias standingsFlatModelAlias: standingsFlatModel
 
     ListModel {
         id: todayGames
@@ -107,65 +417,43 @@ PlasmoidItem {
     }
     toolTipSubText: _tooltipSub
 
-    property date lastUpdated
-    property string debugMsg: ""
-    property bool initialLoading:   true
-    property bool   standingsOpen:    false
-    property string standingsMode:    'wildcard'  // 'wildcard' | 'division' | 'league'
-    property string standingsSortKey: 'points'    // colonne de tri du mode ligue
-    property bool   standingsSortAsc: false       // false = décroissant
-    property var  standingsData:    []
-    property bool standingsLoading: false
-    property string standingsError: ""
-
     function fetchStandings() {
-        if (standingsLoading) return
-        standingsLoading = true
-        standingsError   = ""
-        var xhr = new XMLHttpRequest()
-        xhr.open("GET", "https://api-web.nhle.com/v1/standings/now")
-        xhr.onreadystatechange = function() {
-            if (xhr.readyState !== 4) return
-            standingsLoading = false
-            if (xhr.status === 200) {
-                try {
-                    var d = JSON.parse(xhr.responseText)
-                    standingsData = d.standings || []
-                } catch(e) { standingsError = "Parse error" }
-            } else { standingsError = "HTTP " + xhr.status }
-        }
-        xhr.send()
+        if (std.loading) return
+        std.loading = true
+        std.error   = ""
+        Logic.ApiService.getStandings(function(err, d) {
+            std.loading = false
+            if (err) {
+                std.error = String(err)
+            } else {
+                std.data = d.standings || []
+            }
+        })
     }
 
     // ── Clignotement de score sur but ────────────────────────────────────
     // Snapshot des scores avant chaque refresh : { gameId -> { ag, hg } }
-    property var prevScores: ({})
     // Heure de début d'intermission par gameId : { gameId: wallClockMs }
 
     // Durée de clignotement en secondes (config)
     property int blinkDuration: Plasmoid.configuration.blinkDuration || 10
 
-    // Dictionnaire des matchs en cours de clignotement : { gameId: true }
-    property var blinkingGames: ({})
-
     // État ON/OFF du clignotement (bascule à 500ms)
-    property bool blinkOn: false
-
     // Timer de bascule visuelle
     Timer {
         id: blinkToggleTimer
         interval: 500
         repeat: true
-        running: Object.keys(root.blinkingGames).length > 0
-        onTriggered: root.blinkOn = !root.blinkOn
+        running: Object.keys(glob.blinkingGames).length > 0
+        onTriggered: glob.blinkOn = !glob.blinkOn
     }
 
     // Démarre le clignotement pour un match pendant blinkDuration secondes
     function startBlink(gameId, scorer) {
-        let b = Object.assign({}, blinkingGames)
+        let b = Object.assign({}, glob.blinkingGames)
         // scorer : 'away', 'home', ou 'both' — pour flasher la bonne pastille
         b[gameId] = scorer || 'both'
-        blinkingGames = b
+        glob.blinkingGames = b
 
         // Timer one-shot pour arrêter ce match
         let stop = stopBlinkTimerComp.createObject(root, { targetGameId: String(gameId) })
@@ -179,9 +467,9 @@ PlasmoidItem {
             interval: root.blinkDuration * 1000
             repeat: false
             onTriggered: {
-                let b = Object.assign({}, root.blinkingGames)
+                let b = Object.assign({}, glob.blinkingGames)
                 delete b[targetGameId]
-                root.blinkingGames = b
+                glob.blinkingGames = b
                 destroy()
             }
         }
@@ -205,8 +493,8 @@ PlasmoidItem {
                              || (scorer === 'both' && (away === favTeam || home === favTeam))
                 if (favScored) {
                     let scorerName = ''
-                    if (root.detailOpen && root.detailGameId === gameId && root.detailGoals.length > 0) {
-                        let lastGoal = root.detailGoals[root.detailGoals.length - 1]
+                    if (nav.detail && det.gameId === gameId && det.goals.length > 0) {
+                        let lastGoal = det.goals[det.goals.length - 1]
                         if (lastGoal && lastGoal.scorer) scorerName = lastGoal.scorer
                     }
                     root.sendGoalNotification(favTeam, away, home, ag, hg, scorerName)
@@ -214,13 +502,6 @@ PlasmoidItem {
             }
         }
     }
-
-    // Propriétés de la bannière (au niveau root pour être accessibles partout)
-    property string goalBannerTeam:   ''
-    property string goalBannerTitle:  ''
-    property string goalBannerScore:  ''
-    property string goalBannerScorer: ''
-    property bool   goalBannerVisible: false
 
     // Son + bannière custom pour un but de l'équipe favorite
     function sendGoalNotification(favTeam, away, home, ag, hg, scorerName) {
@@ -237,18 +518,18 @@ PlasmoidItem {
         let oppScore = isAway ? hg : ag
         let isFr     = Qt.locale().name.startsWith("fr")
 
-        root.goalBannerTeam   = favTeam
-        root.goalBannerTitle  = "🚨 " + (isFr ? "BUT!!" : "GOAL!!")
-        root.goalBannerScore  = favTeam + "  " + favScore + " – " + oppScore + "  " + opponent
-        root.goalBannerScorer = scorerName || ''
-        root.goalBannerVisible = true
+        banner.team   = favTeam
+        banner.title  = "🚨 " + (isFr ? "BUT!!" : "GOAL!!")
+        banner.score  = favTeam + "  " + favScore + " – " + oppScore + "  " + opponent
+        banner.scorer = scorerName || ''
+        banner.visible = true
         bannerAutoHide.restart()
     }
 
     Timer {
         id: bannerAutoHide
         interval: 6000; repeat: false
-        onTriggered: root.goalBannerVisible = false
+        onTriggered: banner.visible = false
     }
 
     // Retourne true s'il y a des matchs LIVE ou à venir aujourd'hui
@@ -295,18 +576,13 @@ PlasmoidItem {
         'VAN':'#008852','VGK':'#333F42','WPG':'#AC162C','WSH':'#041E42'
     })
 
-    readonly property var teamColors: ({ 'ANA':'#F47A38','UTA':'#6E2B62','BOS':'#FFB81C','BUF':'#003087','CAR':'#CC0000','CBJ':'#002654','CGY':'#C8102E','CHI':'#CF0A2C','COL':'#6F263D','DAL':'#006847','DET':'#CE1126','EDM':'#FF4C00','FLA':'#C8102E','LAK':'#111111','MIN':'#154734','MTL':'#AF1E2D','NJD':'#CE1126','NSH':'#FFB81C','NYI':'#00539B','NYR':'#0038A8','OTT':'#C52032','PHI':'#F74902','PIT':'#FFB81C','SEA':'#99D9D9','SJS':'#006D75','STL':'#002F87','TBL':'#002868','TOR':'#00205B','VAN':'#00205B','VGK':'#B4975A','WPG':'#041E42','WSH':'#C8102E' })
-
-    function teamColor(code) {
-        var c = teamColors[String(code||'').toUpperCase()]
-        return c ? c : Kirigami.Theme.positiveBackgroundColor
-    }
+    // (L'ancienne fonction teamColor a été remplacée par Logic.getTeamColor)
 
     // Retourne une version de la couleur d'équipe lisible sur le fond du thème.
     // Sur thème foncé  : les couleurs trop sombres sont éclaircies.
     // Sur thème clair  : les couleurs trop claires sont assombries.
     function teamColorAdapted(code) {
-        var hex = teamColors[String(code||'').toUpperCase()]
+        var hex = Logic.getTeamColor(code, null)
         if (!hex) return Kirigami.Theme.textColor
 
         // Luminance de la couleur d'équipe
@@ -357,14 +633,14 @@ PlasmoidItem {
     // Retourne 'white' ou 'black' selon la luminance de la couleur d'équipe
     // Formule WCAG relative luminance : L = 0.2126R + 0.7152G + 0.0722B
     function blinkOpacity(gameId, side) {
-        var b = root.blinkingGames[String(gameId)]
-        return (b && (b === side || b === 'both') && !root.blinkOn) ? 0.0 : 1.0
+        var b = glob.blinkingGames[String(gameId)]
+        return (b && (b === side || b === 'both') && !glob.blinkOn) ? 0.0 : 1.0
     }
 
     // Retourne les deux couleurs optimales pour le dégradé away→home
     function bestGradientColors(away, home) {
-        var ap = teamColors[away]  || '#888888'
-        var hp = teamColors[home]  || '#888888'
+        var ap = Logic.getTeamColor(away, '#888888')
+        var hp = Logic.getTeamColor(home, '#888888')
         var as = teamSecondaryColors[away]  || ap
         var hs = teamSecondaryColors[home]  || hp
         // Distance euclidienne RGB
@@ -386,25 +662,22 @@ PlasmoidItem {
         return best
     }
 
-    function teamTextColor(code) {
-        var hex = teamColors[String(code||'').toUpperCase()]
-        if (!hex) return 'white'
-        hex = hex.replace('#', '')
-        var r = parseInt(hex.substring(0,2), 16) / 255
-        var g = parseInt(hex.substring(2,4), 16) / 255
-        var b = parseInt(hex.substring(4,6), 16) / 255
-        // Correction gamma sRGB
-        r = r <= 0.03928 ? r / 12.92 : Math.pow((r + 0.055) / 1.055, 2.4)
-        g = g <= 0.03928 ? g / 12.92 : Math.pow((g + 0.055) / 1.055, 2.4)
-        b = b <= 0.03928 ? b / 12.92 : Math.pow((b + 0.055) / 1.055, 2.4)
-        var L = 0.2126 * r + 0.7152 * g + 0.0722 * b
-        return L > 0.35 ? '#111111' : 'white'
+    function pad2(n) {
+        return (n < 10 ? "0" : "") + n
     }
-    function pad2(n) { return (n < 10 ? "0" : "") + n }
-    function dateISO(d) { return d.getFullYear() + "-" + pad2(d.getMonth() + 1) + "-" + pad2(d.getDate()) }
 
-    function isSameDay(a, b) { return a.getFullYear()===b.getFullYear() && a.getMonth()===b.getMonth() && a.getDate()===b.getDate() }
-    function localTimeStr(ms) { var d = new Date(ms); return Qt.formatTime(d, Qt.DefaultLocaleShortDate) }
+    function dateISO(d) {
+        return d.getFullYear() + "-" + pad2(d.getMonth() + 1) + "-" + pad2(d.getDate())
+    }
+
+    function isSameDay(a, b) {
+        return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate()
+    }
+
+    function localTimeStr(ms) {
+        var d = new Date(ms)
+        return Qt.formatTime(d, Qt.DefaultLocaleShortDate)
+    }
     function localeDateLong(ms) {
         var d = new Date(ms)
         var days   = [i18n('Sunday'),i18n('Monday'),i18n('Tuesday'),i18n('Wednesday'),
@@ -419,117 +692,11 @@ PlasmoidItem {
     // ex: 1451 = away 4 skaters, home 5 skaters → home PP
     //     1441 = away 4, home 4  → double pénalité (égal)
     //     1351 = away 3, home 5  → home double avantage
-    function parseSituation(code, away, home) {
-        if (!code || code.length < 4) return null
-        var ag = parseInt(code[0])   // goalie visiteur (0=vide, 1=en jeu)
-        var as = parseInt(code[1])   // patineurs visiteur
-        var hs = parseInt(code[2])   // patineurs local
-        var hg = parseInt(code[3])   // goalie local
-        // Valeurs invalides — changement de ligne ou données transitoires de l'API
-        if (isNaN(ag) || isNaN(as) || isNaN(hs) || isNaN(hg)) return null
-        if (as < 0 || as > 6 || hs < 0 || hs > 6) return null
-        if (ag < 0 || ag > 1 || hg < 0 || hg > 1) return null
-        // Si une équipe a 6 patineurs, elle doit avoir retiré son gardien
-        if (as === 6 && ag === 1) return null
-        if (hs === 6 && hg === 1) return null
-        var enTeam = ag === 0 ? away : (hg === 0 ? home : '')  // équipe au filet vide
-        // Données invalides — début de match, intermission ou équipes pas encore sur la glace
-        if (as === 0 || hs === 0) return null
-        // 5v5 ou 6v6 normal (changement de ligne) sans filet vide → rien à afficher
-        if (as === hs && as >= 5 && enTeam === '') return null
-        // Filet vide sans AN (ex: 0651 = 6v5 égal après retrait gardien)
-        if (as === hs) {
-            return { ppTeam: '', shTeam: '', ppType: as + 'v' + hs,
-                     awaySkaters: as, homeSkaters: hs,
-                     emptyNet: enTeam !== '', enTeam: enTeam, even: true }
-        }
-        // Avantage numérique
-        var ppTeam  = as > hs ? away : home
-        var shTeam  = as > hs ? home : away
-        var ppCount = Math.abs(as - hs)
-        var ppType  = ppCount === 1 ? 'PP' : '5v3'
-        var emptyNet = enTeam !== ''
-        return { ppTeam: ppTeam, shTeam: shTeam, ppType: ppType,
-                 awaySkaters: as, homeSkaters: hs,
-                 emptyNet: emptyNet, enTeam: enTeam, even: false }
-    }
-
-    property string detailSituationCode: '1551'
-    property bool   detailIsPlayoff: false
-    property string detailSeriesRound: ''
-    property int    detailSeriesGameNum: 0
-
-    // Bracket des séries
-    property bool   bracketOpen:   false
+    // (Logique parseSituation déplacée vers logic.js)
 
     // ── Vue journée complète ─────────────────────────────────────────
-    property bool   dayViewOpen:    false
-    property string dayViewDate:    ''    // ISO date ex: "2026-03-15"
-    property bool   dayViewLoading: false
-    property string dayViewError:   ''
-    property var    dayViewGames:   []
-
-    // Calendrier
-    property bool   calendarOpen:   false
-    property int    calYear:        new Date().getFullYear()
-    property int    calMonth:       new Date().getMonth()  // 0-11
-    property var    calGameCounts:  ({})  // { "2026-03-15": 12, ... }
-    property bool   calLoading:     false
-    property bool   bracketLoading: false
-    property string bracketError:  ''
-    property var    bracketData:   null
 
     // ── Leaders de la ligue ─────────────────────────────────────────
-    property bool   leadersOpen:    false
-    property bool   leadersLoading: false
-    property string leadersError:   ''
-    property var    leadersPoints:  []
-    property var    leadersGoals:   []
-    property var    leadersAssists: []
-    property var    leadersPim:     []
-    property var    leadersWins:    []
-    property var    leadersSho:     []
-    property var    leadersGaa:     []
-    property var    leadersSvp:     []
-
-    // Fiche joueur
-    property bool   playerOpen:    false
-    property bool   playerLoading: false
-    property string playerError:   ''
-    property var    playerData:    null
-    property string playerFrom:    'leaders'  // 'leaders' | 'teamstats' | 'search'
-    property var    detailThreeStars:  []
-    property var    detailPenalties:   []
-    property var    penaltyPlayerMap:  ({})  // "TEAM-sweater" → playerId   // [{period, time, team, player, duration, type, descKey, drawnBy}]
-    property string detailView:        'goals'  // 'goals' | 'penalties' | 'stars'
-
-    // Recherche de joueurs
-    property bool   searchOpen:    false
-    property bool   searchLoading: false
-    property string searchError:   ''
-    property string searchQuery:   ''
-    property var    searchResults: []
-
-    // ── Hub d'équipe ────────────────────────────────────────────────
-    property bool   teamHubOpen:    false
-    property string teamHubCode:    ''
-    property string teamHubFrom:    ''   // 'detail' ou 'standings'
-
-
-    property bool   teamHubLoading: false
-    property string teamHubError:   ''
-    // Données du hub
-    property string teamHubRecord:      ''   // ex: "32-28-5"
-    property string teamHubCoach:       ''
-    property string teamHubStanding:    ''   // ex: "3rd Atlantic"
-    property string teamHubFullName:    ''   // ex: "Maple Leafs de Toronto"
-    property int    teamHubW:           0
-    property int    teamHubL:           0
-    property int    teamHubOT:          0
-    property int    teamHubPts:         0
-    property int    teamHubGP:          0
-    property var    teamHubLastGames:   []   // 5 derniers matchs
-    property var    teamHubNextGame:    null // prochain match
 
     // URL du logo NHL selon thème clair/foncé
     function teamLogoUrl(abbrev) {
@@ -539,142 +706,20 @@ PlasmoidItem {
         var variant = L < 0.5 ? 'dark' : 'light'
         return 'https://assets.nhle.com/logos/nhl/svg/' + abbrev + '_' + variant + '.svg'
     }
-
-    // ---- Venue timezone helpers ----
-    function teamZone(code) {
-        switch(String(code||'')){
-        case 'BOS': case 'BUF': case 'CAR': case 'CBJ': case 'DET': case 'FLA': case 'MTL': case 'NJD': case 'NYI': case 'NYR': case 'OTT': case 'PHI': case 'PIT': case 'TBL': case 'TOR': case 'WSH':
-            return 'ET'
-        case 'CHI': case 'DAL': case 'MIN': case 'NSH': case 'STL': case 'WPG':
-            return 'CT'
-        case 'COL': case 'CGY': case 'EDM': case 'UTA':
-            return 'MT'
-        case 'ANA': case 'LAK': case 'SEA': case 'SJS': case 'VAN': case 'VGK':
-            return 'PT'
-        default:
-            return 'ET'
-        }
-    }
-    function zoneBaseOffsetHours(zone){
-        if(zone==='ET') return -5
-        if(zone==='CT') return -6
-        if(zone==='MT') return -7
-        if(zone==='PT') return -8
-        return -5
-    }
-    function zoneHasDst(zone){ return true }
-    function nthSundayOfMonth(year, month0, n){
-        var d = new Date(Date.UTC(year, month0, 1))
-        var dow = d.getUTCDay()
-        var firstSunday = 1 + ((7 - dow) % 7)
-        return firstSunday + 7*(n-1)
-    }
-    function firstSundayNovember(year){ return nthSundayOfMonth(year, 10, 1) }
-    function secondSundayMarch(year){ return nthSundayOfMonth(year, 2, 2) }
-    function isDstDateLocalLike(year, month0, day, zone){
-        if(!zoneHasDst(zone)) return false
-        var dStart = secondSundayMarch(year)
-        var dEnd = firstSundayNovember(year)
-        if(month0>2 && month0<10) return true
-        if(month0<2 || month0>10) return false
-        if(month0===2) return day>=dStart
-        if(month0===10) return day<dEnd
-        return false
-    }
-    // Résoudre l'abréviation NHL depuis teamCommonName (ex: "Oilers" → "EDM")
     function resolveNHLAbbrev(teamCommonName) {
-        if (!teamCommonName) return ''
-        var name = (teamCommonName.default || teamCommonName).toLowerCase()
-        // Table statique complète — équipes actuelles + historiques
-        var table = {
-            // Équipes actuelles
-            'ducks': 'ANA', 'coyotes': 'UTA', 'utah hockey club': 'UTA',
-            'bruins': 'BOS', 'sabres': 'BUF', 'hurricanes': 'CAR',
-            'blackhawks': 'CHI', 'avalanche': 'COL', 'blue jackets': 'CBJ',
-            'stars': 'DAL', 'red wings': 'DET', 'oilers': 'EDM',
-            'panthers': 'FLA', 'kings': 'LAK', 'wild': 'MIN',
-            'canadiens': 'MTL', 'predators': 'NSH', 'devils': 'NJD',
-            'islanders': 'NYI', 'rangers': 'NYR', 'senators': 'OTT',
-            'flyers': 'PHI', 'penguins': 'PIT', 'blues': 'STL',
-            'lightning': 'TBL', 'maple leafs': 'TOR', 'canucks': 'VAN',
-            'golden knights': 'VGK', 'jets': 'WPG', 'capitals': 'WSH',
-            'kraken': 'SEA', 'sharks': 'SJS', 'flames': 'CGY',
-            'nashville predators': 'NSH',
-            // Équipes historiques
-            'thrashers': 'ATL', 'nordiques': 'QUE', 'whalers': 'HFD',
-            'scouts': 'KCS', 'rockies': 'CLR', 'barons': 'CLE',
-            'seals': 'CAL', 'california golden seals': 'CGS',
-            'phoenix coyotes': 'PHX', 'minnesota north stars': 'MNS',
-            'north stars': 'MNS', 'mighty ducks': 'ANA',
-            'atlanta thrashers': 'ATL', 'winnipeg jets': 'WPG',
-            'hartford whalers': 'HFD', 'quebec nordiques': 'QUE'
-        }
-        return table[name] || ''
+        return Logic.resolveNHLAbbrev(teamCommonName)
+    }
+
+    function parseSituation(code, away, home) {
+        return Logic.parseSituation(code, away, home)
     }
 
     function dayViewTimeLabel(msUTC, homeTeam) {
-        if (root.dateMode === 'venue') return venueTimeStr(msUTC, homeTeam)
-        var d = new Date(msUTC)
-        var h = d.getHours(), m = d.getMinutes()
-        function pad(n){ return (n<10?'0':'')+n }
-        return pad(h) + ':' + pad(m)
+        return Logic.getDayViewTimeLabel(msUTC, homeTeam, root.dateMode)
     }
 
     function venueTimeStr(msUTC, homeTeam) {
-        var zone = teamZone(homeTeam)
-        var dStd = new Date(msUTC + zoneBaseOffsetHours(zone)*3600*1000)
-        var dst  = isDstDateLocalLike(dStd.getUTCFullYear(), dStd.getUTCMonth(), dStd.getUTCDate(), zone)
-        var off  = zoneBaseOffsetHours(zone) + (dst ? 1 : 0)
-        var shifted = new Date(msUTC + off*3600*1000)
-        var h = shifted.getUTCHours()
-        var m = shifted.getUTCMinutes()
-        function pad(n){ return (n<10?'0':'')+n }
-        return pad(h) + ':' + pad(m)
-    }
-
-
-
-    // ---- Networking ----
-    function httpGet(url, cb){
-        let xhr = new XMLHttpRequest()
-        xhr.open("GET", url)
-        xhr.onreadystatechange = function(){
-            if(xhr.readyState===XMLHttpRequest.DONE){
-                if(xhr.status===200){
-                    try{ cb(null, JSON.parse(xhr.responseText)) }catch(e){ cb(e,null) }
-                } else {
-                    cb(new Error("HTTP "+xhr.status+" @ "+url), null)
-                }
-            }
-        }
-        xhr.send()
-    }
-
-    function liveClockText(periodType, period, timeRemaining) {
-        if (!timeRemaining) { return "" }
-        if (periodType === "OT") { return "OT " + timeRemaining }
-        if (periodType === "SO") { return "SO" }
-        if (period === 1) { return "1st " + timeRemaining }
-        if (period === 2) { return "2nd " + timeRemaining }
-        if (period === 3) { return "3rd " + timeRemaining }
-        return ""
-    }
-
-    // Ligne 1 : ordinal seulement (ex: "1st", "2nd", "OT")
-    function livePeriodText(periodType, period) {
-        if (periodType === "SO") return i18n("SO")
-        if (periodType === "OT") return "OT"
-        if (period === 1) return i18n("1st")
-        if (period === 2) return i18n("2nd")
-        if (period === 3) return i18n("3rd")
-        if (period > 3)   return (period - 3) + "OT"
-        return ""
-    }
-
-    // Ligne 2 : chrono seulement (ex: "14:32")
-    function liveTimeText(periodType, period, timeRemaining) {
-        if (periodType === "SO" || !timeRemaining) return ""
-        return timeRemaining
+        return Logic.venueTimeStr(msUTC, homeTeam)
     }
 
     function fetchLeagueByDates(days, cb){
@@ -683,8 +728,7 @@ PlasmoidItem {
         let errors=[]
         if(pending===0){ cb(acc, errors); return }
         days.forEach(function(d){
-            const u = "https://api-web.nhle.com/v1/scoreboard/" + dateISO(d)
-            httpGet(u, function(err,data){
+            Logic.ApiService.getScoreboard(dateISO(d), function(err,data){
                 if(err){ errors.push(String(err)) }
                 else if (data && data.games){ acc = acc.concat(data.games) }
                 pending--
@@ -701,8 +745,7 @@ PlasmoidItem {
         let pending=teamCodes.length
         if(pending===0){ cb(acc, errors); return }
         teamCodes.forEach(function(team){
-            const url = "https://api-web.nhle.com/v1/scoreboard/" + team + "/now"
-            httpGet(url, function(err, data){
+            Logic.ApiService.getScoreboardNow(team, function(err, data){
                 if (err) { errors.push(String(err)) }
                 else if (data && data.gamesByDate) {
                     for (let i=0;i<data.gamesByDate.length;i++){
@@ -716,12 +759,9 @@ PlasmoidItem {
         })
     }
 
-    // Génération de rafraîchissement — permet d'ignorer les callbacks obsolètes
-    property int refreshGen: 0
-
     function refresh() {
-        refreshGen++
-        const myGen = refreshGen
+        glob.refreshGen++
+        const myGen = glob.refreshGen
 
         let days = []
         let base = new Date()
@@ -741,13 +781,13 @@ PlasmoidItem {
         }
 
         fetchLeagueByDates(days, function(leagueGames, leagueErrs) {
-            if (myGen !== refreshGen) return  // requête obsolète, on abandonne
+            if (myGen !== glob.refreshGen) return  // requête obsolète, on abandonne
             if (leagueGames && leagueGames.length) {
                 buildFromRawGames(leagueGames, leagueErrs)
             } else {
                 const pool = showAllTeams ? allTeams : favoriteTeams
                 fetchTeamNow(pool, function(teamGames, teamErrs) {
-                    if (myGen !== refreshGen) return
+                    if (myGen !== glob.refreshGen) return
                     buildFromRawGames(teamGames || [],
                                       (leagueErrs||[]).concat(teamErrs||[]))
                 })
@@ -755,73 +795,67 @@ PlasmoidItem {
         })
     }
 
-    function isScoreSet(g){ return g && g.homeTeam && g.awayTeam && g.homeTeam.score !== undefined && g.awayTeam.score !== undefined }
+    function isScoreSet(g) { return Logic.isScoreSet(g) }
 
-    function statusFromGame(g){
-        var s = (g && g.gameState) ? String(g.gameState).toUpperCase() : ''
-        if (s==='LIVE' || s==='IN_PROGRESS') return 'LIVE'
-        if (s==='FINAL' || s==='FINAL_OT' || s==='FINAL_SO') return 'FINAL'
-        if (s==='PRE' || s==='FUT' || s==='SCHEDULED' || s==='PREGAME') return 'UPCOMING'
-        if (s==='OFF'){
-            var start = new Date(g.startTimeUTC || new Date())
-            var now = new Date()
-            if (isScoreSet(g) && (now.getTime() - start.getTime()) > 30*60000) return 'FINAL'
-            return 'UPCOMING'
-        }
-        var pd = g && g.periodDescriptor ? (g.periodDescriptor.periodType || '').toUpperCase() : ''
-        if (pd==='FINAL') return 'FINAL'
-        var outcome = g && g.gameOutcome ? String(g.gameOutcome).toUpperCase() : ''
-        if (outcome && outcome !== 'UNDEFINED') return 'FINAL'
-        var st = new Date(g.startTimeUTC || new Date())
-        var now2 = new Date()
-        if (st.getTime() > now2.getTime() + 5*60000) return 'UPCOMING'
-        if (isScoreSet(g)) return 'LIVE'
-        return 'UPCOMING'
+    function statusFromGame(g) { return Logic.getStatusFromGame(g) }
+
+    function statusSuffix(rawState, periodType) {
+        return Logic.getStatusSuffix(rawState, periodType, Plasmoid.configuration.showOvertimeSuffix)
+    }
+
+    function liveClockText(periodType, period, timeRemaining) {
+        return Logic.getLiveClockText(periodType, period, timeRemaining)
+    }
+
+    function livePeriodText(periodType, period) {
+        return Logic.getLivePeriodText(periodType, period, {
+            "SO": i18n("SO"),
+            "first": i18n("1st"),
+            "second": i18n("2nd"),
+            "third": i18n("3rd")
+        })
+    }
+
+    function liveTimeText(periodType, period, timeRemaining) {
+        if (periodType === "SO" || !timeRemaining) return ""
+        return timeRemaining
     }
 
 
-    function statusSuffix(rawState, periodType){
-        if (!showOvertimeSuffix) return ''
-        var s = (rawState || '').toUpperCase()
-        var pd = (periodType || '').toUpperCase()
-        if (s.indexOf('OT') >= 0 || pd === 'OT') return ' OT'
-        if (s.indexOf('SO') >= 0 || pd === 'SO') return ' SO'
-        return ''
-    }
 
-    function statusColor(st){ return st==='LIVE' ? liveColor : (st==='FINAL' ? finalColor : upcomingColor) }
+    function statusColor(st){
+ return st==='LIVE' ? liveColor : (st==='FINAL' ? finalColor : upcomingColor) }
 
-    // Ligne 1 de la pastille : statut / chrono / heure
+    // Ligne 1 de la pastille : Période (ou Final/Heure)
     function badgeLine1(st, rawState, periodType, period, liveRemain, startMs, homeTeam, intermission) {
         var suffix = statusSuffix(rawState, periodType)
         if (st === 'LIVE') {
             if (intermission) return 'INT'
-            var clock = liveClockText(periodType, period, liveRemain)
-            return clock !== '' ? clock + suffix : 'LIVE' + suffix
+            var pText = livePeriodText(periodType, period)
+            return pText !== '' ? pText + suffix : 'LIVE' + suffix
         }
-        if (st === 'FINAL') {
-            return i18n('Final')  // OT/SO affiché dans badgeLine2
-        }
-        // UPCOMING : heure ou label
+        if (st === 'FINAL') return i18n('Final')
         var t = upcomingWhenText(startMs, st, homeTeam)
         return t !== '' ? t : i18n('Upcoming')
     }
 
-    // Ligne 2 de la pastille : date pour FINAL uniquement ('' sinon)
-    function badgeLine2(st, startMs, homeTeam, periodType) {
-        if (st !== 'FINAL') return ''
-        if (periodType === 'OT') return 'OT'
-        if (periodType === 'SO') return i18n('SO')
-        return ''  // pas de date
+    // Ligne 2 de la pastille : Temps restant (ou OT/SO)
+    function badgeLine2(st, startMs, homeTeam, periodType, period, liveRemain, intermission, intermissionRemain) {
+        if (st === 'LIVE') {
+            if (intermission) return intermissionRemain || ""
+            return liveTimeText(periodType, period, liveRemain)
+        }
+        if (st === 'FINAL') {
+            if (periodType === 'OT') return 'OT'
+            if (periodType === 'SO') return i18n('SO')
+        }
+        return ''
     }
 
     function fetchClock(gameId, modelIndex) {
-        let xhr = new XMLHttpRequest()
-        xhr.open("GET", "https://api-web.nhle.com/v1/gamecenter/" + gameId + "/play-by-play")
-        xhr.onreadystatechange = function() {
-            if (xhr.readyState !== XMLHttpRequest.DONE || xhr.status !== 200) return
+        Logic.ApiService.getGameClock(gameId, function(err, data) {
+            if (err) return
             try {
-                let data = JSON.parse(xhr.responseText)
                 if (data && data.clock) {
                     todayGames.setProperty(modelIndex, "liveRemain", data.clock.timeRemaining || "")
                     todayGames.setProperty(modelIndex, "inIntermission", data.clock.inIntermission ? true : false)
@@ -833,9 +867,9 @@ PlasmoidItem {
                     if (data.situationCode) {
                         todayGames.setProperty(modelIndex, "situationCode", data.situationCode)
                         // Mise à jour immédiate du popup si ce match est ouvert
-                        if (root.detailOpen && root.detailGameId === todayGames.get(modelIndex).gameId) {
-                            root.detailSituationCode = data.situationCode
-                            root.detailIntermRemain  = data.clock.inIntermission
+                        if (nav.detail && det.gameId === todayGames.get(modelIndex).gameId) {
+                            det.sitCode = data.situationCode
+                            det.intermRemain  = data.clock.inIntermission
                                                        ? (data.clock.timeRemaining || '')
                                                        : ''
                         }
@@ -847,20 +881,16 @@ PlasmoidItem {
             } catch(e) {
                 console.warn("fetchClock parse error for game", gameId, e)
             }
-        }
-        xhr.send()
+        })
     }
 
 
     // Calcule situationCode depuis summary.iceSurface du landing
     // Format : [awayGoalie][awaySkaters][homeSkaters][homeGoalie]
     function fetchSituationFromLanding(gameId) {
-        let xhr = new XMLHttpRequest()
-        xhr.open("GET", "https://api-web.nhle.com/v1/gamecenter/" + gameId + "/landing")
-        xhr.onreadystatechange = function() {
-            if (xhr.readyState !== XMLHttpRequest.DONE || xhr.status !== 200) return
+        Logic.ApiService.getGameLanding(gameId, function(err, data) {
+            if (err) return
             try {
-                let data = JSON.parse(xhr.responseText)
                 let ice = data.summary && data.summary.iceSurface
                 if (!ice) return
                 let at = ice.awayTeam || {}
@@ -880,16 +910,17 @@ PlasmoidItem {
                 if ((as === hs && as >= 5 && ag === 1 && hg === 1)
                     || (as === 0 || hs === 0)) {
                     // Situation normale — reset
-                    var pm0 = root.penaltiesMap
+                    var pm0 = glob.penaltiesMap
                     pm0[String(gameId)] = { away: [], home: [] }
-                    root.penaltiesMap = pm0
+                    glob.penaltiesMap = pm0
                     for (let j = 0; j < todayGames.count; j++) {
                         if (todayGames.get(j).gameId == gameId) {
                             todayGames.setProperty(j, "situationCode", "1551")
-                            if (root.detailOpen && root.detailGameId == gameId) {
-                                root.detailSituationCode = "1551"
-                                root.detailPenaltyBoxAway = "[]"
-                                root.detailPenaltyBoxHome = "[]"
+                            todayGames.setProperty(j, "penaltyTime", "")
+                            if (nav.detail && det.gameId == gameId) {
+                                det.sitCode = "1551"
+                                det.penaltyBoxAway = "[]"
+                                det.penaltyBoxHome = "[]"
                             }
                             break
                         }
@@ -899,55 +930,84 @@ PlasmoidItem {
                 let code = String(ag) + String(as) + String(hs) + String(hg)
                 let pba = at.penaltyBox || []
                 let pbh = ht.penaltyBox || []
-                // Stocker dans penaltiesMap (évite String vs List dans ListModel)
-                var pm = root.penaltiesMap
+                
+                // Calcul du temps restant de la punition qui se termine le plus tôt
+                let minTime = ""
+                let allPens = pba.concat(pbh)
+                if (allPens.length > 0) {
+                    let minSecs = 9999
+                    for (let pi = 0; pi < allPens.length; pi++) {
+                        let pen = allPens[pi]
+                        let s = -1
+                        let t = pen.timeRemaining || pen.timeLeft || pen.timeRemainingInPeriod
+                        
+                        if (t && typeof t === 'string' && t.indexOf(':') > 0) {
+                            let parts = t.split(':')
+                            s = parseInt(parts[0]) * 60 + parseInt(parts[1])
+                        } else if (pen.secondsRemaining !== undefined) {
+                            s = parseInt(pen.secondsRemaining)
+                        }
+
+                        if (s >= 0 && s < minSecs) {
+                            minSecs = s
+                            // Convertir en M:SS
+                            let mins = Math.floor(s / 60)
+                            let secs = s % 60
+                            minTime = mins + ":" + (secs < 10 ? "0" : "") + secs
+                        }
+                    }
+                }
+
+                // Stocker dans glob.penaltiesMap (évite String vs List dans ListModel)
+                var pm = glob.penaltiesMap
                 pm[String(gameId)] = { away: pba, home: pbh }
-                root.penaltiesMap = pm
+                glob.penaltiesMap = pm
                 for (let j = 0; j < todayGames.count; j++) {
                     if (todayGames.get(j).gameId == gameId) {
                         todayGames.setProperty(j, "situationCode", code)
-                        if (root.detailOpen && root.detailGameId == gameId) {
-                            root.detailSituationCode = code
-                            var entry = root.penaltiesMap[String(gameId)] || {away:[],home:[]}
-                            root.detailPenaltyBoxAway = JSON.stringify(entry.away)
-                            root.detailPenaltyBoxHome = JSON.stringify(entry.home)
+                        todayGames.setProperty(j, "penaltyTime", minTime)
+                        if (nav.detail && det.gameId == gameId) {
+                            det.sitCode = code
+                            var entry = glob.penaltiesMap[String(gameId)] || {away:[],home:[]}
+                            det.penaltyBoxAway = JSON.stringify(entry.away)
+                            det.penaltyBoxHome = JSON.stringify(entry.home)
                         }
                         break
                     }
                 }
             } catch(e) { console.warn("landing error:", e) }
-        }
-        xhr.send()
+        })
     }
 
     // ── Vue journée complète ─────────────────────────────────────────
     function openDayView(dateISO) {
-        dayViewOpen    = true
-        dayViewDate    = dateISO
-        dayViewLoading = true
-        dayViewError   = ''
-        dayViewGames   = []
+        nav.dayView    = true
+        expanded       = true
+        day.date       = dateISO
+        day.loading    = true
+        day.error      = ''
+        day.games      = []
         // Fermer les autres vues
-        standingsOpen  = false
-        leadersOpen    = false
-        bracketOpen    = false
-        teamHubOpen    = false
-        detailOpen     = false
-        scheduleOpen   = false
-        playerOpen     = false
-        searchOpen     = false
-        calendarOpen   = false
+        nav.standings  = false
+        nav.leaders    = false
+        nav.bracket    = false
+        nav.teamHub    = false
+        nav.detail     = false
+        nav.schedule   = false
+        nav.player     = false
+        nav.search     = false
+        nav.calendar   = false
 
         // Choisir l'endpoint selon la date
         var todayISO = root.dateISO(new Date())
         var isFuture = dateISO > todayISO
-        var url = isFuture
-            ? "https://api-web.nhle.com/v1/schedule/" + dateISO
-            : "https://api-web.nhle.com/v1/score/" + dateISO
+        var apiCall = isFuture
+            ? function(d, cb) { Logic.ApiService.getSchedule(d, cb) }
+            : function(d, cb) { Logic.ApiService.getScore(d, cb) }
 
-        httpGet(url, function(err, data) {
-                dayViewLoading = false
-                if (err) { dayViewError = String(err); return }
+        apiCall(dateISO, function(err, data) {
+                day.loading = false
+                if (err) { day.error = String(err); return }
 
                 // /v1/schedule/{date} → data.gameWeek[0].games
                 // /v1/score/{date}    → data.games
@@ -967,9 +1027,9 @@ PlasmoidItem {
                     games = data.games || []
                 }
 
-                if (games.length === 0) { dayViewError = "No data"; return }
+                if (games.length === 0) { day.error = "No data"; return }
 
-                dayViewGames = games.map(function(g) {
+                day.games = games.map(function(g) {
                     var st = statusFromGame(g)
                     var per = g.periodDescriptor || {}
                     var clk = g.clock || {}
@@ -995,13 +1055,61 @@ PlasmoidItem {
             })
     }
 
+    // ── Affrontements saison entre 2 équipes ─────────────────────────
+    function fetchH2H(away, home) {
+        det.h2hGames = []
+        Logic.ApiService.getTeamSchedule(away, function(err, data) {
+                if (err || !data) return
+                var games = data.games || []
+                var h2h = []
+                for (var i = 0; i < games.length; i++) {
+                    var g = games[i]
+                    var aw = g.awayTeam ? (g.awayTeam.abbrev || '') : ''
+                    var hm = g.homeTeam ? (g.homeTeam.abbrev || '') : ''
+                    // Garder seulement les matchs entre ces 2 équipes
+                    if ((aw === away && hm === home) || (aw === home && hm === away)) {
+                        var st = (g.gameState || '').toUpperCase()
+                        var isFinal   = st === 'FINAL' || st === 'OFF' || st === 'OFFICIAL'
+                        var isUpcoming = st === 'FUT' || st === 'PRE'
+                        var awS = g.awayTeam ? (g.awayTeam.score || 0) : 0
+                        var hmS = g.homeTeam ? (g.homeTeam.score || 0) : 0
+                        h2h.push({
+                            away:      aw,
+                            home:      hm,
+                            awayScore: awS,
+                            homeScore: hmS,
+                            start:     g.startTimeUTC || '',
+                            final:     isFinal,
+                            upcoming:  isUpcoming
+                        })
+                    }
+                }
+                // Trier par date
+                h2h.sort(function(a, b) { return new Date(a.start) - new Date(b.start) })
+                det.h2hGames = h2h
+                // Recalculer le bilan
+                var awW = 0, hmW = 0
+                for (var j = 0; j < h2h.length; j++) {
+                    if (!h2h[j].final) continue
+                    if (h2h[j].away === away) {
+                        if (h2h[j].awayScore > h2h[j].homeScore) awW++; else hmW++
+                    } else {
+                        if (h2h[j].homeScore > h2h[j].awayScore) awW++; else hmW++
+                    }
+                }
+                det.seriesAway  = awW
+                det.seriesHome  = hmW
+                det.seriesTotal = h2h.length > 0
+            })
+    }
+
     // ── Résolution des playerIds pour les pénalités ─────────────────
     function resolvePenaltyIds(pmap) {
         if (!pmap || Object.keys(pmap).length === 0) return
-        if (!detailPenalties || detailPenalties.length === 0) return
+        if (!det.penalties || det.penalties.length === 0) return
         var updated = []
-        for (var i = 0; i < detailPenalties.length; i++) {
-            var pen = detailPenalties[i]
+        for (var i = 0; i < det.penalties.length; i++) {
+            var pen = det.penalties[i]
             var key = pen.team + '-' + pen.number
             updated.push({
                 period:   pen.period,
@@ -1016,7 +1124,7 @@ PlasmoidItem {
                 drawnBy:  pen.drawnBy
             })
         }
-        detailPenalties = updated
+        det.penalties = updated
     }
 
     // ── Traduction des infractions ───────────────────────────────────
@@ -1056,13 +1164,12 @@ PlasmoidItem {
 
     // ── Calendrier — nombre de matchs par jour ───────────────────────
     function fetchCalendarMonth(year, month) {
-        calLoading = true
+        cal.loading = true
         var counts = {}
         var pending = 0
         var daysInMonth = new Date(year, month + 1, 0).getDate()
 
         // Calculer les dates de début de chaque semaine du mois
-        // On fait des requêtes tous les 7 jours pour couvrir tout le mois
         var fetchDates = []
         for (var d = 1; d <= daysInMonth; d += 7) {
             fetchDates.push(year + "-" + root.pad2(month + 1) + "-" + root.pad2(d))
@@ -1072,20 +1179,18 @@ PlasmoidItem {
         function done() {
             pending--
             if (pending <= 0) {
-                calLoading = false
-                root.calGameCounts = counts
+                cal.loading = false
+                cal.counts = counts
             }
         }
 
         for (var fi = 0; fi < fetchDates.length; fi++) {
             (function(isoDate) {
-                httpGet("https://api-web.nhle.com/v1/schedule/" + isoDate,
-                    function(err, data) {
+                Logic.ApiService.getSchedule(isoDate, function(err, data) {
                         if (!err && data) {
                             var week = data.gameWeek || []
                             for (var wi = 0; wi < week.length; wi++) {
                                 var day = week[wi]
-                                // Inclure seulement les jours du mois demandé
                                 if (day.date) {
                                     var parts = day.date.split('-')
                                     if (parseInt(parts[1]) - 1 === month
@@ -1104,30 +1209,27 @@ PlasmoidItem {
 
     // ── Recherche de joueurs ─────────────────────────────────────────
     function openSearch() {
-        searchOpen    = true
-        searchResults = []
-        searchError   = ''
-        searchQuery   = ''
-        // Fermer les autres vues sauf detailOpen
-        standingsOpen = false
-        leadersOpen   = false
-        playerOpen    = false
+        nav.search    = true
+        srch.results = []
+        srch.error   = ''
+        srch.query   = ''
+        // Fermer les autres vues sauf nav.detail
+        nav.standings = false
+        nav.leaders   = false
+        nav.player    = false
     }
 
     function fetchSearch(query) {
         if (!query || query.length < 2) return
-        searchLoading = true
-        searchError   = ''
-        searchResults = []
-        var url = "https://search.d3.nhle.com/api/v1/search/player?q="
-                  + encodeURIComponent(query)
-                  + "&culture=fr-CA&limit=20"
-        httpGet(url, function(err, data) {
-            searchLoading = false
-            if (err) { searchError = String(err); return }
+        srch.loading = true
+        srch.error   = ''
+        srch.results = []
+        Logic.ApiService.searchPlayers(query, function(err, data) {
+            srch.loading = false
+            if (err) { srch.error = String(err); return }
             var players = data.players || data || []
-            if (!Array.isArray(players)) { searchError = "No results"; return }
-            searchResults = players.map(function(p) {
+            if (!Array.isArray(players)) { srch.error = "No results"; return }
+            srch.results = players.map(function(p) {
                 return {
                     id:       p.playerId || 0,
                     name:     (p.name || p.fullName || ''),
@@ -1137,153 +1239,164 @@ PlasmoidItem {
                     headshot: p.headshot || ''
                 }
             })
-            if (searchResults.length === 0) searchError = i18n("No results")
+            if (srch.results.length === 0) srch.error = i18n("No results")
         })
     }
 
     // ── Leaders de la ligue ─────────────────────────────────────────
     function fetchLeaders() {
-        root.leadersLoading = true
-        root.leadersError   = ''
-        let pending = 2
-        function done() { pending--; if (pending <= 0) root.leadersLoading = false }
+        fetchLeadersFiltered(lead.filterF, lead.filterD, lead.filterG, lead.filterR)
+    }
 
-        // Patineurs : points, buts, passes, PIM
-        // 4 appels séparés — l'API n'accepte qu'une catégorie à la fois
-        let skaterPending = 4
+    function fetchLeadersFiltered(fF, fD, fG, fR) {
+        lead.loading = true
+        lead.error   = ''
+        let pending = 2
+        function done() { pending--; if (pending <= 0) lead.loading = false }
+
+        var anyPos = fF || fD || fG  // filtre de position actif
+        // Recrues : endpoint séparé ci-dessous
+        var limit = fD ? 250 : (anyPos ? 100 : root.leadersLimit)
+
+        // Fonction de filtrage local
+        function applyFilter(arr, isGoalie) {
+            if (!arr) return []
+            var result = arr
+            // Filtre recrue
+            if (fR) result = result.filter(function(p) { return p.rookie === true })
+            // Filtre position (patineurs seulement)
+            if (!isGoalie) {
+                if (fF && !fD) result = result.filter(function(p) {
+                    var pos = (p.position || '').toUpperCase()
+                    return pos === 'C' || pos === 'L' || pos === 'R'
+                })
+                else if (fD && !fF) result = result.filter(function(p) {
+                    return (p.position || '').toUpperCase() === 'D'
+                })
+            }
+            // Gardiens : masqués si F ou D actif (sans G)
+            if (isGoalie && (fF || fD) && !fG) return []
+            // Patineurs : masqués si G seul
+            if (!isGoalie && fG && !fF && !fD) return []
+            return result.slice(0, root.leadersLimit)
+        }
+
+        var noPos = !fF && !fD  // aucun filtre de position = tous
+        var loadSkaters = !fG || fF || fD  // charger patineurs sauf si G seul
+        var loadGoalies = !fF && !fD || fG  // charger gardiens sauf si F ou D seul
+
+        let skaterPending = loadSkaters ? 4 : 0
         function skaterDone() { skaterPending--; if (skaterPending <= 0) done() }
 
-        var base = "https://api-web.nhle.com/v1/skater-stats-leaders/current?limit=10&categories="
-        httpGet(base + "points", function(err, data) {
-            if (err) { root.leadersError = String(err) }
-            else {
-                root.leadersPoints = root.parseLeaders(data.points || [])
-            }
-            skaterDone()
-        })
-        httpGet(base + "goals", function(err, data) {
-            if (!err) root.leadersGoals = root.parseLeaders(data.goals || data.skaterLeaders || [])
-            skaterDone()
-        })
-        httpGet(base + "assists", function(err, data) {
-            if (!err) root.leadersAssists = root.parseLeaders(data.assists || data.skaterLeaders || [])
-            skaterDone()
-        })
-        httpGet(base + "penaltyMins", function(err, data) {
-            if (!err) root.leadersPim = root.parseLeaders(data.penaltyMins || [])
-            skaterDone()
-        })
+        if (loadSkaters) {
+            Logic.ApiService.getSkaterLeaders(limit, fR, "points", function(err, data) {
+                if (err) { lead.error = String(err) }
+                var pts = Logic.parseLeaders(data.points || [], "points")
+                lead.points = applyFilter(pts, false)
+                skaterDone()
+            })
+            Logic.ApiService.getSkaterLeaders(limit, fR, "goals", function(err, data) {
+                if (!err) lead.goals = applyFilter(Logic.parseLeaders(data.goals || [], "goals"), false)
+                skaterDone()
+            })
+            Logic.ApiService.getSkaterLeaders(limit, fR, "assists", function(err, data) {
+                if (!err) lead.assists = applyFilter(Logic.parseLeaders(data.assists || [], "assists"), false)
+                skaterDone()
+            })
+            Logic.ApiService.getSkaterLeaders(limit, fR, "penaltyMins", function(err, data) {
+                if (!err) lead.pim = applyFilter(Logic.parseLeaders(data.penaltyMins || [], "penaltyMins"), false)
+                skaterDone()
+            })
+        } else {
+            lead.points = []; lead.goals = []
+            lead.assists = []; lead.pim = []
+            done()
+        }
 
-        // Gardiens : victoires, blanchissages, GAA, SV%
-        var goalieUrl = "https://api-web.nhle.com/v1/goalie-stats-leaders/current"
-                      + "?categories=wins,shutouts,goalsAgainstAverage,savePctg"
-                      + "&limit=10"
-        httpGet(goalieUrl, function(err, data) {
+        if (loadGoalies) {
+            Logic.ApiService.getGoalieLeaders(limit, fR, "wins,shutouts,goalsAgainstAverage,savePctg", function(err, data) {
                 if (err) { done(); return }
-                root.leadersWins = root.parseGoalieLeaders(data.wins)
-                root.leadersSho  = root.parseGoalieLeaders(data.shutouts)
-                root.leadersGaa  = root.parseGoalieLeaders(data.goalsAgainstAverage)
-                root.leadersSvp  = root.parseGoalieLeaders(data.savePctg)
+                lead.wins = applyFilter(Logic.parseLeaders(data.wins, "wins"), true)
+                lead.sho  = applyFilter(Logic.parseLeaders(data.shutouts, "shutouts"), true)
+                lead.gaa = applyFilter(Logic.parseLeaders(data.goalsAgainstAverage, "gaa"), true)
+                lead.svp = applyFilter(Logic.parseLeaders(data.savePctg, "savePctg"), true)
                 done()
             })
-    }
-
-    function parseLeaders(arr) {
-        if (!arr || !Array.isArray(arr)) return []
-        return arr.map(function(p) {
-            return {
-                id:    p.id || 0,
-                name:  (p.firstName && p.firstName.default || p.firstName || '')
-                     + ' '
-                     + (p.lastName  && p.lastName.default  || p.lastName  || ''),
-                team:  p.teamAbbrev || '',
-                value: p.value !== undefined ? p.value : 0,
-                headshot: p.headshot || '',
-                position: p.position || ''
-            }
-        })
-    }
-
-    function parseGoalieLeaders(arr) {
-        if (!arr || !Array.isArray(arr)) return []
-        return arr.map(function(p) {
-            return {
-                id:    p.id || 0,
-                name:  (p.firstName && p.firstName.default || p.firstName || '')
-                     + ' '
-                     + (p.lastName  && p.lastName.default  || p.lastName  || ''),
-                team:  p.teamAbbrev || '',
-                value: p.value !== undefined ? p.value : 0,
-                headshot: p.headshot || '',
-                position: p.position || ''
-            }
-        })
+        } else {
+            lead.wins = []; lead.sho = []
+            lead.gaa = []; lead.svp = []
+            done()
+        }
     }
 
     // ── Fiche joueur ─────────────────────────────────────────────────
     function openPlayer(playerId, from) {
         if (!playerId) return
-        playerOpen    = true
-        playerFrom    = from || 'leaders'
-        playerLoading = true
-        playerError   = ''
-        playerData    = null
-        httpGet("https://api-web.nhle.com/v1/player/" + playerId + "/landing",
-            function(err, data) {
-                playerLoading = false
-                if (err) { playerError = String(err); return }
-                playerData = data
+        nav.player    = true
+        ply.from    = from || 'leaders'
+        ply.loading = true
+        ply.error   = ''
+        ply.data    = null
+
+        // Fermer les autres vues pour éviter les conflits de visibilité
+        nav.standings = false
+        nav.leaders   = false
+        nav.search    = false
+        nav.teamHub   = false
+        nav.bracket   = false
+        nav.calendar  = false
+        nav.dayView   = false
+
+        Logic.ApiService.getPlayerLanding(playerId, function(err, data) {
+                ply.loading = false
+                if (err) { ply.error = String(err); return }
+                ply.data = data
             })
     }
 
     // ── Séries éliminatoires ────────────────────────────────────────
     function fetchPlayoffBracket() {
-        root.bracketLoading = true
-        root.bracketError   = ''
-        let xhr = new XMLHttpRequest()
-        xhr.open("GET", "https://api-web.nhle.com/v1/playoff-bracket/now")
-        xhr.onreadystatechange = function() {
-            if (xhr.readyState !== XMLHttpRequest.DONE) return
-            root.bracketLoading = false
-            if (xhr.status !== 200) { root.bracketError = "HTTP " + xhr.status; return }
-            try {
-                let data = JSON.parse(xhr.responseText)
-                root.bracketData = data
-            } catch(e) { root.bracketError = String(e) }
-        }
-        xhr.send()
+        brk.loading = true
+        brk.error   = ''
+        Logic.ApiService.getPlayoffBracket(function(err, data) {
+            brk.loading = false
+            if (err) {
+                brk.error = String(err)
+            } else {
+                brk.data = data
+            }
+        })
     }
 
     // ── Ouvrir le hub d'équipe ──────────────────────────────────────
     function openTeamHub(teamCode, from) {
-        teamHubOpen    = true
-        teamHubCode    = teamCode
-        teamHubFrom    = from || 'detail'
-        teamHubLoading = true
-        teamHubError   = ''
-        teamHubRecord  = ''
-        teamHubCoach   = ''
-        teamHubFullName = ''
-        teamHubW       = 0
-        teamHubL       = 0
-        teamHubOT      = 0
-        teamHubPts     = 0
-        teamHubGP      = 0
-        teamHubStanding = ''
-        teamHubLastGames = []
-        teamHubNextGame  = null
+        nav.teamHub    = true
+        hub.code    = teamCode
+        hub.from    = from || 'detail'
+        hub.loading = true
+        hub.error   = ''
+        hub.record  = ''
+        hub.coach   = ''
+        hub.fullName = ''
+        hub.w       = 0
+        hub.l       = 0
+        hub.ot      = 0
+        hub.pts     = 0
+        hub.gp      = 0
+        hub.standing = ''
+        hub.lastGames = []
+        hub.nextGame  = null
 
         // Fermer les autres vues
-        scheduleOpen  = false
-        bracketOpen   = false
-        standingsOpen = false
+        nav.schedule  = false
+        nav.bracket   = false
+        nav.standings = false
 
         let pending = 3   // schedule, standings, entraîneur(direct)
-        function done() { pending--; if (pending <= 0) teamHubLoading = false }
+        function done() { pending--; if (pending <= 0) hub.loading = false }
 
         // 1. Calendrier → derniers matchs + prochain
-        httpGet("https://api-web.nhle.com/v1/club-schedule-season/" + teamCode + "/now",
-            function(err, data) {
+        Logic.ApiService.getTeamSchedule(teamCode, function(err, data) {
                 if (!err && data && data.games) {
                     let now = Date.now()
                     let past = data.games.filter(function(g) {
@@ -1292,7 +1405,7 @@ PlasmoidItem {
                     let next = data.games.find(function(g) {
                         return g.gameState === 'FUT' || g.gameState === 'PRE'
                     })
-                    teamHubLastGames = past.map(function(g) {
+                    hub.lastGames = past.map(function(g) {
                         let isHome = g.homeTeam && g.homeTeam.abbrev === teamCode
                         let opp    = isHome ? (g.awayTeam && g.awayTeam.abbrev) : (g.homeTeam && g.homeTeam.abbrev)
                         let gf     = isHome ? (g.homeTeam && g.homeTeam.score) : (g.awayTeam && g.awayTeam.score)
@@ -1306,32 +1419,31 @@ PlasmoidItem {
                         let isHome = next.homeTeam && next.homeTeam.abbrev === teamCode
                         let opp = isHome ? (next.awayTeam && next.awayTeam.abbrev)
                                          : (next.homeTeam && next.homeTeam.abbrev)
-                        teamHubNextGame = { opp: opp, home: isHome, start: next.startTimeUTC }
+                        hub.nextGame = { opp: opp, home: isHome, start: next.startTimeUTC }
                     }
                 }
                 done()
             })
 
         // 2. Standings → fiche + position
-        httpGet("https://api-web.nhle.com/v1/standings/now",
-            function(err, data) {
+        Logic.ApiService.getStandings(function(err, data) {
                 if (!err && data && data.standings) {
                     let team = data.standings.find(function(s) {
                         return s.teamAbbrev && s.teamAbbrev.default === teamCode
                     })
                     if (team) {
-                        teamHubRecord   = (team.wins || 0) + "-" + (team.losses || 0) + "-" + (team.otLosses || 0)
+                        hub.record   = (team.wins || 0) + "-" + (team.losses || 0) + "-" + (team.otLosses || 0)
                         var cn = team.teamCommonName ? (team.teamCommonName.default || team.teamCommonName) : ''
                         var pn = team.teamPlaceNameWithPreposition ? (team.teamPlaceNameWithPreposition.fr || team.teamPlaceNameWithPreposition.default || '') : ''
-                        teamHubFullName = cn + (pn ? ' ' + pn : '')
-                        teamHubW        = team.wins        || 0
-                        teamHubL        = team.losses      || 0
-                        teamHubOT       = team.otLosses    || 0
-                        teamHubPts      = team.points      || 0
-                        teamHubGP       = team.gamesPlayed || 0
+                        hub.fullName = cn + (pn ? ' ' + pn : '')
+                        hub.w        = team.wins        || 0
+                        hub.l        = team.losses      || 0
+                        hub.ot       = team.otLosses    || 0
+                        hub.pts      = team.points      || 0
+                        hub.gp       = team.gamesPlayed || 0
                         let div   = team.divisionName || ''
                         let rank  = team.divisionSequence || team.wildcardSequence || ''
-                        teamHubStanding = rank + (rank ? " · " : "") + div
+                        hub.standing = rank + (rank ? " · " : "") + div
                     }
                 }
                 done()
@@ -1356,7 +1468,7 @@ PlasmoidItem {
             'VAN': 'Rick Tocchet',      'VGK': 'Bruce Cassidy',
             'WPG': 'Scott Arniel',      'WSH': 'Spencer Carbery'
         }
-        teamHubCoach = coaches[teamCode] || ''
+        hub.coach = coaches[teamCode] || ''
         done()
     }
 
@@ -1424,6 +1536,10 @@ PlasmoidItem {
                         rawState: (g.gameState || ''),
                         periodType: g.periodDescriptor?.periodType || "",
                         period: g.periodDescriptor?.number || 0,
+                        inIntermission: g.clock?.inIntermission || false,
+                        intermissionRemain: g.clock?.inIntermission ? (g.clock?.timeRemaining || "") : "",
+                        liveRemain: g.clock?.timeRemaining || "",
+
                         pbpClock: "",
                         pbpPeriod: 0,
                         clockStartRemain: "",
@@ -1455,7 +1571,7 @@ PlasmoidItem {
             let sg = todayGames.get(si)
             snapshot[sg.gameId] = { ag: sg.ag, hg: sg.hg, status: sg.statusRole }
         }
-        prevScores = snapshot
+        glob.prevScores = snapshot
 
         todayGames.clear()
         let lastDateKey = ''
@@ -1482,7 +1598,7 @@ PlasmoidItem {
                     statusRole: 'DATE_SEP',
                     rawState: '', periodType: '', period: 0,
                     liveRemain: '', inIntermission: false,
-                    situationCode: '1551', intermissionRemain: '',
+                    situationCode: '1551', penaltyTime: '', intermissionRemain: '',
                     gameType: 2, gameIndex: gameIdx  // gameIdx = index du prochain vrai match
                 })
             }
@@ -1501,17 +1617,18 @@ PlasmoidItem {
                 liveRemain: liveRemain,
                 inIntermission: uniq[i].inIntermission || false,
                 situationCode: uniq[i].situationCode || '1551',
-                intermissionRemain: '',
+                penaltyTime: uniq[i].penaltyTime || '',
+                intermissionRemain: uniq[i].intermissionRemain || '',
                 gameType: uniq[i].gameType || 2,
                 gameIndex: gameIdx++
             })
         }
 
         // Détecter les nouveaux buts et envoyer les notifications
-        if (!initialLoading) {
+        if (!glob.initialLoading) {
             for (let ni = 0; ni < todayGames.count; ni++) {
                 let ng = todayGames.get(ni)
-                let prev = prevScores[ng.gameId]
+                let prev = glob.prevScores[ng.gameId]
                 if (prev && ng.statusRole === 'LIVE') {
                     if (ng.ag > prev.ag || ng.hg > prev.hg) {
                         triggerGoalBlink(ng.away, ng.home, ng.ag, ng.hg, prev.ag, prev.hg, ng.gameId)
@@ -1520,9 +1637,9 @@ PlasmoidItem {
             }
         }
 
-        initialLoading = false
-        lastUpdated = new Date()
-        debugMsg = (errors && errors.length ? errors.join(' | ') : '')
+        glob.initialLoading = false
+        glob.lastUpdated = new Date()
+        glob.debugMsg = (errors && errors.length ? errors.join(' | ') : '')
         pollTimer.running = true
 
         // Récupérer l'horloge play-by-play pour les matchs en direct
@@ -1558,8 +1675,11 @@ PlasmoidItem {
         function onScoreLayoutChanged(){ root.scoreLayout = Plasmoid.configuration.scoreLayout || 'stack' }
         function onUltraCompactChanged(){
             root.ultraCompact = Plasmoid.configuration.ultraCompact || false
-            // Forcer reconstruction du Repeater
-            if (hRepeater) { hRepeater.model = null; hRepeater.model = todayGames }
+            // Forcer reconstruction du Repeater si défini
+            if (typeof hRepeater !== 'undefined' && hRepeater) {
+                hRepeater.model = null
+                hRepeater.model = todayGames
+            }
         }
         function onShowUpcomingTimeChanged(){ }
         function onDateModeChanged(){ }
@@ -1567,130 +1687,43 @@ PlasmoidItem {
     }
 
     Component { id: statusBadge
-        Rectangle {
-            property string gameStatus:  'UPCOMING'
-            property string suffix:      ''
-            property string rawState:    ''
-            property string periodType:  ''
-            property int    period:      0
-            property string liveRemain:  ''
-            property var    startMs:     0
-            property string homeTeam:    ''
-            property bool   intermission: false
-            radius: 5
-            color: statusColor(gameStatus)
-            opacity: 0.95
-            Column {
-                anchors.centerIn: parent
-                spacing: 0
-                Text {
-                    anchors.horizontalCenter: parent.horizontalCenter
-                    text: badgeLine1(parent.parent.gameStatus, parent.parent.rawState,
-                                     parent.parent.periodType, parent.parent.period,
-                                     parent.parent.liveRemain, parent.parent.startMs,
-                                     parent.parent.homeTeam, parent.parent.intermission)
-                    color: 'white'; font.pixelSize: 10; font.bold: true
-                }
-                Text {
-                    anchors.horizontalCenter: parent.horizontalCenter
-                    visible: text !== ''
-                    text: badgeLine2(parent.parent.gameStatus, parent.parent.startMs, parent.parent.homeTeam, parent.parent.periodType)
-                    color: 'white'; font.pixelSize: 9; opacity: 0.85
-                }
-            }
-            width:  Math.max(
-                        badgeLine1(gameStatus, rawState, periodType, period, liveRemain, startMs, homeTeam).length,
-                        badgeLine2(gameStatus, startMs, homeTeam, periodType).length
-                    ) * 6 + 10
-            height: (badgeLine2(gameStatus, startMs, homeTeam, periodType) !== '' ? 28 : 16)
+        Components.StatusBadge {
+            controller: root
+            line1: root.badgeLine1(parent.gameStatus, parent.rawState,
+                                   parent.periodType, parent.period,
+                                   parent.liveRemain, parent.startMs,
+                                   parent.homeTeam, parent.intermission)
+            line2: root.badgeLine2(parent.gameStatus, parent.startMs,
+                                   parent.homeTeam, parent.periodType,
+                                   parent.period, parent.liveRemain,
+                                   parent.intermission, parent.intermissionRemain)
+            bgColor: root.statusColor(parent.gameStatus)
+            situationCode: parent.situationCode || "1551"
+            penaltyTime: parent.penaltyTime || ""
+            awayTeam: parent.awayTeam || ""
+            homeTeam: parent.homeTeam || ""
         }
     }
 
     Component { id: teamColumn
-        Column {
-            spacing: 1
-            property string code:     ''
-            property int    score:    0
-            property int    sz:       14
-            property string gameId:   ''
-            property string teamSide: ''
-            Rectangle {
-                radius: 3
-                color: teamColor(code)
-                border.color: 'white'
-                border.width: 1
-                height: nameText.implicitHeight + Math.max(2, sz * 0.12)
-                width:  nameText.implicitWidth  + Math.max(3, sz * 0.25)
-                opacity: {
-                    var b = root.blinkingGames[parent.gameId]
-                    return (b && (b === parent.teamSide || b === 'both') && !root.blinkOn) ? 0.0 : 1.0
-                }
-                Text {
-                    id: nameText
-                    anchors.centerIn: parent
-                    text: code
-                    color: teamTextColor(code)
-                    font.pixelSize: Math.max(8, sz * 0.72)
-                    font.bold: true
-                    font.family: "monospace"
-                }
-            }
-            Text {
-                text: String(score)
-                font.pixelSize: Math.max(10, sz * 0.95)
-                font.bold: true
-                color: Kirigami.Theme.textColor
-                anchors.horizontalCenter: parent.horizontalCenter
-                opacity: {
-                    var b = root.blinkingGames[parent.gameId]
-                    return (b && (b === parent.teamSide || b === 'both') && !root.blinkOn) ? 0.0 : 1.0
-                }
-            }
+        Components.TeamBadge {
+            code: parent.code; score: parent.score; sz: parent.sz
+            gameId: parent.gameId; teamSide: parent.teamSide
+            blinkingGames: glob.blinkingGames; blinkOn: glob.blinkOn
         }
     }
 
     Component { id: teamRowInline
-        Row {
-            spacing: Math.max(3, sz * 0.22)
-            property string awayCode: ''
-            property string homeCode: ''
-            property int    agScore:  0
-            property int    hgScore:  0
-            property int    sz:       14
-            property string gameId:   ''
-            Rectangle {
-                radius: 3
-                color: teamColor(awayCode)
-                border.color: 'white'; border.width: 1
-                height: aText.implicitHeight + Math.max(2, sz * 0.12)
-                width:  aText.implicitWidth  + Math.max(3, sz * 0.25)
-                opacity: {
-                    var b = root.blinkingGames[parent.gameId]
-                    return (b && (b === 'away' || b === 'both') && !root.blinkOn) ? 0.0 : 1.0
-                }
-                Text { id: aText; anchors.centerIn: parent; text: awayCode
-                    color: teamTextColor(awayCode)
-                    font.pixelSize: Math.max(8, sz * 0.72); font.bold: true; font.family: "monospace" }
-            }
-            Label { text: String(agScore); font.pixelSize: Math.max(10, sz * 0.9); font.bold: true; color: Kirigami.Theme.textColor; anchors.verticalCenter: parent.verticalCenter
-                    opacity: { var b = root.blinkingGames[gameId]; return (b && (b==='away'||b==='both') && !root.blinkOn) ? 0.0 : 1.0 } }
-            Label { text: "–"; font.pixelSize: Math.max(10, sz * 0.9); color: Kirigami.Theme.disabledTextColor; anchors.verticalCenter: parent.verticalCenter }
-            Label { text: String(hgScore); font.pixelSize: Math.max(10, sz * 0.9); font.bold: true; color: Kirigami.Theme.textColor; anchors.verticalCenter: parent.verticalCenter
-                    opacity: { var b = root.blinkingGames[gameId]; return (b && (b==='home'||b==='both') && !root.blinkOn) ? 0.0 : 1.0 } }
-            Rectangle {
-                radius: 3
-                color: teamColor(homeCode)
-                border.color: 'white'; border.width: 1
-                height: hText.implicitHeight + Math.max(2, sz * 0.12)
-                width:  hText.implicitWidth  + Math.max(3, sz * 0.25)
-                opacity: {
-                    var b = root.blinkingGames[parent.gameId]
-                    return (b && (b === 'home' || b === 'both') && !root.blinkOn) ? 0.0 : 1.0
-                }
-                Text { id: hText; anchors.centerIn: parent; text: homeCode
-                    color: teamTextColor(homeCode)
-                    font.pixelSize: Math.max(8, sz * 0.72); font.bold: true; font.family: "monospace" }
-            }
+        Components.TeamRowInline {
+            awayCode: parent.awayCode; homeCode: parent.homeCode
+            agScore: parent.agScore; hgScore: parent.hgScore
+            sz: parent.sz; gameId: parent.gameId
+            blinkingGames: glob.blinkingGames; blinkOn: glob.blinkOn
+            statusComponent: parent.statusComponent
+            gameStatus: parent.gameStatus || 'UPCOMING'
+            line1: parent.line1 || ""
+            line2: parent.line2 || ""
+            bgColor: parent.bgColor || "gray"
         }
     }
 
@@ -1701,677 +1734,28 @@ PlasmoidItem {
     }
 
 
-    compactRepresentation: Item {
-        id: compactRoot
-        readonly property int pad: 6
-        // sz : taille de base dérivée de la hauteur du panneau (mode horizontal)
-
-        readonly property int sz: root.isVertical ? 14
-            : Math.min(20, Math.max(8, Math.round(height * 0.38)))
-        // Bascule automatique inline quand le panneau est trop mince (< ~40px)
-        readonly property bool forceInline: !root.isVertical && sz < 13.5
-
-        // ── Taille selon l'orientation ────────────────────────────────
-        // Vertical : largeur = panneau (~48px), hauteur = somme des tuiles
-        // Horizontal / Desktop : largeur = somme des matchs, hauteur = panneau
-        implicitWidth:  root.isVertical
-            ? parent.width
-            : Math.max(hRow.implicitWidth + pad, emptyMsg.implicitWidth + pad)
-        implicitHeight: root.isVertical
-            ? Math.max(vCol.implicitHeight, emptyMsg.implicitHeight + 2)
-            : Math.max(hRow.implicitHeight + 2, emptyMsg.implicitHeight + 2)
-
-        Layout.preferredWidth:  implicitWidth
-        Layout.minimumWidth:    root.isVertical ? 0 : implicitWidth
-        Layout.preferredHeight: implicitHeight
-        Layout.minimumHeight:   root.isVertical ? 0 : implicitHeight
-        Layout.fillWidth:       root.isVertical
-        Layout.fillHeight:      !root.isVertical
-
-        // ══════════════════════════════════════════════════════════════
-        // MODE HORIZONTAL (panneau horizontal ou bureau)
-        // ══════════════════════════════════════════════════════════════
-        Row {
-            id: hRow
-            anchors.horizontalCenter: parent.horizontalCenter
-            anchors.verticalCenter: parent.verticalCenter
-            spacing: root.ultraCompact ? 1 : 2
-            visible: !root.isVertical && todayGames.count > 0
-
-            Repeater {
-                id: hRepeater
-                model: todayGames
-                delegate: Item {
-                    // Largeur fixe = cartes uniformes
-                    clip: true
-                    readonly property bool isDateSep: statusRole === 'DATE_SEP'
-                    readonly property int cardW: Math.max(compactRoot.sz * 6.0, 80)
-                    readonly property int cardWeff: {
-                        if (root.ultraCompact) return ucRow.implicitWidth + 2
-                        if (statusRole === 'UPCOMING' && scoreLayout !== 'stack') return Math.max(compactRoot.sz * 6.5, 88)
-                        if (statusRole === 'UPCOMING') return Math.max(compactRoot.sz * 5.8, 82)
-                        if (scoreLayout !== 'stack') return Math.max(compactRoot.sz * 7.0, 96)
-                        // Élargir légèrement si PP actif (3e étage dans la pastille)
-                        if (statusRole === 'LIVE' && cmpSit !== null) return Math.max(compactRoot.sz * 6.5, 88)
-                        if (statusRole === 'FINAL') return Math.max(compactRoot.sz * 5.1, 68)
-                        return cardW
-                    }
-                    property var cmpSit: root.parseSituation(situationCode, away, home)
-                    readonly property real csz: compactRoot.sz * 0.88  // sz réduit pour tenir dans la carte
-                    width:  isDateSep ? (dateSepContent.implicitWidth + 4) : (root.ultraCompact ? cardWeff + 2 : cardWeff + 4)
-                    height: compactRoot.height
-                    opacity: statusRole === 'FINAL' ? 0.5 : 1.0
-                    visible: gameIndex < maxGames
-
-                    // Séparateur de date : | 14/03 |
-                    Row {
-                        id: dateSepContent
-                        anchors.verticalCenter: parent.verticalCenter
-                        anchors.left: parent.left
-                        visible: isDateSep
-                        spacing: 0
-                        // Ligne verticale gauche
-                        Rectangle {
-                            width: 1; height: parent.parent.height * 0.7
-                            anchors.verticalCenter: parent.verticalCenter
-                            color: Kirigami.Theme.textColor; opacity: 0.35
-                        }
-                        // Date DD/MM
-                        Text {
-                            anchors.verticalCenter: parent.verticalCenter
-                            leftPadding: 5; rightPadding: 5
-                            text: {
-                                var d = new Date(start)
-                                return String(d.getDate()).padStart(2,'0') + '/' + String(d.getMonth()+1).padStart(2,'0')
-                            }
-                            font.pixelSize: Math.max(10, compactRoot.sz * 0.75)
-                            font.bold: true
-                            color: Kirigami.Theme.textColor
-                            opacity: 0.75
-                        }
-                        // Ligne verticale droite
-                        Rectangle {
-                            width: 1; height: parent.parent.height * 0.7
-                            anchors.verticalCenter: parent.verticalCenter
-                            color: Kirigami.Theme.textColor; opacity: 0.35
-                        }
-                    }
-
-                    // Carte avec coins arrondis + fond selon statut
-                    Rectangle {
-                        id: cardBg
-                        visible: !isDateSep && !root.ultraCompact
-                        clip: true
-                        anchors.centerIn: parent
-                        width: cardWeff
-                        height: parent.height - 4
-                        radius: 5
-                        color: {
-                            if (statusRole === 'LIVE')
-                                return Qt.rgba(0.0, 0.55, 0.1, 0.13)
-                            if (statusRole === 'FINAL')
-                                return Qt.rgba(0.5, 0.5, 0.5, 0.08)
-                            return Qt.rgba(0.3, 0.5, 0.9, 0.10)
-                        }
-                        border.color: {
-                            if (statusRole === 'LIVE')   return Qt.rgba(0.0, 0.7, 0.1, 0.35)
-                            if (statusRole === 'FINAL')  return Qt.rgba(0.5, 0.5, 0.5, 0.2)
-                            return Qt.rgba(0.3, 0.5, 0.9, 0.25)
-                        }
-                        border.width: 1
-
-                        // MODE NORMAL (stack) — disposition verticale centrée
-                        Column {
-                            anchors.centerIn: parent
-                            spacing: 1
-                            visible: !root.ultraCompact && !isDateSep
-                            enabled: !root.ultraCompact && !isDateSep
-
-                            // Mode stack : [AWAY score] [statut] [HOME score]
-                            Row {
-                                anchors.horizontalCenter: parent.horizontalCenter
-                                spacing: 3
-                                visible: compactRoot.forceInline || scoreLayout === 'stack'
-
-                                // Visiteur : pastille + score
-                                Column {
-                                    anchors.verticalCenter: parent.verticalCenter
-                                    spacing: 1
-                                    Rectangle {
-                                        radius: 3; color: root.teamColor(away)
-                                        border.color: 'white'; border.width: 1
-                                        width: awayLbl.implicitWidth + 6
-                                        height: awayLbl.implicitHeight + 3
-                                        opacity: root.blinkOpacity(gameId, 'away')
-                                        Text { id: awayLbl; anchors.centerIn: parent; text: away
-                                            color: root.teamTextColor(away)
-                                            font.pixelSize: Math.max(7, csz * 0.68)
-                                            font.bold: true; font.family: "monospace" }
-                                    }
-                                    Text {
-                                        anchors.horizontalCenter: parent.horizontalCenter
-                                        text: String(ag)
-                                        font.pixelSize: Math.max(9, csz * 0.88)
-                                        font.bold: true; color: Kirigami.Theme.textColor
-                                        visible: statusRole === 'LIVE' || statusRole === 'FINAL'
-                                        opacity: root.blinkOpacity(gameId, 'away')
-                                    }
-
-                                }
-
-                                // Pastille statut
-                                Rectangle {
-                                    anchors.verticalCenter: parent.verticalCenter
-                                    radius: Math.max(2, csz * 0.15)
-                                    color: statusColor(statusRole); opacity: 0.95
-                                    width:  statusCol.implicitWidth  + 6
-                                    height: statusCol.implicitHeight + 3
-                                    Column {
-                                        id: statusCol; anchors.centerIn: parent; spacing: 0
-                                        // Étage 1 : période ou statut
-                                        Text {
-                                            anchors.horizontalCenter: parent.horizontalCenter
-                                            text: statusRole === 'LIVE' && !inIntermission
-                                                  ? root.livePeriodText(periodType, period)
-                                                  : statusRole === 'LIVE' ? 'INT'
-                                                  : badgeLine1(statusRole, rawState, periodType, period, liveRemain, start, home, inIntermission)
-                                            color: 'white'
-                                            font.pixelSize: Math.max(6, csz * 0.55); font.bold: true
-                                        }
-                                        // Étage 2 : chrono ou compte à rebours entracte
-                                        Text {
-                                            anchors.horizontalCenter: parent.horizontalCenter
-                                            visible: statusRole === 'LIVE'
-                                            text: inIntermission
-                                                  ? (intermissionRemain !== '' ? intermissionRemain : '')
-                                                  : root.liveTimeText(periodType, period, liveRemain)
-                                            color: 'white'
-                                            font.pixelSize: Math.max(6, csz * 0.55); font.bold: true
-                                        }
-                                        // Étage 3 : PP / filet désert
-                                        Rectangle {
-                                            anchors.horizontalCenter: parent.horizontalCenter
-                                            visible: statusRole === 'LIVE' && !inIntermission && cmpSit !== null
-                                            radius: 2
-                                            color: cmpSit ? (cmpSit.ppTeam ? root.teamColor(cmpSit.ppTeam) : Kirigami.Theme.highlightColor) : "transparent"
-                                            width: ppRowInner.implicitWidth + 4; height: ppRowInner.implicitHeight + 1
-                                            Row {
-                                                id: ppRowInner; anchors.centerIn: parent; spacing: 2
-                                                Text {
-                                                    text: cmpSit
-                                                          ? (cmpSit.even
-                                                             ? cmpSit.ppType
-                                                             : cmpSit.ppType + ' ' + cmpSit.awaySkaters + 'v' + cmpSit.homeSkaters)
-                                                          : ''
-                                                    color: (cmpSit && cmpSit.ppTeam) ? root.teamTextColor(cmpSit.ppTeam) : 'white'
-                                                    font.pixelSize: Math.max(6, csz * 0.50); font.bold: true
-                                                }
-                                                Text {
-                                                    visible: cmpSit && cmpSit.emptyNet; text: '🥅'
-                                                    font.pixelSize: Math.max(6, csz * 0.50)
-                                                }
-                                            }
-                                        }
-                                        // Date pour FINAL
-                                        Text {
-                                            anchors.horizontalCenter: parent.horizontalCenter
-                                            visible: statusRole === 'FINAL' && text !== ''
-                                            text: badgeLine2(statusRole, start, home, periodType)
-                                            color: 'white'
-                                            font.pixelSize: Math.max(5, csz * 0.38); opacity: 0.85
-                                        }
-                                    }
-                                }
-
-                                // Local : pastille + score
-                                Column {
-                                    anchors.verticalCenter: parent.verticalCenter
-                                    spacing: 1
-                                    Rectangle {
-                                        radius: 3; color: root.teamColor(home)
-                                        border.color: 'white'; border.width: 1
-                                        width: homeLbl.implicitWidth + 6
-                                        height: homeLbl.implicitHeight + 3
-                                        opacity: root.blinkOpacity(gameId, 'home')
-                                        Text { id: homeLbl; anchors.centerIn: parent; text: home
-                                            color: root.teamTextColor(home)
-                                            font.pixelSize: Math.max(7, csz * 0.68)
-                                            font.bold: true; font.family: "monospace" }
-                                    }
-                                    Text {
-                                        anchors.horizontalCenter: parent.horizontalCenter
-                                        text: String(hg)
-                                        font.pixelSize: Math.max(9, csz * 0.88)
-                                        font.bold: true; color: Kirigami.Theme.textColor
-                                        visible: statusRole === 'LIVE' || statusRole === 'FINAL'
-                                        opacity: root.blinkOpacity(gameId, 'home')
-                                    }
-
-                                }
-                            }
-
-
-                        }
-
-                            // Mode inline : [AWAY ag statut hg HOME] sur une ligne
-                            Row {
-                                anchors.centerIn: parent
-                                spacing: 3
-                                visible: !compactRoot.forceInline && scoreLayout !== 'stack'
-                                Rectangle {
-                                    radius: 3; color: root.teamColor(away)
-                                    border.color: 'white'; border.width: 1
-                                    width: awayLblI.implicitWidth + 6; height: awayLblI.implicitHeight + 3
-                                    anchors.verticalCenter: parent.verticalCenter
-                                    opacity: root.blinkOpacity(gameId, 'away')
-                                    Text { id: awayLblI; anchors.centerIn: parent; text: away
-                                        color: root.teamTextColor(away)
-                                        font.pixelSize: Math.max(7, csz * 0.68); font.bold: true; font.family: "monospace" }
-                                }
-                                Text {
-                                    anchors.verticalCenter: parent.verticalCenter
-                                    text: String(ag); visible: statusRole === 'LIVE' || statusRole === 'FINAL'
-                                    font.pixelSize: Math.max(9, csz * 0.88); font.bold: true; color: Kirigami.Theme.textColor
-                                    opacity: root.blinkOpacity(gameId, 'away')
-                                }
-                                Rectangle {
-                                    anchors.verticalCenter: parent.verticalCenter
-                                    radius: Math.max(2, csz * 0.15); color: statusColor(statusRole); opacity: 0.95
-                                    width: statusColI.implicitWidth + 6; height: statusColI.implicitHeight + 3
-                                    Column {
-                                        id: statusColI; anchors.centerIn: parent; spacing: 0
-                                        Text {
-                                            anchors.horizontalCenter: parent.horizontalCenter
-                                            text: statusRole === 'LIVE' && !inIntermission
-                                                  ? root.livePeriodText(periodType, period)
-                                                  : statusRole === 'LIVE' && inIntermission
-                                                    ? 'INT'
-                                                    : badgeLine1(statusRole, rawState, periodType, period, liveRemain, start, home, inIntermission)
-                                            color: 'white'
-                                            font.pixelSize: Math.max(6, csz * 0.55); font.bold: true
-                                        }
-                                        Text {
-                                            anchors.horizontalCenter: parent.horizontalCenter
-                                            visible: statusRole === 'LIVE'
-                                            text: inIntermission
-                                                  ? (intermissionRemain !== '' ? intermissionRemain : '')
-                                                  : root.liveTimeText(periodType, period, liveRemain)
-                                            color: 'white'
-                                            font.pixelSize: Math.max(6, csz * 0.55); font.bold: true
-                                        }
-                                        Rectangle {
-                                            anchors.horizontalCenter: parent.horizontalCenter
-                                            visible: statusRole === 'LIVE' && !inIntermission && cmpSit !== null
-                                            radius: 2
-                                            color: cmpSit ? (cmpSit.ppTeam ? root.teamColor(cmpSit.ppTeam) : Kirigami.Theme.highlightColor) : "transparent"
-                                            width: ppRowI.implicitWidth + 4; height: ppRowI.implicitHeight + 1
-                                            Row {
-                                                id: ppRowI; anchors.centerIn: parent; spacing: 2
-                                                Text {
-                                                    text: cmpSit
-                                                          ? (cmpSit.even
-                                                             ? cmpSit.ppType
-                                                             : cmpSit.ppType + ' ' + cmpSit.awaySkaters + 'v' + cmpSit.homeSkaters)
-                                                          : ''
-                                                    color: (cmpSit && cmpSit.ppTeam) ? root.teamTextColor(cmpSit.ppTeam) : 'white'
-                                                    font.pixelSize: Math.max(6, csz * 0.50); font.bold: true
-                                                }
-                                                Text { visible: cmpSit && cmpSit.emptyNet; text: '🥅'; font.pixelSize: Math.max(5, csz * 0.38) }
-                                            }
-                                        }
-                                    }
-                                }
-                                Text {
-                                    anchors.verticalCenter: parent.verticalCenter
-                                    text: String(hg); visible: statusRole === 'LIVE' || statusRole === 'FINAL'
-                                    font.pixelSize: Math.max(9, csz * 0.88); font.bold: true; color: Kirigami.Theme.textColor
-                                    opacity: root.blinkOpacity(gameId, 'home')
-                                }
-                                Rectangle {
-                                    radius: 3; color: root.teamColor(home)
-                                    border.color: 'white'; border.width: 1
-                                    width: homeLblI.implicitWidth + 6; height: homeLblI.implicitHeight + 3
-                                    anchors.verticalCenter: parent.verticalCenter
-                                    opacity: root.blinkOpacity(gameId, 'home')
-                                    Text { id: homeLblI; anchors.centerIn: parent; text: home
-                                        color: root.teamTextColor(home)
-                                        font.pixelSize: Math.max(7, csz * 0.68); font.bold: true; font.family: "monospace" }
-                                }
-                            }
-
-                    }
-
-                    // MODE ULTRA-COMPACT — hors cardBg pour éviter superposition
-                    Row {
-                        id: ucRow
-                        anchors.centerIn: parent
-                        visible: root.ultraCompact && !isDateSep
-                        spacing: 2
-                        Rectangle {
-                            id: ucAwayDot
-                            width: Math.max(14, compactRoot.sz * 0.95)
-                            height: width; radius: width / 2
-                            anchors.verticalCenter: parent.verticalCenter
-                            color: root.teamColor(away)
-                            border.color: 'white'; border.width: 1
-                            opacity: root.blinkOpacity(gameId, 'away')
-                            Text { anchors.centerIn: parent; text: away.charAt(0); color: root.teamTextColor(away); font.pixelSize: Math.max(7, ucAwayDot.width * 0.60); font.bold: true }
-                        }
-                        Text {
-                            anchors.verticalCenter: parent.verticalCenter
-                            visible: statusRole === 'LIVE' || statusRole === 'FINAL'
-                            text: ag + '–' + hg
-                            color: Kirigami.Theme.textColor
-                            font.pixelSize: Math.max(10, compactRoot.sz * 0.80)
-                            font.bold: true
-                        }
-                        Rectangle {
-                            id: ucHomeDot
-                            width: Math.max(14, compactRoot.sz * 0.95)
-                            height: width; radius: width / 2
-                            anchors.verticalCenter: parent.verticalCenter
-                            color: root.teamColor(home)
-                            border.color: 'white'; border.width: 1
-                            opacity: root.blinkOpacity(gameId, 'home')
-                            Text { anchors.centerIn: parent; text: home.charAt(0); color: root.teamTextColor(home); font.pixelSize: Math.max(7, ucHomeDot.width * 0.60); font.bold: true }
-                        }
-                    }
-
-                    // Séparateur entre les cartes
-                    Rectangle {
-                        anchors.right: parent.right
-                        anchors.verticalCenter: parent.verticalCenter
-                        visible: !isDateSep && gameIndex >= 0 && gameIndex < maxGames - 1
-                        width: 1; height: parent.height * 0.6
-                        color: Kirigami.Theme.textColor; opacity: 0.2
-                    }
-
-                    TapHandler {
-                        enabled: true
-                        acceptedButtons: Qt.LeftButton; gesturePolicy: TapHandler.ReleaseWithinBounds
-                        cursorShape: Qt.PointingHandCursor
-                        onTapped: {
-                            if (isDateSep) {
-                                // Utiliser la date locale (pas UTC) — l'API NHL utilise l'heure locale
-                                var d = new Date(start)
-                                var iso = d.getFullYear() + "-"
-                                        + root.pad2(d.getMonth() + 1) + "-"
-                                        + root.pad2(d.getDate())
-                                if (root.dayViewOpen && root.dayViewDate === iso) {
-                                    root.dayViewOpen = false
-                                    root.expanded = false
-                                } else {
-                                    root.openDayView(iso)
-                                    root.expanded = true
-                                }
-                            } else {
-                                root.openDetail(gameId, away, home, ag, hg, statusRole, periodType, period, liveRemain, start, inIntermission, situationCode)
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        // ══════════════════════════════════════════════════════════════
-        // MODE VERTICAL — tuiles empilées
-        // Chaque tuile : [pastille couleur équipe visitor] [pastille statut]
-        //                [pastille couleur équipe locale ]
-        // ══════════════════════════════════════════════════════════════
-        Column {
-            id: vCol
-            anchors.horizontalCenter: parent.horizontalCenter
-            spacing: 3
-            visible: root.isVertical && todayGames.count > 0
-
-            Repeater {
-                id: vRepeater
-                model: todayGames
-                delegate: Item {
-                    // Tuile unique par match — largeur = panneau, hauteur auto
-                    property string rAway:   away   || ""
-                    property string rHome:   home   || ""
-                    property int    rAg:     ag     || 0
-                    property int    rHg:     hg     || 0
-                    property string rStatus: statusRole || ""
-                    property string rRaw:    rawState   || ""
-                    property string rPType:  periodType || ""
-                    property int    rPeriod: period     || 0
-                    property string rRemain: liveRemain || ""
-                    property var    rStart:  start
-                    property bool   rInterm: inIntermission || false
-
-                    visible: gameIndex < maxGames
-                    width: compactRoot.width
-                    height: tileCol.implicitHeight + 6
-
-                    // Dégradé équipes LIVE
-                    Rectangle {
-                        anchors.fill: parent; radius: 4
-                        visible: statusRole === 'LIVE'
-                        opacity: 0.55
-                        gradient: Gradient {
-                            orientation: Gradient.Horizontal
-                            GradientStop { position: 0.0; color: root.bestGradientColors(away, home).ac }
-                            GradientStop { position: 1.0; color: root.bestGradientColors(away, home).hc }
-                        }
-                    }
-                    // Fond subtil au survol
-                    Rectangle {
-                        anchors.fill: parent; radius: 4
-                        color: tileArea.containsMouse ? Qt.rgba(Kirigami.Theme.highlightColor.r,
-                            Kirigami.Theme.highlightColor.g, Kirigami.Theme.highlightColor.b, 0.15)
-                            : "transparent"
-                    }
-
-                    Column {
-                        id: tileCol
-                        anchors.centerIn: parent
-                        spacing: 2
-
-                        // ── Pastille fusionnée ───────────────────────
-                        Rectangle {
-                            anchors.horizontalCenter: parent.horizontalCenter
-                            radius: 3
-                            color: root.statusColor(rStatus)
-                            opacity: rStatus === 'FINAL' ? 0.6 : 0.95
-                            width: vtBadgeCol.implicitWidth + 8
-                            height: vtBadgeCol.implicitHeight + 4
-                            Column {
-                                id: vtBadgeCol
-                                anchors.centerIn: parent
-                                spacing: 0
-                                Text {
-                                    anchors.horizontalCenter: parent.horizontalCenter
-                                    text: root.badgeLine1(rStatus, rRaw, rPType, rPeriod, rRemain, rStart, rHome, rInterm)
-                                    color: "white"; font.pixelSize: 9; font.bold: true
-                                }
-                                Text {
-                                    anchors.horizontalCenter: parent.horizontalCenter
-                                    visible: text !== ''
-                                    text: root.badgeLine2(rStatus, rStart, rHome, rPType)
-                                    color: "white"; font.pixelSize: 8; opacity: 0.85
-                                }
-                            }
-                        }
-
-                        // ── Équipe visiteur ───────────────────────────
-                        Rectangle {
-                            anchors.horizontalCenter: parent.horizontalCenter
-                            width: awayLblVert.implicitWidth + 8; height: awayLblVert.implicitHeight + 4; radius: 3
-                            color: root.teamColor(rAway)
-                            opacity: {
-                                var b = root.blinkingGames[String(gameId)]
-                                return (b && (b === 'away' || b === 'both') && !root.blinkOn) ? 0.0 : 1.0
-                            }
-                            Label {
-                                id: awayLblVert; anchors.centerIn: parent
-                                text: rAway; font.pixelSize: 10; font.bold: true; font.family: "monospace"
-                                color: root.teamTextColor(rAway)
-                            }
-                        }
-
-                        // ── Score visiteur ────────────────────────────
-                        Label {
-                            anchors.horizontalCenter: parent.horizontalCenter
-                            text: rAg
-                            font.pixelSize: 13; font.bold: true
-                            color: (rStatus === 'LIVE' && rAg > rHg)
-                                ? Kirigami.Theme.positiveTextColor : Kirigami.Theme.textColor
-                            opacity: {
-                                var b = root.blinkingGames[String(gameId)]
-                                if (b && (b === 'away' || b === 'both') && !root.blinkOn) return 0.0
-                                return rStatus === 'FINAL' ? 0.7 : 1.0
-                            }
-                        }
-
-                        // ── Score local ───────────────────────────────
-                        Label {
-                            anchors.horizontalCenter: parent.horizontalCenter
-                            text: rHg
-                            font.pixelSize: 13; font.bold: true
-                            color: (rStatus === 'LIVE' && rHg > rAg)
-                                ? Kirigami.Theme.positiveTextColor : Kirigami.Theme.textColor
-                            opacity: {
-                                var b = root.blinkingGames[String(gameId)]
-                                if (b && (b === 'home' || b === 'both') && !root.blinkOn) return 0.0
-                                return rStatus === 'FINAL' ? 0.7 : 1.0
-                            }
-                        }
-
-                        // ── Équipe locale ─────────────────────────────
-                        Rectangle {
-                            anchors.horizontalCenter: parent.horizontalCenter
-                            width: homeLblVert.implicitWidth + 8; height: homeLblVert.implicitHeight + 4; radius: 3
-                            color: root.teamColor(rHome)
-                            opacity: {
-                                var b = root.blinkingGames[String(gameId)]
-                                return (b && (b === 'home' || b === 'both') && !root.blinkOn) ? 0.0 : 1.0
-                            }
-                            Label {
-                                id: homeLblVert; anchors.centerIn: parent
-                                text: rHome; font.pixelSize: 10; font.bold: true; font.family: "monospace"
-                                color: root.teamTextColor(rHome)
-                            }
-                        }
-
-
-                    }
-
-                    // Séparateur entre tuiles
-                    Rectangle {
-                        anchors.bottom: parent.bottom
-                        anchors.left: parent.left; anchors.right: parent.right
-                        anchors.leftMargin: 4; anchors.rightMargin: 4
-                        height: 1
-                        color: Kirigami.Theme.textColor; opacity: 0.1
-                        visible: index < Math.min(todayGames.count, maxGames) - 1
-                    }
-
-                    HoverHandler { id: tileArea }
-                    TapHandler {
-                        acceptedButtons: Qt.LeftButton; gesturePolicy: TapHandler.ReleaseWithinBounds
-                        cursorShape: Qt.PointingHandCursor
-                        onTapped: root.openDetail(gameId, rAway, rHome, rAg, rHg, rStatus, rPType, rPeriod, rRemain, rStart, rInterm, situationCode)
-                    }
-                }
-            }
-        }
-
-        // Message vide (commun aux deux modes)
-        Label {
-            id: emptyMsg
-            anchors.centerIn: parent
-            visible: todayGames.count === 0
-            text: root.initialLoading ? i18n('Loading…') : i18n('No games')
-            color: root.initialLoading ? Kirigami.Theme.disabledTextColor : Kirigami.Theme.textColor
-            font.italic: root.initialLoading
-        }
-
-        // ── Bannière BUT! custom ─────────────────────────────────────
-        Rectangle {
-            id: goalBanner
-            anchors.fill: parent
-            z: 100
-            radius: 6
-            clip: true
-            visible: root.goalBannerVisible
-            opacity: root.goalBannerVisible ? 1.0 : 0.0
-
-            Behavior on opacity {
-                NumberAnimation { duration: 300 }
-            }
-
-            color: root.teamColor(root.goalBannerTeam)
-            border.color: 'white'; border.width: 2
-
-            Column {
-                anchors.centerIn: parent
-                spacing: 2
-                Text {
-                    anchors.horizontalCenter: parent.horizontalCenter
-                    text: root.goalBannerTitle
-                    color: root.teamTextColor(root.goalBannerTeam)
-                    font.pixelSize: Math.max(10, compactRoot.sz * 0.85)
-                    font.bold: true
-                }
-                Text {
-                    anchors.horizontalCenter: parent.horizontalCenter
-                    visible: root.goalBannerScore !== ''
-                    text: root.goalBannerScore
-                    color: root.teamTextColor(root.goalBannerTeam)
-                    font.pixelSize: Math.max(8, compactRoot.sz * 0.65)
-                    font.bold: true
-                }
-                Text {
-                    anchors.horizontalCenter: parent.horizontalCenter
-                    visible: root.goalBannerScorer !== ''
-                    text: "⚡ " + root.goalBannerScorer
-                    color: root.teamTextColor(root.goalBannerTeam)
-                    font.pixelSize: Math.max(7, compactRoot.sz * 0.55)
-                }
-            }
-            TapHandler { onTapped: root.goalBannerVisible = false }
-        }
-    }
-
-
-    // ── État du calendrier d'équipe ─────────────────────────────────────
-    property bool   scheduleOpen:      false
-    property bool   scheduleShowStats: false   // false=calendrier  true=stats joueurs
-    property string scheduleTeam:      ''
-    property var    scheduleGames:     []
-    property bool   scheduleLoading:   false
-    property string scheduleError:     ''
-    property var    scheduleSkaters:   []   // [{name, pos, gp, g, a, pts, plusMinus, pim}]
-    property var    scheduleGoalies:   []   // [{name, gp, wins, losses, gaa, svPct}]
-    property bool   scheduleStatsLoading: false
-    property string scheduleStatsError:   ''
+    compactRepresentation: CompactRepresentation { controller: root }
 
     function openSchedule(team, showStats) {
-        scheduleShowStats    = showStats === true
-        scheduleSkaters      = []
-        scheduleGoalies      = []
-        scheduleStatsError   = ''
-        scheduleStatsLoading = false
-        scheduleTeam    = team
-        scheduleGames   = []
-        scheduleError   = ''
-        scheduleLoading = true
-        scheduleOpen    = true
+        nav.scheduleShowStats    = showStats === true
+        sch.skaters      = []
+        sch.goalies      = []
+        sch.statsError   = ''
+        sch.statsLoading = false
+        sch.team    = team
+        sch.games   = []
+        sch.error   = ''
+        sch.loading = true
+        nav.schedule    = true
         fetchSchedule(team)
         if (showStats === true) fetchTeamStats(team)
     }
 
     function fetchSchedule(team) {
-        var xhr = new XMLHttpRequest()
-        xhr.open("GET", "https://api-web.nhle.com/v1/club-schedule-season/" + team + "/now")
-        xhr.onreadystatechange = function() {
-            if (xhr.readyState !== XMLHttpRequest.DONE) return
-            scheduleLoading = false
-            if (xhr.status !== 200) { scheduleError = "HTTP " + xhr.status; return }
+        Logic.ApiService.getTeamSchedule(team, function(err, data) {
+            sch.loading = false
+            if (err) { sch.error = String(err); return }
             try {
-                var data = JSON.parse(xhr.responseText)
                 var games = data.games || []
                 var past = [], future = []
                 for (var i = 0; i < games.length; i++) {
@@ -2384,7 +1768,7 @@ PlasmoidItem {
                 // Garder les N derniers matchs joués + tous les futurs
                 var recent = past.slice(-5)  // 5 derniers matchs joués
                 var result = recent.concat(future)
-                scheduleGames = result.map(function(g) {
+                sch.games = result.map(function(g) {
                     var st = (g.gameState || '').toUpperCase()
                     var isFinal = (st === 'FINAL' || st === 'OFF' || st === 'OFFICIAL')
                     var isLive  = (st === 'LIVE' || st === 'IN_PROGRESS')
@@ -2414,23 +1798,18 @@ PlasmoidItem {
                         gameId:  g.id || 0
                     }
                 })
-            } catch(e) { scheduleError = String(e) }
-        }
-        xhr.send()
+            } catch(e) { sch.error = String(e) }
+        })
     }
 
     function fetchTeamStats(team) {
-        scheduleStatsLoading = true
-        scheduleStatsError   = ''
-        var xhr = new XMLHttpRequest()
+        sch.statsLoading = true
+        sch.statsError   = ''
         // Endpoint stats équipe saison courante
-        xhr.open("GET", "https://api-web.nhle.com/v1/club-stats/" + team + "/now")
-        xhr.onreadystatechange = function() {
-            if (xhr.readyState !== XMLHttpRequest.DONE) return
-            scheduleStatsLoading = false
-            if (xhr.status !== 200) { scheduleStatsError = "HTTP " + xhr.status; return }
+        Logic.ApiService.getTeamStats(team, function(err, data) {
+            sch.statsLoading = false
+            if (err) { sch.statsError = String(err); return }
             try {
-                var data = JSON.parse(xhr.responseText)
                 // Patineurs
                 var sk = []
                 var skaters = data.skaters || []
@@ -2454,7 +1833,7 @@ PlasmoidItem {
                 sk.sort(function(a, b) {
                     return b.pts !== a.pts ? b.pts - a.pts : b.g - a.g
                 })
-                scheduleSkaters = sk
+                sch.skaters = sk
                 // Gardiens
                 var gl = []
                 var goalies = data.goalies || []
@@ -2471,288 +1850,108 @@ PlasmoidItem {
                         ot:     g.otLosses      || 0,
                         gaa:    g.goalsAgainstAverage !== undefined
                                     ? Math.round(g.goalsAgainstAverage * 100) / 100 : 0,
-                        svPct:  g.savePctg !== undefined
-                                    ? Math.round(g.savePctg * 1000) / 1000 : 0
+                        svPct:  (function(goalie) {
+                                    if (goalie.savePercentage !== undefined && goalie.savePercentage > 0) return goalie.savePercentage
+                                    if (goalie.savePctg !== undefined && goalie.savePctg > 0) return goalie.savePctg
+                                    if (goalie.shotsAgainst > 0) return (goalie.shotsAgainst - goalie.goalsAgainst) / goalie.shotsAgainst
+                                    return 0
+                                })(g)
                     })
                 }
                 // Trier par wins desc
                 gl.sort(function(a, b) { return b.wins - a.wins })
-                scheduleGoalies = gl
-            } catch(e) { scheduleStatsError = String(e) }
-        }
-        xhr.send()
-    }
-
-    // ── État du détail de match (au niveau root) ─────────────────────────
-    property int  detailGameId:   0
-    property string detailAway:   ''
-    property string detailHome:   ''
-    property int  detailAg:       0
-    property int  detailHg:       0
-    property string detailStatus: ''
-    property string detailPType:  ''
-    property int  detailPeriod:   0
-    property string detailRemain: ''
-    property var  detailStart:    0
-    property bool detailInterm:   false
-    property string detailIntermRemain: ''
-    property string detailPenaltyBoxAway: '[]'
-    property string detailPenaltyBoxHome: '[]'
-    // Stockage pénalités hors ListModel (évite le problème de type String vs List)
-    property var penaltiesMap: ({})
-    property var  detailGoals:    []
-
-    // Liste plate pour affichage par période :
-    // éléments de type { isPeriodHeader: true, label: "1re période" }
-    // ou               { isPeriodHeader: false, ...données but... }
-    readonly property var detailPenaltiesByPeriod: {
-        var result = []
-        var seenPeriods = []
-        for (var i = 0; i < detailPenalties.length; i++) {
-            var p = detailPenalties[i].period
-            if (seenPeriods.indexOf(p) === -1) seenPeriods.push(p)
-        }
-        seenPeriods.sort(function(a, b) {
-            var order = { '1':1, '2':2, '3':3, 'OT':4, 'SO':99 }
-            function rank(p) {
-                if (order[p] !== undefined) return order[p]
-                var m = p.match(/^(\d+)OT$/)
-                return m ? 3 + parseInt(m[1]) : 98
-            }
-            return rank(a) - rank(b)
+                sch.goalies = gl
+            } catch(e) { sch.statsError = String(e) }
         })
-        for (var pi = 0; pi < seenPeriods.length; pi++) {
-            var period = seenPeriods[pi]
-            var label = period === 'SO' ? i18n('Shootout')
-                      : period === 'OT' ? i18n('Overtime')
-                      : /^\d+OT$/.test(period) ? (period.replace('OT','') + 'e ' + i18n('Overtime'))
-                      : period === '1'  ? i18n('1st period')
-                      : period === '2'  ? i18n('2nd period')
-                      : period === '3'  ? i18n('3rd period')
-                      : i18n('Period') + ' ' + period
-            result.push({ isPeriodHeader: true, label: label })
-            for (var gi = 0; gi < detailPenalties.length; gi++) {
-                if (detailPenalties[gi].period === period) {
-                    var pen = detailPenalties[gi]
-                    result.push({
-                        isPeriodHeader: false,
-                        time:     pen.time,
-                        team:     pen.team,
-                        player:   pen.player,
-                        number:   pen.number,
-                        duration: pen.duration,
-                        descKey:  pen.descKey,
-                        playerId: pen.playerId || 0
-                    })
-                }
-            }
-        }
-        return result
     }
-
-    readonly property var detailGoalsByPeriod: {
-        var result = []
-        var seenPeriods = []
-        var maxPeriod = 0
-        // Déterminer la période courante pour les matchs en cours
-        if (detailStatus === 'LIVE' || detailStatus === 'FINAL') {
-            maxPeriod = detailPeriod || 0
-        }
-        // Collecter les périodes qui ont des buts
-        for (var i = 0; i < detailGoals.length; i++) {
-            var p = detailGoals[i].period
-            if (seenPeriods.indexOf(p) === -1) seenPeriods.push(p)
-        }
-        // Assurer que les périodes réglementaires jouées apparaissent (max 3)
-        // Les périodes OT/SO sont ajoutées seulement si elles ont des buts (déjà dans seenPeriods)
-        for (var pn = 1; pn <= Math.min(maxPeriod, 3); pn++) {
-            var pStr = String(pn)
-            if (seenPeriods.indexOf(pStr) === -1) seenPeriods.push(pStr)
-        }
-        // Trier : 1, 2, 3, OT, SO
-        seenPeriods.sort(function(a, b) {
-            var order = { '1':1, '2':2, '3':3, 'OT':4, 'SO':99 }
-            // 2OT=5, 3OT=6, etc.
-            function rank(p) {
-                if (order[p] !== undefined) return order[p]
-                var m = p.match(/^(\d+)OT$/)
-                if (m) return 3 + parseInt(m[1])  // 2OT→5, 3OT→6...
-                return 98
-            }
-            return rank(a) - rank(b)
-        })
-        // Construire la liste plate
-        for (var pi = 0; pi < seenPeriods.length; pi++) {
-            var period = seenPeriods[pi]
-            var label = period === 'SO' ? i18n('Shootout')
-                      : period === 'OT' ? i18n('Overtime')
-                      : /^\d+OT$/.test(period) ? (period.replace('OT','') + 'e ' + i18n('Overtime'))
-                      : period === '1'  ? i18n('1st period')
-                      : period === '2'  ? i18n('2nd period')
-                      : period === '3'  ? i18n('3rd period')
-                      : i18n('Period') + ' ' + period
-            result.push({ isPeriodHeader: true, label: label, period: period,
-                          team:'', scorer:'', assists:[], time:'', goalsToDate:-1,
-                          ppg:false, shg:false, en:false })
-            var count = 0
-            for (var gi = 0; gi < detailGoals.length; gi++) {
-                if (detailGoals[gi].period === period) {
-                    var gobj = detailGoals[gi]
-                    result.push({ isPeriodHeader: false, label: '',
-                                  period: gobj.period, time: gobj.time,
-                                  team: gobj.team, scorer: gobj.scorer,
-                                  scorerId: gobj.scorerId || 0,
-                                  goalsToDate: gobj.goalsToDate,
-                                  assists: gobj.assists,
-                                  ppg: gobj.ppg, shg: gobj.shg, en: gobj.en })
-                    count++
-                }
-            }
-            if (count === 0) {
-                result.push({ isPeriodHeader: false, label: i18n('No goals recorded.'),
-                              period: period, time:'', team:'', scorer:'',
-                              assists:[], goalsToDate:-1,
-                              ppg:false, shg:false, en:false,
-                              isEmpty: true })
-            }
-        }
-        return result
-    }
-    property var  detailStats:    ({})
-    // Propriétés scalaires pour le preview UPCOMING (évite les bugs de binding QML avec var)
-    property string pvVenue:       ''
-    property int    pvSeriesAway:  0
-    property int    pvSeriesHome:  0
-    property bool   pvSeriesTotal: false
-    property string pvAwayRecord:  ''
-    property string pvHomeRecord:  ''
-    property var    pvAwayLeaders: []
-    property var    pvHomeLeaders: []
-    property var    pvAwayGoalie:  null
-    property var    pvHomeGoalie:  null
-    property bool detailLoading:  false
-    property string detailError:  ''
-    property bool detailOpen:     false
 
     function openDetail(gid, away, home, ag, hg, status, ptype, period, remain, start, interm, sitCode) {
         // Toggle : fermer si le même match est déjà ouvert
-        if (detailOpen && detailGameId === gid) {
-            detailOpen = false
+        if (nav.detail && det.gameId === gid) {
+            nav.detail = false
             expanded   = false
             return
         }
         // Fermer le calendrier/stats et le classement si ouverts
-        scheduleOpen      = false
-        scheduleShowStats = false
-        bracketOpen       = false
-        standingsOpen     = false
-        teamHubOpen       = false
-        leadersOpen       = false
-        dayViewOpen       = false
-        playerOpen        = false
-        searchOpen        = false
-        calendarOpen      = false
-        detailThreeStars    = []
-        detailPenalties     = []
-        penaltyPlayerMap    = {}
-        detailView          = 'goals'
-        detailGameId  = gid
-        detailAway    = away
-        detailHome    = home
-        detailAg      = ag
-        detailHg      = hg
-        detailStatus  = status
-        detailPType   = ptype
-        detailPeriod  = period
-        detailRemain  = remain
-        detailStart   = start
-        detailInterm  = interm || false
-        detailGoals   = []
-        detailStats   = ({})
-        pvVenue = ''; pvSeriesAway = 0; pvSeriesHome = 0; pvSeriesTotal = false
-        pvAwayRecord = ''; pvHomeRecord = ''
-        pvAwayLeaders = []; pvHomeLeaders = []
-        pvAwayGoalie = null; pvHomeGoalie = null
-        detailSituationCode  = sitCode || '1551'
-        detailIntermRemain   = ''
+        nav.schedule      = false
+        nav.scheduleShowStats = false
+        nav.bracket       = false
+        nav.standings     = false
+        nav.teamHub       = false
+        nav.leaders       = false
+        nav.dayView       = false
+        nav.player        = false
+        nav.search        = false
+        nav.calendar      = false
+        det.threeStars    = []
+        det.penalties     = []
+        det.playerMap    = {}
+        det.view          = 'goals'
+        fetchH2H(away, home)
+        det.gameId  = gid
+        det.away    = away
+        det.home    = home
+        det.ag      = ag
+        det.hg      = hg
+        det.status  = status
+        det.pType   = ptype
+        det.period  = period
+        det.remain  = remain
+        det.start   = start
+        det.interm  = interm || false
+        det.goals   = []
+        det.stats   = ({})
+        det.venue = ''; det.seriesAway = 0; det.seriesHome = 0; det.seriesTotal = false; det.h2hGames = []
+        det.awayRecord = ''; det.homeRecord = ''
+        det.awayLeaders = []; det.homeLeaders = []
+        det.awayGoalie = null; det.homeGoalie = null
+        det.sitCode  = sitCode || '1551'
+        det.intermRemain   = ''
         // Détecter les séries éliminatoires
-        detailIsPlayoff = false
-        detailSeriesRound = ''
-        detailSeriesGameNum = 0
+        det.isPlayoff = false
+        det.seriesRound = ''
+        det.seriesGameNum = 0
         for (let pi = 0; pi < todayGames.count; pi++) {
             let pg = todayGames.get(pi)
             if (pg.gameId === gid) {
-                detailIsPlayoff = (pg.gameType === 3)
+                det.isPlayoff = (pg.gameType === 3)
                 break
             }
         }
-        var pmEntry = root.penaltiesMap[String(gid)] || {away:[],home:[]}
-        detailPenaltyBoxAway = JSON.stringify(pmEntry.away)
-        detailPenaltyBoxHome = JSON.stringify(pmEntry.home)
-        detailError   = ''
-        detailOpen    = true
+        var pmEntry = glob.penaltiesMap[String(gid)] || {away:[],home:[]}
+        det.penaltyBoxAway = JSON.stringify(pmEntry.away)
+        det.penaltyBoxHome = JSON.stringify(pmEntry.home)
+        det.error   = ''
+        nav.detail    = true
         fetchDetail(gid)
         // Ouvrir le fullRepresentation (popup natif Plasma)
         expanded = true
     }
 
     function fetchDetail(gid) {
-        detailLoading = true
-        let done = 0
-        function tryDone() { done++; if (done >= 2) detailLoading = false }
+        det.loading = true
+        var done = 0
+        function tryDone() { done++; if (done >= 2) det.loading = false }
 
         // landing → buts
-        let xhrL = new XMLHttpRequest()
-        xhrL.open("GET", "https://api-web.nhle.com/v1/gamecenter/" + gid + "/landing")
-        xhrL.onreadystatechange = function() {
-            if (xhrL.readyState !== XMLHttpRequest.DONE) return
-            if (xhrL.status === 200) {
+        Logic.ApiService.getGameLanding(gid, function(err, d) {
+            if (!err) {
                 try {
-                    let d = JSON.parse(xhrL.responseText)
-
-
                     // ── Preview pour les matchs à venir ─────────────────
-                    // Structure confirmée :
-                    //   d.awayTeam.record          → string "W-L-OT"
-                    //   d.matchup.skaterComparison.leaders → [{category,awayLeader,homeLeader}]
-                    //     leader.name.default, leader.goals, leader.points
-                    //   d.matchup.goalieComparison.{awayTeam|homeTeam}.leaders[0] → gardien
-                    //   d.seasonSeries              → matchs de la série saison
-                    if (detailStatus === 'UPCOMING') {
-                        let pv = {}
-
-                        // Heure locale du match
-                        pv.startMs = detailStart || 0
-
-
-                        // Aréna
-                        let venue = d.venue
+                    if (det.status === 'UPCOMING') {
+                        var pv = {}
+                        pv.startMs = det.start || 0
+                        var venue = d.venue
                         pv.venue = venue ? (venue.default || venue) : ''
+                        pv.seriesAway  = 0
+                        pv.seriesHome  = 0
+                        pv.seriesTotal = false
 
-                        // Série saison
-                        let ss = d.seasonSeries || []
-                        let awWins = 0, hmWins = 0
-                        for (let si = 0; si < ss.length; si++) {
-                            let sg = ss[si]
-                            let sgState = (sg.gameState || '').toUpperCase()
-                            if (sgState === 'FINAL' || sgState === 'OFF' || sgState === 'OFFICIAL') {
-                                let aw = sg.awayTeam ? (sg.awayTeam.abbrev || '') : ''
-                                let awS = sg.awayTeam ? (sg.awayTeam.score || 0) : 0
-                                let hmS = sg.homeTeam ? (sg.homeTeam.score || 0) : 0
-                                if (aw === detailAway) { if (awS > hmS) awWins++; else hmWins++ }
-                                else                   { if (hmS > awS) awWins++; else hmWins++ }
-                            }
-                        }
-                        pv.seriesAway  = awWins
-                        pv.seriesHome  = hmWins
-                        pv.seriesTotal = ss.length > 0
-
-                        // Fiche : d.awayTeam.record est une string "W-L-OT"
                         function parseRecord(team) {
                             if (!team || !team.record) return { wins:'–', losses:'–', ot:'–' }
-                            let rec = team.record
+                            var rec = team.record
                             if (typeof rec === 'string') {
-                                let p = rec.split('-')
+                                var p = rec.split('-')
                                 return { wins: p[0]||'–', losses: p[1]||'–', ot: p[2]||'–' }
                             }
                             return {
@@ -2764,22 +1963,18 @@ PlasmoidItem {
                         pv.awayRecord = parseRecord(d.awayTeam)
                         pv.homeRecord = parseRecord(d.homeTeam)
 
-                        // Leaders : d.matchup.skaterComparison.leaders
-                        // = [{category:"points"|"goals"|"assists", awayLeader:{name,value}, homeLeader:{name,value}}]
-                        // Chaque row = UN meneur par catégorie — afficher points/goals/assists séparément
                         function parseLeaders(scLeaders, side) {
                             if (!scLeaders || !scLeaders.length) return []
-                            let catOrder = ['points', 'goals', 'assists']
-                            let result = []
-                            // D'abord dans l'ordre souhaité
-                            for (let oi = 0; oi < catOrder.length; oi++) {
-                                let cat = catOrder[oi]
-                                for (let ci = 0; ci < scLeaders.length; ci++) {
-                                    let row = scLeaders[ci]
+                            var catOrder = ['points', 'goals', 'assists']
+                            var result = []
+                            for (var oi = 0; oi < catOrder.length; oi++) {
+                                var cat = catOrder[oi]
+                                for (var ci = 0; ci < scLeaders.length; ci++) {
+                                    var row = scLeaders[ci]
                                     if ((row.category || '').toLowerCase() !== cat) continue
-                                    let p = side === 'away' ? row.awayLeader : row.homeLeader
+                                    var p = side === 'away' ? row.awayLeader : row.homeLeader
                                     if (!p) continue
-                                    let name = p.name ? (p.name.default || '') : ''
+                                    var name = p.name ? (p.name.default || '') : ''
                                     result.push({
                                         cat:   cat,
                                         name:  name,
@@ -2790,112 +1985,84 @@ PlasmoidItem {
                             }
                             return result
                         }
-                        let scLeaders = (d.matchup && d.matchup.skaterComparison
-                                         && d.matchup.skaterComparison.leaders) || []
+                        var scLeaders = (d.matchup && d.matchup.skaterComparison && d.matchup.skaterComparison.leaders) || []
                         pv.awayLeaders = parseLeaders(scLeaders, 'away')
                         pv.homeLeaders = parseLeaders(scLeaders, 'home')
 
-                        // Gardiens : d.matchup.goalieComparison.{awayTeam|homeTeam}.leaders[0]
-                        // Champs confirmés : playerId, name, gamesPlayed, seasonPoints,
-                        //                   record (string ou objet), gaa (float), savePctg (float), shutouts
                         function parseGoalie(teamData) {
                             if (!teamData) return null
-                            let leaders = teamData.leaders || []
-                            let g = leaders.length > 0 ? leaders[0] : null
+                            var leaders = teamData.leaders || []
+                            var g = leaders.length > 0 ? leaders[0] : null
                             if (!g) return null
-                            let name = g.name ? (g.name.default || '') : ''
+                            var name = g.name ? (g.name.default || '') : ''
                             if (!name) return null
-                            // record : peut être string "W-L-OT" ou objet
-                            let recStr = '–'
+                            var recStr = '–'
                             if (g.record !== undefined) {
                                 if (typeof g.record === 'string') {
                                     recStr = g.record
                                 } else if (typeof g.record === 'object') {
-                                    let r = g.record
-                                    recStr = (r.wins||0) + '-' + (r.losses||0)
-                                           + (r.otLosses !== undefined ? '-' + r.otLosses : '')
+                                    var r = g.record
+                                    recStr = (r.wins||0) + '-' + (r.losses||0) + (r.otLosses !== undefined ? '-' + r.otLosses : '')
                                 }
                             }
-                            // gaa : float direct
-                            let gaa = g.gaa !== undefined    ? parseFloat(g.gaa).toFixed(2)
-                                    : g.goalsAgainstAverage !== undefined
-                                        ? parseFloat(g.goalsAgainstAverage).toFixed(2) : '–'
-                            // savePctg : float ex 0.912
-                            let svp = g.savePctg !== undefined ? g.savePctg : null
+                            var gaa = g.gaa !== undefined ? parseFloat(g.gaa).toFixed(2)
+                                    : g.goalsAgainstAverage !== undefined ? parseFloat(g.goalsAgainstAverage).toFixed(2) : '–'
+                            var svp = g.savePctg !== undefined ? g.savePctg : null
                             return {
                                 name:   name,
                                 record: recStr,
                                 gaa:    gaa,
-                                svPct:  svp !== null
-                                    ? ('.' + String(Math.round(svp*1000)).padStart(3,'0')) : '–'
+                                svPct:  svp !== null ? ('.' + String(Math.round(svp*1000)).padStart(3,'0')) : '–'
                             }
                         }
-                        let glComp = (d.matchup && d.matchup.goalieComparison) || null
+                        var glComp = (d.matchup && d.matchup.goalieComparison) || null
                         pv.awayGoalie = parseGoalie(glComp ? glComp.awayTeam : null)
                         pv.homeGoalie = parseGoalie(glComp ? glComp.homeTeam : null)
 
-                        // Assigner chaque propriété scalaire séparément → bindings QML fiables
-                        pvVenue       = pv.venue || ''
-                        pvSeriesAway  = pv.seriesAway  || 0
-                        pvSeriesHome  = pv.seriesHome  || 0
-                        pvSeriesTotal = pv.seriesTotal || false
-                        pvAwayRecord  = (pv.awayRecord
-                            ? (pv.awayRecord.wins||'–')+'-'+(pv.awayRecord.losses||'–')+'-'+(pv.awayRecord.ot||'–')
-                            : '')
-                        pvHomeRecord  = (pv.homeRecord
-                            ? (pv.homeRecord.wins||'–')+'-'+(pv.homeRecord.losses||'–')+'-'+(pv.homeRecord.ot||'–')
-                            : '')
-                        pvAwayLeaders = pv.awayLeaders || []
-                        pvHomeLeaders = pv.homeLeaders || []
-                        pvAwayGoalie  = pv.awayGoalie  || null
-                        pvHomeGoalie  = pv.homeGoalie  || null
+                        det.venue       = pv.venue || ''
+                        det.seriesAway  = pv.seriesAway  || 0
+                        det.seriesHome  = pv.seriesHome  || 0
+                        det.seriesTotal = pv.seriesTotal || false
+                        det.h2hGames    = pv.h2hGames    || []
+                        det.awayRecord  = (pv.awayRecord ? (pv.awayRecord.wins||'–')+'-'+(pv.awayRecord.losses||'–')+'-'+(pv.awayRecord.ot||'–') : '')
+                        det.homeRecord  = (pv.homeRecord ? (pv.homeRecord.wins||'–')+'-'+(pv.homeRecord.losses||'–')+'-'+(pv.homeRecord.ot||'–') : '')
+                        det.awayLeaders = pv.awayLeaders || []
+                        det.homeLeaders = pv.homeLeaders || []
+                        det.awayGoalie  = pv.awayGoalie  || null
+                        det.homeGoalie  = pv.homeGoalie  || null
                     }
 
                     // ── Buts pour les matchs commencés / terminés ────────
-                    let g = []
-                    let periods = (d.summary && d.summary.scoring) ? d.summary.scoring : []
-                    for (let p = 0; p < periods.length; p++) {
-                        let ps = periods[p]
-                        let pnum  = ps.periodDescriptor ? (ps.periodDescriptor.number || (p+1)) : (p+1)
-                        let ptype = ps.periodDescriptor ? (ps.periodDescriptor.periodType || '') : ''
-                        let pname = ptype === 'SO' ? 'SO'
-                                  : ptype === 'OT' ? (pnum === 4 ? 'OT' : (pnum - 3) + 'OT')
-                                  : String(pnum)
-                        let gs = ps.goals || []
-                        for (let gi = 0; gi < gs.length; gi++) {
-                            let gl = gs[gi]
-                            let scorer = gl.firstName
-                                ? (gl.firstName.default || '') + ' ' + (gl.lastName.default || '')
-                                : (gl.name && gl.name.default ? gl.name.default : '?')
-                            let assists = []
+                    var goalsList = []
+                    var periods = (d.summary && d.summary.scoring) ? d.summary.scoring : []
+                    for (var p = 0; p < periods.length; p++) {
+                        var ps = periods[p]
+                        var pnum  = ps.periodDescriptor ? (ps.periodDescriptor.number || (p+1)) : (p+1)
+                        var ptype = ps.periodDescriptor ? (ps.periodDescriptor.periodType || '') : ''
+                        var pname = ptype === 'SO' ? 'SO' : ptype === 'OT' ? (pnum === 4 ? 'OT' : (pnum - 3) + 'OT') : String(pnum)
+                        var gs = ps.goals || []
+                        for (var gi = 0; gi < gs.length; gi++) {
+                            var gl = gs[gi]
+                            var scorer = gl.firstName ? (gl.firstName.default || '') + ' ' + (gl.lastName.default || '') : (gl.name && gl.name.default ? gl.name.default : '?')
+                            var assists = []
                             if (gl.assists) {
-                                for (let ai = 0; ai < gl.assists.length; ai++) {
-                                    let a = gl.assists[ai]
-                                    let aName = a.firstName
-                                        ? (a.firstName.default || '') + ' ' + (a.lastName.default || '')
-                                        : (a.name && a.name.default ? a.name.default : '?')
-                                    assists.push({
-                                        id:            a.playerId || 0,
-                                        name:          aName,
-                                        assistsToDate: a.assistsToDate !== undefined ? a.assistsToDate : -1
-                                    })
+                                for (var ai = 0; ai < gl.assists.length; ai++) {
+                                    var a = gl.assists[ai]
+                                    var aName = a.firstName ? (a.firstName.default || '') + ' ' + (a.lastName.default || '') : (a.name && a.name.default ? a.name.default : '?')
+                                    assists.push({ id: a.playerId || 0, name: aName, assistsToDate: a.assistsToDate !== undefined ? a.assistsToDate : -1 })
                                 }
                             }
-                            g.push({
-                                period:       pname,
-                                time:         gl.timeInPeriod || '',
-                                team:         gl.teamAbbrev ? (gl.teamAbbrev.default || gl.teamAbbrev) : '',
-                                scorerId:     gl.playerId || 0,
-                                scorer:       scorer,
-                                goalsToDate:  gl.goalsToDate !== undefined ? gl.goalsToDate : -1,
-                                assists:      assists,
-                                ppg:          gl.strength === 'pp',
-                                shg:          gl.strength === 'sh',
-                                en:           gl.goalModifier === 'empty-net' || gl.emptyNet === true
+                            goalsList.push({
+                                period: pname, time: gl.timeInPeriod || '',
+                                team: gl.teamAbbrev ? (gl.teamAbbrev.default || gl.teamAbbrev) : '',
+                                scorerId: gl.playerId || 0, scorer: scorer,
+                                goalsToDate: gl.goalsToDate !== undefined ? gl.goalsToDate : -1,
+                                assists: assists, ppg: gl.strength === 'pp', shg: gl.strength === 'sh',
+                                en: gl.goalModifier === 'empty-net' || gl.emptyNet === true
                             })
                         }
                     }
-                    detailGoals = g
+                    det.goals = goalsList
 
                     // ── Pénalités ──────────────────────────────────
                     var penData = d.summary && d.summary.penalties
@@ -2904,11 +2071,9 @@ PlasmoidItem {
                         for (var pi = 0; pi < penData.length; pi++) {
                             var pperiod = penData[pi]
                             var pd2 = pperiod.periodDescriptor || {}
-                            var pnum = pd2.number || 1
-                            var ptype = (pd2.periodType || '').toUpperCase()
-                            var pname = ptype === 'SO' ? 'SO'
-                                      : ptype === 'OT' ? (pnum === 4 ? 'OT' : (pnum - 3) + 'OT')
-                                      : String(pnum)
+                            var pnum2 = pd2.number || 1
+                            var ptype2 = (pd2.periodType || '').toUpperCase()
+                            var pname2 = ptype2 === 'SO' ? 'SO' : ptype2 === 'OT' ? (pnum2 === 4 ? 'OT' : (pnum2 - 3) + 'OT') : String(pnum2)
                             var ppens = pperiod.penalties || []
                             for (var pj = 0; pj < ppens.length; pj++) {
                                 var pen = ppens[pj]
@@ -2919,4814 +2084,288 @@ PlasmoidItem {
                                 var dfn = db.firstName ? (db.firstName.default || '') : ''
                                 var dln = db.lastName  ? (db.lastName.default  || '') : ''
                                 penList.push({
-                                    period:   pname,
-                                    time:     pen.timeInPeriod || '',
-                                    team:     pen.teamAbbrev ? (pen.teamAbbrev.default || pen.teamAbbrev) : '',
-                                    player:   pfn + ' ' + pln,
-                                    playerId: cb.playerId || 0,
-                                    number:   cb.sweaterNumber || 0,
-                                    duration: pen.duration || 2,
-                                    type:     pen.type || '',
-                                    descKey:  pen.descKey || '',
-                                    drawnBy:  dfn ? dfn + ' ' + dln : ''
+                                    period: pname2, time: pen.timeInPeriod || '',
+                                    team: pen.teamAbbrev ? (pen.teamAbbrev.default || pen.teamAbbrev) : '',
+                                    player: pfn + ' ' + pln, playerId: cb.playerId || 0,
+                                    number: cb.sweaterNumber || 0, duration: pen.duration || 2,
+                                    type: pen.type || '', descKey: pen.descKey || '',
+                                    drawnBy: dfn ? dfn + ' ' + dln : ''
                                 })
                             }
                         }
-                        root.detailPenalties = penList
-                        // Si boxscore déjà arrivé, enrichir immédiatement
-                        if (Object.keys(root.penaltyPlayerMap).length > 0)
-                            root.resolvePenaltyIds(root.penaltyPlayerMap)
+                        det.penalties = penList
+                        if (Object.keys(det.playerMap).length > 0) root.resolvePenaltyIds(det.playerMap)
                     }
 
                     // ── 3 étoiles ────────────────────────────────
                     var stars = d.summary && d.summary.threeStars
                     if (stars && Array.isArray(stars)) {
-                        root.detailThreeStars = stars.map(function(s) {
+                        det.threeStars = stars.map(function(s) {
                             var name = s.name ? (s.name.default || s.name) : ''
                             return {
-                                star:     s.star      || 0,
-                                id:       s.playerId  || 0,
-                                name:     name,
-                                team:     s.teamAbbrev ? (s.teamAbbrev.default || s.teamAbbrev) : '',
-                                position: s.position  || '',
-                                goals:    s.goals     !== undefined ? s.goals     : -1,
-                                assists:  s.assists   !== undefined ? s.assists   : -1,
-                                toi:      s.toi       || ''
+                                star: s.star || 0, id: s.playerId || 0, name: name,
+                                team: s.teamAbbrev ? (s.teamAbbrev.default || s.teamAbbrev) : '',
+                                position: s.position || '',
+                                goals: s.goals !== undefined ? s.goals : -1,
+                                assists: s.assists !== undefined ? s.assists : -1,
+                                toi: s.toi || ''
                             }
                         })
                     }
-                } catch(e) { detailError = 'landing: ' + e }
+                } catch(e) { det.error = 'landing: ' + e }
             } else {
-                detailError = 'HTTP ' + xhrL.status + ' (landing)'
+                det.error = 'HTTP (landing): ' + String(err)
             }
             tryDone()
-        }
-        xhrL.send()
+        })
 
         // boxscore → stats d'équipe
-        let xhrB = new XMLHttpRequest()
-        xhrB.open("GET", "https://api-web.nhle.com/v1/gamecenter/" + gid + "/boxscore")
-        xhrB.onreadystatechange = function() {
-            if (xhrB.readyState !== XMLHttpRequest.DONE) return
-            if (xhrB.status === 200) {
+        Logic.ApiService.getGameBoxscore(gid, function(err, d) {
+            if (!err) {
                 try {
-                    let d = JSON.parse(xhrB.responseText)
-                    let st = {}
-                    // Tirs au but : directement dans awayTeam/homeTeam
-                    let awSog = d.awayTeam && d.awayTeam.sog !== undefined ? d.awayTeam.sog : null
-                    let hmSog = d.homeTeam && d.homeTeam.sog !== undefined ? d.homeTeam.sog : null
-                    if (awSog !== null && hmSog !== null) {
-                        st['sog'] = { away: awSog, home: hmSog }
+                    var st = {}
+                    var awSog = d.awayTeam && d.awayTeam.sog !== undefined ? d.awayTeam.sog : null
+                    var hmSog = d.homeTeam && d.homeTeam.sog !== undefined ? d.homeTeam.sog : null
+                    if (awSog !== null && hmSog !== null) st['sog'] = { away: awSog, home: hmSog }
+                    var ts = d.teamGameStats || []
+                    for (var i = 0; i < ts.length; i++) {
+                        var row = ts[i]
+                        st[row.category || ''] = { away: row.awayValue !== undefined ? row.awayValue : '—', home: row.homeValue !== undefined ? row.homeValue : '—' }
                     }
-                    // Autres stats dans teamGameStats
-                    let ts = d.teamGameStats || []
-                    for (let i = 0; i < ts.length; i++) {
-                        let row = ts[i]
-                        let av = row.awayValue !== undefined ? row.awayValue : '—'
-                        let hv = row.homeValue !== undefined ? row.homeValue : '—'
-                        st[row.category || ''] = { away: av, home: hv }
-                    }
-                    // Agréger les stats d'équipe depuis playerByGameStats
-                    let pg = d.playerByGameStats || {}
-                    // Construire map sweater → playerId pour les pénalités
+                    var pg = d.playerByGameStats || {}
                     var pmap = {}
                     function indexTeamPlayers(team, abbrev) {
                         var all = (team.forwards||[]).concat(team.defense||[]).concat(team.goalies||[])
-                        for (var pi2 = 0; pi2 < all.length; pi2++) {
-                            var pl = all[pi2]
-                            if (pl.playerId && pl.sweaterNumber)
-                                pmap[abbrev + '-' + pl.sweaterNumber] = pl.playerId
+                        for (var pi3 = 0; pi3 < all.length; pi3++) {
+                            var pl = all[pi3]
+                            if (pl.playerId && pl.sweaterNumber) pmap[abbrev + '-' + pl.sweaterNumber] = pl.playerId
                         }
                     }
-                    // Trouver les abréviations depuis detailAway/detailHome
-                    indexTeamPlayers(pg.awayTeam || {}, root.detailAway)
-                    indexTeamPlayers(pg.homeTeam || {}, root.detailHome)
-                    root.penaltyPlayerMap = pmap
-                    // Enrichir les pénalités avec playerIds (si landing déjà arrivé)
+                    indexTeamPlayers(pg.awayTeam || {}, det.away)
+                    indexTeamPlayers(pg.homeTeam || {}, det.home)
+                    det.playerMap = pmap
                     root.resolvePenaltyIds(pmap)
                     function sumTeam(team) {
-                        let all = (team.forwards||[]).concat(team.defense||[])
-                        let r = {hits:0, pim:0, blockedShots:0, giveaways:0, takeaways:0}
-                        for (let i=0; i<all.length; i++) {
-                            let p = all[i]
-                            r.hits         += p.hits         || 0
-                            r.pim          += p.pim          || 0
-                            r.blockedShots += p.blockedShots || 0
-                            r.giveaways    += p.giveaways    || 0
-                            r.takeaways    += p.takeaways    || 0
+                        var all = (team.forwards||[]).concat(team.defense||[])
+                        var r = {hits:0, pim:0, blockedShots:0, giveaways:0, takeaways:0}
+                        for (var i=0; i<all.length; i++) {
+                            var p = all[i]
+                            r.hits += p.hits || 0; r.pim += p.pim || 0; r.blockedShots += p.blockedShots || 0
+                            r.giveaways += p.giveaways || 0; r.takeaways += p.takeaways || 0
                         }
-                        let goalies = team.goalies || []
-                        for (let gi=0; gi<goalies.length; gi++) {
-                            r.pim += goalies[gi].pim || 0
-                        }
+                        var goalies = team.goalies || []
+                        for (var gi=0; gi<goalies.length; gi++) r.pim += goalies[gi].pim || 0
                         return r
                     }
-                    let awStats = sumTeam(pg.awayTeam || {})
-                    let hmStats = sumTeam(pg.homeTeam || {})
-                    // Ajouter dans st (toujours, même si 0)
+                    var awStats = sumTeam(pg.awayTeam || {})
+                    var hmStats = sumTeam(pg.homeTeam || {})
                     st['hits']         = { away: awStats.hits,         home: hmStats.hits }
                     st['pim']          = { away: awStats.pim,          home: hmStats.pim }
                     st['blockedShots'] = { away: awStats.blockedShots, home: hmStats.blockedShots }
                     st['giveaways']    = { away: awStats.giveaways,    home: hmStats.giveaways }
                     st['takeaways']    = { away: awStats.takeaways,    home: hmStats.takeaways }
-                    // Assigner APRÈS l'agrégation complète
-                    detailStats = st
-                } catch(e) { detailError = 'boxscore: ' + e }
+                    det.stats = st
+                } catch(e) { det.error = 'boxscore: ' + e }
             } else {
-                if (!detailError) detailError = 'HTTP ' + xhrB.status + ' (boxscore)'
+                det.error = 'HTTP (boxscore): ' + String(err)
             }
             tryDone()
-        }
-        xhrB.send()
+        })
     }
 
     // Timer rafraîchissement automatique du popup détail
     Timer {
         id: detailRefreshTimer
         interval: 20000
-        running: root.detailOpen && root.detailStatus === 'LIVE'
+        running: nav.detail && det.status === 'LIVE'
         repeat: true
         onTriggered: {
-            if (root.detailOpen) {
+            if (nav.detail) {
                 // Mettre à jour le score depuis le modèle si le match est toujours là
                 for (let i = 0; i < todayGames.count; i++) {
                     let g = todayGames.get(i)
-                    if (g.gameId === root.detailGameId) {
-                        root.detailAg      = g.ag
-                        root.detailHg      = g.hg
-                        root.detailPeriod  = g.period
-                        root.detailRemain  = g.liveRemain
-                        root.detailStatus  = g.statusRole
-                        root.detailPType   = g.periodType
+                    if (g.gameId === det.gameId) {
+                        det.ag      = g.ag
+                        det.hg      = g.hg
+                        det.period  = g.period
+                        det.remain  = g.liveRemain
+                        det.status  = g.statusRole
+                        det.pType   = g.periodType
                         if (g.statusRole === 'LIVE')
-                            root.detailSituationCode = g.situationCode || '1551'
+                            det.sitCode = g.situationCode || '1551'
                         break
                     }
                 }
                 // Recharger les buts et stats
-                fetchDetail(root.detailGameId)
+                fetchDetail(det.gameId)
             }
         }
     }
 
     // ── fullRepresentation : popup natif Plasma, bien positionné ─────────
     // ── Modèle plat pour la vue standings ───────────────────────────────
-    // Reconstruit quand standingsData change
+    // Reconstruit quand std.data change
     ListModel { id: standingsFlatModel }
 
     // standingsFlatModel stocke des primitives seulement (limitation ListModel).
     // Pour les lignes d'équipe, on stocke les champs directement à plat.
     function buildStandingsModel() {
-        // Forcer la recréation complète du modèle pour éviter les conflits de rôles
         standingsFlatModel.clear()
-        // Amorce avec tous les champs pour initialiser les rôles QML correctement
-        standingsFlatModel.append({ type:"_init_", label:"", abbrev:"", city:"",
-            gp:0, w:0, l:0, ot:0, pts:0,
-            gf:0, ga:0, sow:0, sol:0, hw:0, hl:0, hot:0,
-            rw:0, rl:0, rot:0, l10w:0, l10l:0, l10ot:0, streak:""
+        // Amorce avec tous les champs pour initialiser les rôles QML
+        standingsFlatModel.append({ 
+            type:"_init_", label:"", abbrev:"", city:"", gp:0, w:0, l:0, ot:0, pts:0, gf:0, ga:0,
+            sow:0, sol:0, hw:0, hl:0, hot:0, rw:0, rl:0, rot:0, l10w:0, l10l:0, l10ot:0, streak:""
         })
         standingsFlatModel.remove(0)
-        if (root.standingsMode === 'league') { buildLeagueModel(); return }
-        if (root.standingsMode === 'division') { buildDivisionModel(); return }
-        buildWildCardModel()
-    }
 
-    function buildLeagueModel() {
-        var key = root.standingsSortKey
-        var asc = root.standingsSortAsc
-        var all = root.standingsData.slice()
+        var rows = []
+        var labels = { atlantic: "Atlantique", metro: "Métropolitaine", central: "Centrale", pacific: "Pacifique", 
+                       east: i18n("Eastern Conference"), west: i18n("Western Conference"), wc: i18n("Wild Card") }
 
-        all.sort(function(a, b) {
-            var av = leagueSortVal(a, key)
-            var bv = leagueSortVal(b, key)
-            if (av === bv) {
-                // Tiebreaker : points puis victoires
-                if (b.points !== a.points) return b.points - a.points
-                return b.wins - a.wins
-            }
-            return asc ? (av < bv ? -1 : 1) : (bv < av ? -1 : 1)
-        })
-        standingsFlatModel.append({ type: "leagueHeader",
-            label: "", abbrev:"", city:"", gp:0, w:0, l:0, ot:0, pts:0,
-            gf:0, ga:0, sow:0, sol:0, hw:0, hl:0, hot:0, rw:0, rl:0, rot:0,
-            l10w:0, l10l:0, l10ot:0, streak:""
-        })
-        for (var i = 0; i < all.length; i++) {
-            var t = all[i]
-            standingsFlatModel.append({
-                type:   "leagueTeam",
-                label:  "",
-                abbrev: t.teamAbbrev  ? (t.teamAbbrev.default  || t.teamAbbrev)  : "?",
-                city:   t.teamCommonName ? (t.teamCommonName.default || t.teamCommonName) : "",
-                gp:     t.gamesPlayed    || 0,
-                w:      t.wins           || 0,
-                l:      t.losses         || 0,
-                ot:     t.otLosses       || 0,
-                pts:    t.points         || 0,
-                gf:     t.goalFor        || 0,
-                ga:     t.goalAgainst    || 0,
-                sow:    t.shootoutWins   || 0,
-                sol:    t.shootoutLosses || 0,
-                hw:     t.homeWins       || 0,
-                hl:     t.homeLosses     || 0,
-                hot:    t.homeOtLosses   || 0,
-                rw:     t.roadWins       || 0,
-                rl:     t.roadLosses     || 0,
-                rot:    t.roadOtLosses   || 0,
-                l10w:   t.l10Wins        || 0,
-                l10l:   t.l10Losses      || 0,
-                l10ot:  t.l10OtLosses    || 0,
-                streak: (t.streakCode    || '') + String(t.streakCount || '')
-            })
+        if (std.mode === 'league') {
+            rows = Logic.parseLeagueStandings(std.data, std.sortKey, std.sortAsc)
+        } else if (std.mode === 'division') {
+            rows = Logic.parseDivisionStandings(std.data, labels)
+        } else {
+            rows = Logic.parseWildCardStandings(std.data, labels)
+        }
+
+        for (var i = 0; i < rows.length; i++) {
+            standingsFlatModel.append(rows[i])
         }
     }
 
-    function leagueSortVal(t, key) {
-        switch(key) {
-            case 'pts':    return t.points          || 0
-            case 'w':      return t.wins            || 0
-            case 'l':      return t.losses          || 0
-            case 'ot':     return t.otLosses        || 0
-            case 'gp':     return t.gamesPlayed     || 0
-            case 'gf':     return t.goalFor         || 0
-            case 'ga':     return t.goalAgainst     || 0
-            case 'so':     return (t.shootoutWins||0) + (t.shootoutLosses||0)
-            case 'home':   return (t.homeWins||0)*2 - (t.homeLosses||0)
-            case 'away':   return (t.roadWins||0)*2 - (t.roadLosses||0)
-            case 'l10':    return (t.l10Wins||0)*2  - (t.l10Losses||0)
-            case 'streak': return parseInt(t.streakCount) || 0
-            default:       return t.points          || 0
-        }
+    Connections {
+        target: std
+        function onDataChanged() { buildStandingsModel() }
     }
-
-    function buildDivisionModel() {
-        var divs = [
-            { api: "Atlantic",      label: "Atlantique"     },
-            { api: "Metropolitan",  label: "Métropolitaine" },
-            { api: "Central",       label: "Centrale"       },
-            { api: "Pacific",       label: "Pacifique"      }
-        ]
-        for (var di = 0; di < divs.length; di++) {
-            var div = divs[di]
-            var teams = []
-            for (var i = 0; i < root.standingsData.length; i++) {
-                if (root.standingsData[i].divisionName === div.api) teams.push(root.standingsData[i])
-            }
-            teams.sort(function(a,b) {
-                if (b.points !== a.points) return b.points - a.points
-                return b.wins - a.wins
-            })
-            standingsFlatModel.append({ type: "divHeader", label: div.label,
-                abbrev:"", city:"", gp:0, w:0, l:0, ot:0, pts:0 })
-            standingsFlatModel.append({ type: "colHeader",
-                label: "", abbrev:"", city:"", gp:0, w:0, l:0, ot:0, pts:0 })
-            for (var k = 0; k < teams.length; k++) {
-                // Séparateur après la 3e position (zone playoff)
-                if (k === 3) {
-                    standingsFlatModel.append({ type: "wcSeparator", label: "",
-                        abbrev:"", city:"", gp:0, w:0, l:0, ot:0, pts:0 })
-                }
-                var t = teams[k]
-                standingsFlatModel.append({
-                    type: "team", label: "",
-                    abbrev: t.teamAbbrev  ? (t.teamAbbrev.default  || t.teamAbbrev)  : "?",
-                    city:   t.placeName   ? (t.placeName.default   || t.placeName)   : "",
-                    gp:  t.gamesPlayed || 0, w: t.wins || 0,
-                    l:   t.losses      || 0, ot: t.otLosses || 0, pts: t.points || 0
-                })
-            }
-        }
-    }
-
-    function buildWildCardModel() {
-        var confs = [
-            { abbrev: "E", name: i18n("Eastern Conference"),
-              divs: [ { api: "Atlantic",      label: "Atlantique"      },
-                      { api: "Metropolitan",  label: "Métropolitaine"  } ] },
-            { abbrev: "W", name: i18n("Western Conference"),
-              divs: [ { api: "Central",       label: "Centrale"        },
-                      { api: "Pacific",       label: "Pacifique"       } ] }
-        ]
-        for (var ci = 0; ci < confs.length; ci++) {
-            var conf = confs[ci]
-            var confTeams = []
-            for (var i = 0; i < root.standingsData.length; i++) {
-                var t = root.standingsData[i]
-                if (t.conferenceAbbrev === conf.abbrev) confTeams.push(t)
-            }
-            standingsFlatModel.append({ type: "confHeader", label: conf.name,
-                abbrev:"", city:"", gp:0, w:0, l:0, ot:0, pts:0 })
-            standingsFlatModel.append({ type: "colHeader",  label: "",
-                abbrev:"", city:"", gp:0, w:0, l:0, ot:0, pts:0 })
-            for (var di = 0; di < conf.divs.length; di++) {
-                var div = conf.divs[di]
-                var divTeams = []
-                for (var j = 0; j < confTeams.length; j++) {
-                    if (confTeams[j].divisionName === div.api) divTeams.push(confTeams[j])
-                }
-                divTeams.sort(function(a,b){ return a.divisionSequence - b.divisionSequence })
-                standingsFlatModel.append({ type: "divHeader", label: div.label,
-                    abbrev:"", city:"", gp:0, w:0, l:0, ot:0, pts:0 })
-                for (var k = 0; k < Math.min(3, divTeams.length); k++) {
-                    var dt = divTeams[k]
-                    standingsFlatModel.append({
-                        type:   "team",
-                        label:  "",
-                        abbrev: dt.teamAbbrev   ? (dt.teamAbbrev.default   || dt.teamAbbrev)   : "?",
-                        city:   dt.placeName    ? (dt.placeName.default    || dt.placeName)     : "",
-                        gp:     dt.gamesPlayed  || 0,
-                        w:      dt.wins         || 0,
-                        l:      dt.losses       || 0,
-                        ot:     dt.otLosses     || 0,
-                        pts:    dt.points       || 0
-                    })
-                }
-            }
-            var wc = []
-            for (var w = 0; w < confTeams.length; w++) {
-                if (confTeams[w].divisionSequence > 3) wc.push(confTeams[w])
-                // fallback : si divisionSequence absent, prendre wildcardSequence
-                else if (!confTeams[w].divisionSequence && confTeams[w].wildcardSequence) wc.push(confTeams[w])
-            }
-            wc.sort(function(a,b){
-                if (b.points !== a.points) return b.points - a.points
-                return b.wins - a.wins
-            })
-            standingsFlatModel.append({ type: "wcHeader", label: i18n("Wild Card"),
-                abbrev:"", city:"", gp:0, w:0, l:0, ot:0, pts:0 })
-            for (var wci = 0; wci < wc.length; wci++) {
-                // Séparateur après les 2 spots Wild Card (positions 7 et 8)
-                if (wci === 2) {
-                    standingsFlatModel.append({ type: "wcSeparator", label: "",
-                        abbrev:"", city:"", gp:0, w:0, l:0, ot:0, pts:0 })
-                }
-                var wt = wc[wci]
-                standingsFlatModel.append({
-                    type:   "team",
-                    label:  "",
-                    abbrev: wt.teamAbbrev  ? (wt.teamAbbrev.default  || wt.teamAbbrev)  : "?",
-                    city:   wt.placeName   ? (wt.placeName.default   || wt.placeName)   : "",
-                    gp:     wt.gamesPlayed || 0,
-                    w:      wt.wins        || 0,
-                    l:      wt.losses      || 0,
-                    ot:     wt.otLosses    || 0,
-                    pts:    wt.points      || 0
-                })
-            }
-        }
-    }
-
-    onStandingsDataChanged: buildStandingsModel()
 
 
     fullRepresentation: Item {
+        id: fullRoot
         implicitWidth:  root.isDesktop ? 400 : 440
         implicitHeight: root.isDesktop ? 520 : 520
-        // En mode desktop, le widget est redimensionnable — pas de contrainte max
         Layout.fillWidth:  root.isDesktop
         Layout.fillHeight: root.isDesktop
 
-        // ── Vue desktop enrichie (cartes de matchs) ──────────────────────
+        // --- Vue desktop enrichie (cartes de matchs) ---
         Loader {
             anchors.fill: parent
             active: root.isDesktop
-            visible: root.isDesktop && !root.detailOpen && !root.standingsOpen
-                     && !root.leadersOpen && !root.bracketOpen && !root.teamHubOpen && !root.dayViewOpen
+            visible: root.isDesktop && !nav.detail && !nav.standings
+                     && !nav.leaders && !nav.bracket && !nav.teamHub && !nav.dayView
+                     && !nav.schedule && !nav.player && !nav.search && !nav.calendar
             sourceComponent: desktopRepresentation
         }
 
-
-        // Vue détail d'un match
-        ScrollView {
-            id: detailScrollView
+        // --- Vue Détail ---
+        Loader {
             anchors.fill: parent
-            visible: root.detailOpen && !root.scheduleOpen && !root.standingsOpen && !root.bracketOpen && !root.teamHubOpen && !root.leadersOpen && !root.dayViewOpen && !root.searchOpen && !(root.playerOpen && root.playerFrom === 'detail') && !root.playerOpen
-            contentWidth: availableWidth
-
-            Item {
-                width: detailScrollView.availableWidth
-                implicitHeight: detailNavBar.implicitHeight + detailColumn.implicitHeight
-
-                // ── Barre de navigation — pleine largeur ─────────────────
-                RowLayout {
-                    id: detailNavBar
-                    anchors { top: parent.top; left: parent.left; right: parent.right }
-                    anchors.topMargin: 4; anchors.leftMargin: 4; anchors.rightMargin: 4
-
-                    Button {
-                        text: i18n('✕')
-                        flat: true
-                        onClicked: {
-                            root.detailOpen = false
-                            root.expanded = false
-                        }
-                    }
-                    Item { Layout.fillWidth: true }
-                    Button {
-                        text: i18n('Standings')
-                        icon.name: 'view-list-symbolic'
-                        flat: true
-                        onClicked: {
-                            root.standingsOpen = true
-                            fetchStandings()
-                        }
-                    }
-                    Item { Layout.fillWidth: true }
-                    Button {
-                        text: i18n('Leaders')
-                        icon.name: 'view-statistics'
-                        flat: true
-                        onClicked: {
-                            root.leadersOpen = true
-                            fetchLeaders()
-                        }
-                    }
-                    Item { Layout.fillWidth: true }
-                    Button {
-                        text: i18n('Search')
-                        icon.name: 'search'
-                        flat: true
-                        onClicked: root.openSearch()
-                    }
-                    Item { Layout.fillWidth: true }
-                    Button {
-                        text: i18n('NHL.com')
-                        icon.name: 'internet-web-browser'
-                        flat: true
-                        onClicked: Qt.openUrlExternally(
-                            gameCenterUrl(root.detailAway, root.detailHome, root.detailStart, root.detailGameId)
-                        )
-                    }
-                    Button {
-                        icon.name: 'view-refresh'
-                        flat: true
-                        ToolTip.text: i18n("Refresh now")
-                        ToolTip.visible: hovered
-                        onClicked: root.refresh()
-                    }
-                }
-
-                ColumnLayout {
-                    id: detailColumn
-                    width: Math.min(320, detailScrollView.availableWidth - 32)
-                    anchors.horizontalCenter: parent.horizontalCenter
-                    anchors.top: detailNavBar.bottom
-                    anchors.topMargin: 4
-                    spacing: 8
-
-                // ── En-tête score ────────────────────────────────────────
-                RowLayout {
-                    Layout.fillWidth: true
-                    Layout.leftMargin: 12
-                    Layout.rightMargin: 12
-                    Layout.alignment: Qt.AlignHCenter
-                    spacing: 8
-
-                    // Visiteur
-                    Column {
-                        spacing: 4
-                        Layout.alignment: Qt.AlignVCenter
-                        Item {
-                            width: 100; height: 100
-                            anchors.horizontalCenter: parent.horizontalCenter
-                            Image {
-                                anchors.fill: parent
-                                source: root.teamLogoUrl(root.detailAway)
-                                fillMode: Image.PreserveAspectFit
-                                smooth: true
-                            }
-                            HoverHandler { cursorShape: Qt.PointingHandCursor }
-                            TapHandler {
-                                acceptedButtons: Qt.LeftButton
-                                gesturePolicy: TapHandler.ReleaseWithinBounds
-                                onTapped: root.openTeamHub(root.detailAway, 'detail')
-                            }
-                        }
-                        Label {
-                            anchors.horizontalCenter: parent.horizontalCenter
-                            text: String(root.detailAg)
-                            font.pixelSize: 32; font.bold: true
-                            color: Kirigami.Theme.textColor
-                        }
-                    }
-
-                    // Centre
-                    Column {
-                        spacing: 4
-                        Layout.fillWidth: true
-                        Layout.alignment: Qt.AlignVCenter
-
-                        // Pastille : seulement pour les matchs terminés (FINAL)
-                        Rectangle {
-                            anchors.horizontalCenter: parent.horizontalCenter
-                            visible: root.detailStatus === 'FINAL'
-                            radius: 5
-                            color: statusColor(root.detailStatus)
-                            opacity: 0.95
-                            width: detailBadgeCol.implicitWidth + 10
-                            height: detailBadgeCol.implicitHeight + 6
-                            Column {
-                                id: detailBadgeCol
-                                anchors.centerIn: parent
-                                spacing: 0
-                                Text {
-                                    anchors.horizontalCenter: parent.horizontalCenter
-                                    text: badgeLine1(root.detailStatus, '', root.detailPType,
-                                                     root.detailPeriod, root.detailRemain,
-                                                     root.detailStart, root.detailHome, root.detailInterm)
-                                    color: 'white'; font.pixelSize: 10; font.bold: true
-                                }
-                                Text {
-                                    anchors.horizontalCenter: parent.horizontalCenter
-                                    visible: text !== ''
-                                    text: badgeLine2(root.detailStatus, root.detailStart, root.detailHome, root.detailPType)
-                                    color: 'white'; font.pixelSize: 9; opacity: 0.85
-                                }
-                            }
-                        }
-                        // LIVE : période et temps restant en texte simple
-                        Column {
-                            anchors.horizontalCenter: parent.horizontalCenter
-                            visible: root.detailStatus === 'LIVE'
-                            spacing: 2
-                            Label {
-                                anchors.horizontalCenter: parent.horizontalCenter
-                                text: badgeLine1(root.detailStatus, '', root.detailPType,
-                                                 root.detailPeriod, root.detailRemain,
-                                                 root.detailStart, root.detailHome, root.detailInterm)
-                                font.pixelSize: 13; font.bold: true
-                                color: Kirigami.Theme.textColor
-                            }
-                            // Compte à rebours intermission depuis API
-                            Label {
-                                anchors.horizontalCenter: parent.horizontalCenter
-                                visible: root.detailInterm && root.detailIntermRemain !== ''
-                                text: root.detailIntermRemain
-                                font.pixelSize: 18; font.bold: true
-                                color: Kirigami.Theme.textColor
-                            }
-                            Label {
-                                anchors.horizontalCenter: parent.horizontalCenter
-                                visible: text !== ''
-                                text: badgeLine2(root.detailStatus, root.detailStart, root.detailHome, root.detailPType)
-                                font.pixelSize: 11
-                                color: Kirigami.Theme.disabledTextColor
-                            }
-                        }
-                    }
-
-                    // Local
-                    Column {
-                        spacing: 4
-                        Layout.alignment: Qt.AlignVCenter
-                        Item {
-                            width: 100; height: 100
-                            anchors.horizontalCenter: parent.horizontalCenter
-                            Image {
-                                anchors.fill: parent
-                                source: root.teamLogoUrl(root.detailHome)
-                                fillMode: Image.PreserveAspectFit
-                                smooth: true
-                            }
-                            HoverHandler { cursorShape: Qt.PointingHandCursor }
-                            TapHandler {
-                                acceptedButtons: Qt.LeftButton
-                                gesturePolicy: TapHandler.ReleaseWithinBounds
-                                onTapped: root.openTeamHub(root.detailHome, 'detail')
-                            }
-                        }
-                        Label {
-                            anchors.horizontalCenter: parent.horizontalCenter
-                            text: String(root.detailHg)
-                            font.pixelSize: 32; font.bold: true
-                            color: Kirigami.Theme.textColor
-                        }
-                    }
-                }
-
-                // Date du match — sous les logos, centrée
-                Label {
-                    visible: root.detailStart > 0 && root.detailStatus !== 'UPCOMING'
-                    Layout.alignment: Qt.AlignHCenter
-                    text: root.detailStart > 0
-                          ? Qt.formatDateTime(new Date(root.detailStart), "hh:mm  ·  ddd d MMM yyyy")
-                          : ""
-                    font.pixelSize: 13; font.bold: true
-                    color: Kirigami.Theme.textColor
-                }
-
-                // Chargement / erreur
-                Label {
-                    visible: root.detailLoading
-                    text: i18n('Loading…')
-                    color: Kirigami.Theme.disabledTextColor
-                    font.pixelSize: 15
-                    Layout.alignment: Qt.AlignHCenter
-                }
-                Label {
-                    visible: !root.detailLoading && root.detailError !== ''
-                    text: root.detailError
-                    color: 'tomato'; font.pixelSize: 14
-                    wrapMode: Text.Wrap
-                    Layout.fillWidth: true
-                }
-
-                // ── Avantage numérique ───────────────────────────────────
-                Rectangle {
-                    id: ppBanner
-                    Layout.alignment: Qt.AlignHCenter
-                    property var sit: root.parseSituation(
-                                          root.detailSituationCode,
-                                          root.detailAway,
-                                          root.detailHome)
-                    visible: sit !== null
-                    width:  ppBannerContent.implicitWidth + 20
-                    height: ppBannerContent.implicitHeight + 10
-                    radius: 6
-                    color: (sit && sit.ppTeam)
-                           ? root.teamColor(sit.ppTeam)
-                           : Kirigami.Theme.highlightColor
-                    Column {
-                        id: ppBannerContent
-                        anchors.centerIn: parent
-                        spacing: 2
-                        // Ligne AN / 4v4 / 3v3
-                        Row {
-                            anchors.horizontalCenter: parent.horizontalCenter
-                            spacing: 6
-                            Text {
-                                text: ppBanner.sit ? ppBanner.sit.ppType : ''
-                                font.pixelSize: 14; font.bold: true
-                                color: 'white'
-                            }
-                            Text {
-                                visible: ppBanner.sit && !ppBanner.sit.even
-                                text: ppBanner.sit
-                                      ? ((ppBanner.sit.ppTeam || '') + '  '
-                                         + ppBanner.sit.awaySkaters + 'v'
-                                         + ppBanner.sit.homeSkaters)
-                                      : ''
-                                font.pixelSize: 14
-                                color: 'white'
-                            }
-                        }
-                        // Filet vide
-                        Row {
-                            anchors.horizontalCenter: parent.horizontalCenter
-                            spacing: 4
-                            visible: ppBanner.sit !== null && ppBanner.sit.emptyNet
-                            Text { text: '🥅'; font.pixelSize: 13 }
-                            Text {
-                                text: ppBanner.sit && ppBanner.sit.enTeam
-                                      ? ppBanner.sit.enTeam : ''
-                                font.pixelSize: 13; font.bold: true
-                                color: 'white'
-                            }
-                        }
-                    }
-                }
-
-                // ── Punitions actives ────────────────────────────────────
-                ColumnLayout {
-                    Layout.fillWidth: true
-                    Layout.alignment: Qt.AlignHCenter
-                    spacing: 3
-                    visible: root.detailStatus === 'LIVE' && !root.detailInterm
-                             && (root.detailPenaltyBoxAway !== '[]'
-                                 || root.detailPenaltyBoxHome !== '[]')
-
-                    // Fonction locale : formater secondes en M:SS
-                    function fmtPen(secs) {
-                        var m = Math.floor(secs / 60)
-                        var s = secs % 60
-                        return m + ':' + (s < 10 ? '0' : '') + s
-                    }
-
-                    Repeater {
-                        model: {
-                            var rows = []
-                            var pa = []
-                            var ph = []
-                            try { pa = JSON.parse(root.detailPenaltyBoxAway) } catch(e) {}
-                            try { ph = JSON.parse(root.detailPenaltyBoxHome) } catch(e) {}
-                            var maxLen = Math.max(pa.length, ph.length)
-                            for (var i = 0; i < maxLen; i++) {
-                                rows.push({
-                                    away: pa[i] || null,
-                                    home: ph[i] || null
-                                })
-                            }
-                            return rows
-                        }
-                        RowLayout {
-                            Layout.fillWidth: true
-                            spacing: 4
-                            // Colonne visiteur
-                            Rectangle {
-                                Layout.preferredWidth: 120
-                                height: penAwayCol.implicitHeight + 6
-                                radius: 4
-                                visible: modelData.away !== null
-                                color: root.teamColor(root.detailAway)
-                                opacity: 0.85
-                                Column {
-                                    id: penAwayCol
-                                    anchors.centerIn: parent
-                                    spacing: 0
-                                    Text {
-                                        text: modelData.away
-                                              ? '#' + modelData.away.sweaterNumber
-                                                + ' ' + modelData.away.name.default
-                                              : ''
-                                        color: root.teamTextColor(root.detailAway)
-                                        font.pixelSize: 12; font.bold: true
-                                        anchors.horizontalCenter: parent.horizontalCenter
-                                    }
-                                    Text {
-                                        text: modelData.away
-                                              ? parent.parent.parent.parent.fmtPen(modelData.away.secondsRemaining)
-                                              : ''
-                                        color: root.teamTextColor(root.detailAway)
-                                        font.pixelSize: 11
-                                        anchors.horizontalCenter: parent.horizontalCenter
-                                    }
-                                }
-                            }
-                            // Icône centre
-                            Label {
-                                text: '🚫'
-                                font.pixelSize: 14
-                                Layout.fillWidth: true
-                                horizontalAlignment: Text.AlignHCenter
-                            }
-                            // Colonne local
-                            Rectangle {
-                                Layout.preferredWidth: 120
-                                height: penHomeCol.implicitHeight + 6
-                                radius: 4
-                                visible: modelData.home !== null
-                                color: root.teamColor(root.detailHome)
-                                opacity: 0.85
-                                Column {
-                                    id: penHomeCol
-                                    anchors.centerIn: parent
-                                    spacing: 0
-                                    Text {
-                                        text: modelData.home
-                                              ? '#' + modelData.home.sweaterNumber
-                                                + ' ' + modelData.home.name.default
-                                              : ''
-                                        color: root.teamTextColor(root.detailHome)
-                                        font.pixelSize: 12; font.bold: true
-                                        anchors.horizontalCenter: parent.horizontalCenter
-                                    }
-                                    Text {
-                                        text: modelData.home
-                                              ? parent.parent.parent.parent.fmtPen(modelData.home.secondsRemaining)
-                                              : ''
-                                        color: root.teamTextColor(root.detailHome)
-                                        font.pixelSize: 11
-                                        anchors.horizontalCenter: parent.horizontalCenter
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-
-                // ── Tirs au but (mise en évidence) ───────────────────────
-                RowLayout {
-                    visible: !root.detailLoading && root.detailStats['sog'] !== undefined
-                    Layout.fillWidth: true
-                    spacing: 0
-                    Label {
-                        text: root.detailStats['sog'] ? String(root.detailStats['sog'].away) : ''
-                        font.pixelSize: 25; font.bold: true
-                        color: teamColorAdapted(root.detailAway)
-                        Layout.preferredWidth: 70; horizontalAlignment: Text.AlignHCenter
-                    }
-                    Label {
-                        text: i18n('Shots on Goal')
-                        font.pixelSize: 14
-                        color: Kirigami.Theme.disabledTextColor
-                        Layout.fillWidth: true; horizontalAlignment: Text.AlignHCenter
-                    }
-                    Label {
-                        text: root.detailStats['sog'] ? String(root.detailStats['sog'].home) : ''
-                        font.pixelSize: 25; font.bold: true
-                        color: teamColorAdapted(root.detailHome)
-                        Layout.preferredWidth: 70; horizontalAlignment: Text.AlignHCenter
-                    }
-                }
-
-                // ── Séparateur ───────────────────────────────────────────
-                Rectangle {
-                    visible: !root.detailLoading && Object.keys(root.detailStats).length > 0
-                    Layout.fillWidth: true; height: 1; radius: 1
-                    gradient: Gradient {
-                            orientation: Gradient.Horizontal
-                            GradientStop { position: 0.0; color: root.teamColor(root.detailAway) }
-                            GradientStop { position: 1.0; color: root.teamColor(root.detailHome) }
-                        }
-                        opacity: 0.6
-                }
-
-                // ── Stats d'équipe (sans SOG, déjà affiché ci-dessus) ─────
-                ColumnLayout {
-                    visible: !root.detailLoading && Object.keys(root.detailStats).length > 0
-                    Layout.fillWidth: true
-                    spacing: 2
-
-                    Repeater {
-                        model: {
-                            let order = ['faceoffWinningPctg','powerPlay','pim','hits','blockedShots','giveaways','takeaways']
-                            let labels = {
-                                'sog':                 i18n('Shots on Goal'),
-                                'faceoffWinningPctg':  i18n('Faceoffs %'),
-                                'powerPlay':           i18n('Power Play'),
-                                'hits':                i18n('Hits'),
-                                'blockedShots':        i18n('Blocks'),
-                                'giveaways':           i18n('Giveaways'),
-                                'takeaways':           i18n('Takeaways'),
-                                'pim':                 i18n('PIM')
-                            }
-                            let rows = []
-                            for (let i = 0; i < order.length; i++) {
-                                let k = order[i]
-                                let entry = root.detailStats[k]
-                                if (entry === undefined) continue
-                                let av = entry.away
-                                let hv = entry.home
-                                let avRaw = 0, hvRaw = 0
-                                let avSub = '', hvSub = ''
-                                if (k === 'powerPlay' && av !== null && typeof av === 'object') {
-                                    let ho = entry.home
-                                    avRaw = av.opportunities > 0 ? av.goals / av.opportunities : 0
-                                    hvRaw = ho.opportunities > 0 ? ho.goals / ho.opportunities : 0
-                                    avSub = av.opportunities > 0 ? (avRaw*100).toFixed(1) + '%' : '—'
-                                    hvSub = ho.opportunities > 0 ? (hvRaw*100).toFixed(1) + '%' : '—'
-                                    av = (av.goals||0) + '/' + (av.opportunities||0)
-                                    hv = (ho.goals||0) + '/' + (ho.opportunities||0)
-                                } else if (k === 'faceoffWinningPctg') {
-                                    avRaw = typeof av === 'number' ? av / 100 : 0
-                                    hvRaw = typeof hv === 'number' ? hv / 100 : 0
-                                    av = typeof av === 'number' ? av.toFixed(1) + '%' : String(av)
-                                    hv = typeof hv === 'number' ? hv.toFixed(1) + '%' : String(hv)
-                                } else {
-                                    let total = (parseFloat(av)||0) + (parseFloat(hv)||0)
-                                    avRaw = total > 0 ? (parseFloat(av)||0) / total : 0.5
-                                    hvRaw = total > 0 ? (parseFloat(hv)||0) / total : 0.5
-                                    av = String(av)
-                                    hv = String(hv)
-                                }
-                                rows.push({
-                                    label: labels[k] || k,
-                                    away: av, home: hv,
-                                    awayRaw: avRaw, homeRaw: hvRaw,
-                                    awaySub: avSub, homeSub: hvSub
-                                })
-                            }
-                            return rows
-                        }
-                        delegate: ColumnLayout {
-                            Layout.fillWidth: true
-                            spacing: 2
-
-                            // Valeurs + label
-                            RowLayout {
-                                Layout.fillWidth: true
-                                spacing: 4
-                                Label {
-                                    text: modelData.away
-                                    font.pixelSize: 16; font.bold: true
-                                    color: root.teamColorAdapted(root.detailAway)
-                                    Layout.preferredWidth: 65
-                                    horizontalAlignment: Text.AlignLeft
-                                }
-                                Label {
-                                    text: modelData.label
-                                    font.pixelSize: 12
-                                    color: Kirigami.Theme.disabledTextColor
-                                    Layout.fillWidth: true
-                                    horizontalAlignment: Text.AlignHCenter
-                                    wrapMode: Text.WordWrap
-                                }
-                                Label {
-                                    text: modelData.home
-                                    font.pixelSize: 16; font.bold: true
-                                    color: root.teamColorAdapted(root.detailHome)
-                                    Layout.preferredWidth: 65
-                                    horizontalAlignment: Text.AlignRight
-                                }
-                            }
-
-                            // Barre de progression bicolore
-                            Item {
-                                Layout.fillWidth: true
-                                height: 4
-
-                                // Côté visiteur
-                                Rectangle {
-                                    anchors { left: parent.left; top: parent.top; bottom: parent.bottom }
-                                    width: parent.width * modelData.awayRaw
-                                    color: root.teamColor(root.detailAway)
-                                    radius: 2
-                                }
-                                // Côté local
-                                Rectangle {
-                                    anchors { right: parent.right; top: parent.top; bottom: parent.bottom }
-                                    width: parent.width * modelData.homeRaw
-                                    color: root.teamColor(root.detailHome)
-                                    radius: 2
-                                }
-                            }
-
-                            // Sous-texte (ex: 8/15 pour faceoffs)
-                            RowLayout {
-                                Layout.fillWidth: true
-                                visible: modelData.awaySub !== '' || modelData.homeSub !== ''
-                                Label {
-                                    text: modelData.awaySub
-                                    font.pixelSize: 11; opacity: 0.55
-                                    color: Kirigami.Theme.disabledTextColor
-                                    Layout.preferredWidth: 65
-                                    horizontalAlignment: Text.AlignLeft
-                                }
-                                Item { Layout.fillWidth: true }
-                                Label {
-                                    text: modelData.homeSub
-                                    font.pixelSize: 11; opacity: 0.55
-                                    color: Kirigami.Theme.disabledTextColor
-                                    Layout.preferredWidth: 65
-                                    horizontalAlignment: Text.AlignRight
-                                }
-                            }
-                        }
-                    }
-                }
-
-                // ── Buts ─────────────────────────────────────────────────
-                Rectangle {
-                    visible: !root.detailLoading
-                    Layout.fillWidth: true; height: 1; radius: 1
-                    gradient: Gradient {
-                            orientation: Gradient.Horizontal
-                            GradientStop { position: 0.0; color: root.teamColor(root.detailAway) }
-                            GradientStop { position: 1.0; color: root.teamColor(root.detailHome) }
-                        }
-                        opacity: 0.6
-                }
-
-                // ── Toggle Buts / Pénalités / 3 étoiles ─────────────────
-                RowLayout {
-                    visible: !root.detailLoading && root.detailStatus !== 'UPCOMING'
-                    Layout.alignment: Qt.AlignHCenter
-                    spacing: 6
-
-                    // Buts
-                    Label {
-                        text: i18n("Goals")
-                        font.bold: root.detailView === 'goals'
-                        font.pixelSize: 14
-                        color: root.detailView === 'goals'
-                               ? Kirigami.Theme.textColor
-                               : Kirigami.Theme.disabledTextColor
-                        opacity: root.detailView === 'goals' ? 1.0 : 0.45
-                        HoverHandler { cursorShape: root.detailView !== 'goals' ? Qt.PointingHandCursor : Qt.ArrowCursor }
-                        TapHandler {
-                            enabled: root.detailView !== 'goals'
-                            onTapped: root.detailView = 'goals'
-                        }
-                    }
-
-                    Label {
-                        text: "·"; font.pixelSize: 14; opacity: 0.3
-                        color: Kirigami.Theme.textColor
-                        visible: root.detailPenalties.length > 0
-                    }
-
-                    // Pénalités
-                    Label {
-                        visible: root.detailPenalties.length > 0
-                        text: i18n("Penalties")
-                        font.bold: root.detailView === 'penalties'
-                        font.pixelSize: 14
-                        color: root.detailView === 'penalties'
-                               ? Kirigami.Theme.textColor
-                               : Kirigami.Theme.disabledTextColor
-                        opacity: root.detailView === 'penalties' ? 1.0 : 0.45
-                        HoverHandler { cursorShape: root.detailView !== 'penalties' ? Qt.PointingHandCursor : Qt.ArrowCursor }
-                        TapHandler {
-                            enabled: root.detailView !== 'penalties'
-                            onTapped: root.detailView = 'penalties'
-                        }
-                    }
-
-                    Label {
-                        text: "·"; font.pixelSize: 14; opacity: 0.3
-                        color: Kirigami.Theme.textColor
-                        visible: root.detailThreeStars.length > 0
-                    }
-
-                    // 3 étoiles
-                    Label {
-                        visible: root.detailThreeStars.length > 0
-                        text: "⭐ " + i18n("Stars")
-                        font.bold: root.detailView === 'stars'
-                        font.pixelSize: 14
-                        color: root.detailView === 'stars'
-                               ? Kirigami.Theme.textColor
-                               : Kirigami.Theme.disabledTextColor
-                        opacity: root.detailView === 'stars' ? 1.0 : 0.45
-                        HoverHandler { cursorShape: root.detailView !== 'stars' ? Qt.PointingHandCursor : Qt.ArrowCursor }
-                        TapHandler {
-                            enabled: root.detailView !== 'stars'
-                            onTapped: root.detailView = 'stars'
-                        }
-                    }
-                }
-
-                // ── Preview match à venir ────────────────────────────
-                ColumnLayout {
-                    visible: !root.detailLoading && root.detailStatus === 'UPCOMING'
-                    Layout.fillWidth: true
-                    spacing: 6
-
-                    // Heure du match
-                    Label {
-                        visible: root.detailStart > 0
-                        Layout.alignment: Qt.AlignHCenter
-                        text: root.detailStart > 0
-                            ? Qt.formatTime(new Date(root.detailStart), "hh:mm") + "  ·  "
-                              + root.localeDateLong(root.detailStart)
-                            : ""
-                        font.pixelSize: 15; font.bold: true
-                        color: Kirigami.Theme.textColor
-                    }
-
-                    // Aréna
-                    Label {
-                        visible: (root.pvVenue || '') !== ''
-                        Layout.alignment: Qt.AlignHCenter
-                        text: root.pvVenue || ''
-                        font.pixelSize: 14; opacity: 0.6
-                        color: Kirigami.Theme.disabledTextColor
-                    }
-
-                    // Séparateur
-                    Rectangle {
-                        Layout.fillWidth: true; height: 1; radius: 1
-                        gradient: Gradient {
-                            orientation: Gradient.Horizontal
-                            GradientStop { position: 0.0; color: root.teamColor(root.detailAway) }
-                            GradientStop { position: 1.0; color: root.teamColor(root.detailHome) }
-                        }
-                        opacity: 0.6
-                    }
-
-                    // ── Score de série (playoffs) ou série saison ────────────
-                    // Playoff : affichage proéminent avec ronde
-                    ColumnLayout {
-                        visible: root.detailIsPlayoff && (root.pvSeriesAway > 0 || root.pvSeriesHome > 0)
-                        Layout.alignment: Qt.AlignHCenter
-                        spacing: 4
-
-                        // Ronde
-                        Label {
-                            Layout.alignment: Qt.AlignHCenter
-                            text: root.detailSeriesRound !== ''
-                                  ? root.detailSeriesRound
-                                  : root.playoffRoundLabel(0)
-                            font.pixelSize: 12; font.bold: true
-                            color: Kirigami.Theme.disabledTextColor
-                            opacity: 0.8
-                        }
-
-                        // Score de série
-                        RowLayout {
-                            Layout.alignment: Qt.AlignHCenter
-                            spacing: 8
-
-                            // Équipe menant
-                            Label {
-                                text: root.pvSeriesAway > root.pvSeriesHome
-                                      ? root.detailAway + "  " + i18n("leads")
-                                      : root.pvSeriesHome > root.pvSeriesAway
-                                        ? root.detailHome + "  " + i18n("leads")
-                                        : i18n("Tied")
-                                font.pixelSize: 13
-                                color: root.pvSeriesAway > root.pvSeriesHome
-                                       ? root.teamColorAdapted(root.detailAway)
-                                       : root.pvSeriesHome > root.pvSeriesAway
-                                         ? root.teamColorAdapted(root.detailHome)
-                                         : Kirigami.Theme.textColor
-                            }
-
-                            // Score
-                            Label {
-                                text: root.pvSeriesAway + " – " + root.pvSeriesHome
-                                font.pixelSize: 22; font.bold: true
-                                color: Kirigami.Theme.textColor
-                            }
-
-                            // Bouton bracket
-                            Button {
-                                text: "🏆"
-                                flat: true
-                                font.pixelSize: 16
-                                onClicked: {
-                                    root.bracketOpen = true
-                                    if (!root.bracketData) fetchPlayoffBracket()
-                                }
-                            }
-                        }
-
-                        // Indication match X de Y
-                        Label {
-                            Layout.alignment: Qt.AlignHCenter
-                            text: {
-                                let tot = root.pvSeriesAway + root.pvSeriesHome + 1
-                                return i18n("Game") + " " + tot + " " + i18n("of 7")
-                            }
-                            font.pixelSize: 11; opacity: 0.6
-                            color: Kirigami.Theme.disabledTextColor
-                        }
-                    }
-
-                    // Série saison (hors playoffs)
-                    Label {
-                        visible: !root.detailIsPlayoff && (root.pvSeriesTotal || false)
-                        Layout.alignment: Qt.AlignHCenter
-                        text: i18n("Season series") + " :  "
-                              + root.detailAway + "  "
-                              + (root.pvSeriesAway || 0)
-                              + " – "
-                              + (root.pvSeriesHome || 0)
-                              + "  " + root.detailHome
-                        font.pixelSize: 14; font.bold: true
-                        color: Kirigami.Theme.textColor
-                    }
-
-                    // Séparateur
-                    Rectangle {
-                        Layout.fillWidth: true; height: 1; radius: 1
-                        gradient: Gradient {
-                            orientation: Gradient.Horizontal
-                            GradientStop { position: 0.0; color: root.teamColor(root.detailAway) }
-                            GradientStop { position: 1.0; color: root.teamColor(root.detailHome) }
-                        }
-                        opacity: 0.6
-                    }
-
-                    // Fiches saison
-                    Item {
-                        Layout.fillWidth: true
-                        height: fichesRow.implicitHeight
-                        RowLayout {
-                            id: fichesRow
-                            anchors.horizontalCenter: parent.horizontalCenter
-                            spacing: 32
-                            // Visiteur
-                            ColumnLayout {
-                                spacing: 2
-                                Label { Layout.alignment: Qt.AlignHCenter
-                                        text: root.pvAwayRecord || '–'
-                                        font.pixelSize: 18; font.bold: true
-                                        color: root.teamColorAdapted(root.detailAway) }
-                                Label { Layout.alignment: Qt.AlignHCenter
-                                        text: i18n("Record")
-                                        font.pixelSize: 11; opacity: 0.35
-                                        color: Kirigami.Theme.disabledTextColor }
-                            }
-                            // Local
-                            ColumnLayout {
-                                spacing: 2
-                                Label { Layout.alignment: Qt.AlignHCenter
-                                        text: root.pvHomeRecord || '–'
-                                        font.pixelSize: 18; font.bold: true
-                                        color: root.teamColorAdapted(root.detailHome) }
-                                Label { Layout.alignment: Qt.AlignHCenter
-                                        text: i18n("Record")
-                                        font.pixelSize: 11; opacity: 0.35
-                                        color: Kirigami.Theme.disabledTextColor }
-                            }
-                        }
-                    }
-
-                    // Séparateur
-                    Rectangle {
-                        Layout.fillWidth: true; height: 1; radius: 1
-                        gradient: Gradient {
-                            orientation: Gradient.Horizontal
-                            GradientStop { position: 0.0; color: root.teamColor(root.detailAway) }
-                            GradientStop { position: 1.0; color: root.teamColor(root.detailHome) }
-                        }
-                        opacity: 0.6
-                    }
-
-                    // Leaders points — titre
-                    Label {
-                        Layout.alignment: Qt.AlignHCenter
-                        visible: (root.pvAwayLeaders || []).length > 0
-                                 || (root.pvHomeLeaders || []).length > 0
-                        text: i18n("Points leaders (last 5 games)")
-                        font.pixelSize: 12; font.bold: true; opacity: 0.6
-                        color: Kirigami.Theme.disabledTextColor
-                    }
-
-                    // Leaders côte à côte
-                    RowLayout {
-                        Layout.fillWidth: true
-                        spacing: 8
-                        visible: (root.pvAwayLeaders || []).length > 0
-                                 || (root.pvHomeLeaders || []).length > 0
-
-                        // Leaders visiteur
-                        ColumnLayout {
-                            Layout.fillWidth: true; spacing: 3
-                            Repeater {
-                                model: root.pvAwayLeaders || []
-                                delegate: ColumnLayout {
-                                    Layout.fillWidth: true; spacing: 0
-                                    Label {
-                                        Layout.fillWidth: true
-                                        text: {
-                                            var lbl = modelData.cat === 'points' ? i18n('PTS')
-                                                    : modelData.cat === 'goals'   ? i18n('Goals')
-                                                    : i18n('Assists')
-                                            return lbl + ' : ' + modelData.value
-                                        }
-                                        font.pixelSize: 11; font.bold: true; opacity: 0.35
-                                        color: Kirigami.Theme.disabledTextColor
-                                    }
-                                    Label {
-                                        Layout.fillWidth: true
-                                        text: modelData.name
-                                        font.pixelSize: 14
-                                        color: root.teamColorAdapted(root.detailAway)
-                                        elide: Text.ElideRight
-                                    }
-                                }
-                            }
-                        }
-
-                        // Séparateur vertical
-                        Rectangle {
-                            width: 1; Layout.fillHeight: true
-                            color: Kirigami.Theme.textColor; opacity: 0.15
-                        }
-
-                        // Leaders local
-                        ColumnLayout {
-                            Layout.fillWidth: true; spacing: 3
-                            Repeater {
-                                model: root.pvHomeLeaders || []
-                                delegate: ColumnLayout {
-                                    Layout.fillWidth: true; spacing: 0
-                                    Label {
-                                        Layout.fillWidth: true
-                                        text: {
-                                            var lbl = modelData.cat === 'points' ? i18n('PTS')
-                                                    : modelData.cat === 'goals'   ? i18n('Goals')
-                                                    : i18n('Assists')
-                                            return lbl + ' : ' + modelData.value
-                                        }
-                                        font.pixelSize: 11; font.bold: true; opacity: 0.35
-                                        color: Kirigami.Theme.disabledTextColor
-                                    }
-                                    Label {
-                                        Layout.fillWidth: true
-                                        text: modelData.name
-                                        font.pixelSize: 14
-                                        color: root.teamColorAdapted(root.detailHome)
-                                        elide: Text.ElideRight
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    // Séparateur
-                    Rectangle {
-                        visible: root.pvAwayGoalie !== null
-                                 || root.pvHomeGoalie !== null
-                        Layout.fillWidth: true; height: 1; radius: 1
-                        gradient: Gradient {
-                            orientation: Gradient.Horizontal
-                            GradientStop { position: 0.0; color: root.teamColor(root.detailAway) }
-                            GradientStop { position: 1.0; color: root.teamColor(root.detailHome) }
-                        }
-                        opacity: 0.6
-                    }
-
-                    // Gardiens probables
-                    Label {
-                        visible: root.pvAwayGoalie !== null
-                                 || root.pvHomeGoalie !== null
-                        Layout.alignment: Qt.AlignHCenter
-                        text: i18n("Probable goalies")
-                        font.pixelSize: 12; font.bold: true; opacity: 0.6
-                        color: Kirigami.Theme.disabledTextColor
-                    }
-
-                    Item {
-                        Layout.fillWidth: true
-                        visible: root.pvAwayGoalie !== null || root.pvHomeGoalie !== null
-                        height: goaliesRow.implicitHeight
-                        RowLayout {
-                            id: goaliesRow
-                            anchors.horizontalCenter: parent.horizontalCenter
-                            spacing: 24
-                            // Gardien visiteur
-                            ColumnLayout {
-                                spacing: 1
-                                Label {
-                                    Layout.alignment: Qt.AlignHCenter
-                                    text: root.pvAwayGoalie ? root.pvAwayGoalie.name : '–'
-                                    font.pixelSize: 14; font.bold: true
-                                    color: root.teamColorAdapted(root.detailAway)
-                                }
-                                Label {
-                                    Layout.alignment: Qt.AlignHCenter
-                                    text: root.pvAwayGoalie ? root.pvAwayGoalie.record : ''
-                                    font.pixelSize: 12; opacity: 0.7
-                                    color: Kirigami.Theme.disabledTextColor
-                                }
-                                Label {
-                                    Layout.alignment: Qt.AlignHCenter
-                                    text: root.pvAwayGoalie
-                                        ? (root.pvAwayGoalie.gaa + " MOY  " + root.pvAwayGoalie.svPct + " %SV") : ''
-                                    font.pixelSize: 12; opacity: 0.7
-                                    color: Kirigami.Theme.disabledTextColor
-                                }
-                            }
-                            Rectangle {
-                                width: 1; height: 40
-                                color: Kirigami.Theme.textColor; opacity: 0.15
-                            }
-                            // Gardien local
-                            ColumnLayout {
-                                spacing: 1
-                                Label {
-                                    Layout.alignment: Qt.AlignHCenter
-                                    text: root.pvHomeGoalie ? root.pvHomeGoalie.name : '–'
-                                    font.pixelSize: 14; font.bold: true
-                                    color: root.teamColorAdapted(root.detailHome)
-                                }
-                                Label {
-                                    Layout.alignment: Qt.AlignHCenter
-                                    text: root.pvHomeGoalie ? root.pvHomeGoalie.record : ''
-                                    font.pixelSize: 12; opacity: 0.7
-                                    color: Kirigami.Theme.disabledTextColor
-                                }
-                                Label {
-                                    Layout.alignment: Qt.AlignHCenter
-                                    text: root.pvHomeGoalie
-                                        ? (root.pvHomeGoalie.gaa + " MOY  " + root.pvHomeGoalie.svPct + " %SV") : ''
-                                    font.pixelSize: 12; opacity: 0.7
-                                    color: Kirigami.Theme.disabledTextColor
-                                }
-                            }
-                        }
-                    }
-
-                    Item { height: 4 }
-                }
-
-                // Liste des buts groupés par période (masqué si pénalités)
-                Repeater {
-                    model: root.detailStatus !== 'UPCOMING' && root.detailView === 'goals'
-                           ? root.detailGoalsByPeriod : []
-                    delegate: Item {
-                        Layout.fillWidth: true
-                        implicitHeight: modelData.isPeriodHeader ? periodRow.implicitHeight + 10
-                                      : goalRow.implicitHeight + 4
-
-                        // ── En-tête de période ──────────────────────────
-                        RowLayout {
-                            id: periodRow
-                            visible: modelData.isPeriodHeader
-                            anchors { left: parent.left; right: parent.right; verticalCenter: parent.verticalCenter }
-                            spacing: 8
-
-                            Rectangle {
-                                height: 1; Layout.fillWidth: true
-                                color: Kirigami.Theme.textColor; opacity: 0.2
-                            }
-                            Label {
-                                text: modelData.label
-                                font.pixelSize: 12; font.bold: true
-                                color: Kirigami.Theme.disabledTextColor
-                                opacity: 0.8
-                            }
-                            Rectangle {
-                                height: 1; Layout.fillWidth: true
-                                color: Kirigami.Theme.textColor; opacity: 0.2
-                            }
-                        }
-
-                        // ── Ligne de but ────────────────────────────────
-                        RowLayout {
-                            id: goalRow
-                            visible: !modelData.isPeriodHeader
-                            anchors { left: parent.left; right: parent.right; verticalCenter: parent.verticalCenter }
-                            spacing: 6
-
-                            // Aucun but dans cette période
-                            Label {
-                                visible: modelData.isEmpty || false
-                                Layout.fillWidth: true
-                                text: i18n('No goals recorded.')
-                                font.pixelSize: 14; font.italic: true
-                                color: Kirigami.Theme.disabledTextColor
-                                horizontalAlignment: Text.AlignHCenter
-                            }
-
-                            // But normal
-                            Rectangle {
-                                visible: !(modelData.isEmpty || false) && modelData.team !== ''
-                                radius: 3
-                                width: tBadge.implicitWidth + 8; height: tBadge.implicitHeight + 4
-                                color: teamColor(modelData.team)
-                                Label {
-                                    id: tBadge; anchors.centerIn: parent
-                                    text: modelData.team
-                                    color: teamTextColor(modelData.team)
-                                    font.pixelSize: 12; font.bold: true
-                                }
-                            }
-                            Label {
-                                visible: !(modelData.isEmpty || false)
-                                text: modelData.time || ''
-                                font.pixelSize: 12; color: Kirigami.Theme.disabledTextColor
-                                Layout.preferredWidth: 48
-                            }
-                            Column {
-                                visible: !(modelData.isEmpty || false)
-                                spacing: 1
-                                Layout.fillWidth: true
-                                // Stocker les valeurs ici — modelData accessible à ce niveau
-                                property int goalScorerID: modelData.scorerId || 0
-                                property string goalScorerName: modelData.scorer || ''
-                                property int goalScorerGtd: modelData.goalsToDate || 0
-                                property bool goalPpg: modelData.ppg || false
-                                property bool goalShg: modelData.shg || false
-                                property bool goalEn:  modelData.en  || false
-                                property var goalAssists: modelData.assists || []
-                                // Buteur cliquable
-                                Item {
-                                    id: scorerDelegate
-                                    width: parent.width
-                                    implicitHeight: scorerLbl.implicitHeight + 4
-                                    property int sid: parent.goalScorerID
-                                    property var sassists: parent.goalAssists
-                                    Label {
-                                        id: scorerLbl
-                                        width: parent.width
-                                        text: {
-                                            var col = parent.parent
-                                            var t = col.goalScorerGtd > 0
-                                                ? col.goalScorerName + ' (' + col.goalScorerGtd + ')'
-                                                : col.goalScorerName
-                                            if (col.goalPpg) t += '  🔵 PP'
-                                            if (col.goalShg) t += '  🔴 SH'
-                                            if (col.goalEn)  t += '  🥅 EN'
-                                            return t
-                                        }
-                                        font.pixelSize: 15; font.bold: true
-                                        color: parent.sid > 0
-                                               ? Kirigami.Theme.highlightColor
-                                               : Kirigami.Theme.textColor
-                                        wrapMode: Text.Wrap
-                                    }
-                                    HoverHandler { cursorShape: parent.sid > 0 ? Qt.PointingHandCursor : Qt.ArrowCursor }
-                                    TapHandler {
-                                        acceptedButtons: Qt.LeftButton
-                                        gesturePolicy: TapHandler.ReleaseWithinBounds
-                                        onTapped: {
-                                            var sid = scorerDelegate.sid
-                                                if (sid > 0) root.openPlayer(sid, 'detail')
-                                        }
-                                    }
-                                }
-
-                                // Passeurs cliquables
-                                Repeater {
-                                    model: scorerDelegate.sassists
-                                    delegate: Item {
-                                        id: assistDelegate
-                                        width: parent.width
-                                        implicitHeight: assistLbl.implicitHeight + 2
-                                        property int aid: modelData.id || 0
-                                        Label {
-                                            id: assistLbl
-                                            width: parent.width
-                                            text: (index === 0 ? i18n('Assists: ') : '  ')
-                                                + (modelData.assistsToDate > 0
-                                                   ? modelData.name + ' (' + modelData.assistsToDate + ')'
-                                                   : modelData.name)
-                                            font.pixelSize: 12
-                                            color: assistDelegate.aid > 0
-                                                   ? Kirigami.Theme.highlightColor
-                                                   : Kirigami.Theme.disabledTextColor
-                                            opacity: 0.85
-                                            wrapMode: Text.Wrap
-                                        }
-                                        HoverHandler { cursorShape: assistDelegate.aid > 0 ? Qt.PointingHandCursor : Qt.ArrowCursor }
-                                        TapHandler {
-                                            enabled: assistDelegate.aid > 0
-                                            acceptedButtons: Qt.LeftButton
-                                            gesturePolicy: TapHandler.ReleaseWithinBounds
-                                            onTapped: root.openPlayer(assistDelegate.aid, 'detail')
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-
-                Item { height: 8 }
-
-                // ── Liste des pénalités ──────────────────────────────────
-                Repeater {
-                    model: root.detailView === 'penalties' ? root.detailPenaltiesByPeriod : []
-                    delegate: Item {
-                        Layout.fillWidth: true
-                        implicitHeight: modelData.isPeriodHeader
-                                        ? penPeriodRow.implicitHeight + 10
-                                        : penRow.implicitHeight + 6
-
-                        // En-tête de période
-                        RowLayout {
-                            id: penPeriodRow
-                            visible: modelData.isPeriodHeader
-                            anchors { left: parent.left; right: parent.right; verticalCenter: parent.verticalCenter }
-                            anchors.leftMargin: 8; anchors.rightMargin: 8
-                            spacing: 8
-                            Rectangle { height: 1; Layout.fillWidth: true; color: Kirigami.Theme.textColor; opacity: 0.2 }
-                            Label {
-                                text: modelData.label || ''
-                                font.pixelSize: 12; font.bold: true; opacity: 0.6
-                                color: Kirigami.Theme.disabledTextColor
-                            }
-                            Rectangle { height: 1; Layout.fillWidth: true; color: Kirigami.Theme.textColor; opacity: 0.2 }
-                        }
-
-                        // Ligne de pénalité
-                        RowLayout {
-                            id: penRow
-                            visible: !modelData.isPeriodHeader
-                            anchors { left: parent.left; right: parent.right; verticalCenter: parent.verticalCenter }
-                            anchors.leftMargin: 8; anchors.rightMargin: 8
-                            spacing: 6
-
-                            // Pastille équipe
-                            Rectangle {
-                                radius: 3
-                                color: root.teamColor(modelData.team || '')
-                                width: 34; height: 20
-                                Label {
-                                    anchors.centerIn: parent
-                                    text: modelData.team || ''
-                                    color: root.teamTextColor(modelData.team || '')
-                                    font.pixelSize: 10; font.bold: true; font.family: "monospace"
-                                }
-                            }
-
-                            // Temps
-                            Label {
-                                text: modelData.time || ''
-                                font.pixelSize: 11
-                                color: Kirigami.Theme.disabledTextColor
-                                Layout.preferredWidth: 42
-                            }
-
-                            // Joueur + infraction
-                            Column {
-                                spacing: 1; Layout.fillWidth: true
-
-                                // Nom cliquable
-                                Item {
-                                    width: parent.width
-                                    implicitHeight: penPlayerLbl.implicitHeight
-                                    property int pid: modelData.playerId || 0
-                                    Label {
-                                        id: penPlayerLbl
-                                        width: parent.width
-                                        text: (modelData.player || '')
-                                              + (modelData.number > 0 ? " #" + modelData.number : '')
-                                        font.pixelSize: 13; font.bold: true
-                                        color: parent.pid > 0
-                                               ? Kirigami.Theme.highlightColor
-                                               : Kirigami.Theme.textColor
-                                        elide: Text.ElideRight
-                                    }
-                                    HoverHandler { cursorShape: parent.pid > 0 ? Qt.PointingHandCursor : Qt.ArrowCursor }
-                                    TapHandler {
-                                        enabled: parent.pid > 0
-                                        acceptedButtons: Qt.LeftButton
-                                        gesturePolicy: TapHandler.ReleaseWithinBounds
-                                        onTapped: root.openPlayer(parent.pid, 'detail')
-                                    }
-                                }
-
-                                // Infraction traduite
-                                Label {
-                                    width: parent.width
-                                    text: root.penaltyDesc(modelData.descKey || '')
-                                    font.pixelSize: 11; opacity: 0.65
-                                    color: Kirigami.Theme.disabledTextColor
-                                    elide: Text.ElideRight
-                                }
-                            }
-
-                            // Durée
-                            Label {
-                                text: modelData.duration + " " + i18n("min")
-                                font.pixelSize: 12; font.bold: true
-                                color: Kirigami.Theme.highlightColor
-                            }
-                        }
-                    }
-                }
-
-                // ── 3 étoiles ────────────────────────────────────────────
-                Repeater {
-                    model: root.detailView === 'stars' ? root.detailThreeStars : []
-                    delegate: Item {
-                        Layout.fillWidth: true
-                        implicitHeight: starRow.implicitHeight + 8
-
-                        HoverHandler { cursorShape: modelData.id > 0 ? Qt.PointingHandCursor : Qt.ArrowCursor }
-                        TapHandler {
-                            enabled: modelData.id > 0
-                            acceptedButtons: Qt.LeftButton
-                            gesturePolicy: TapHandler.ReleaseWithinBounds
-                            onTapped: root.openPlayer(modelData.id, 'detail')
-                        }
-
-                            RowLayout {
-                                id: starRow
-                                anchors { left: parent.left; right: parent.right; verticalCenter: parent.verticalCenter }
-                                anchors.leftMargin: 12; anchors.rightMargin: 12
-                                spacing: 10
-
-                                // Étoiles colorées
-                                Label {
-                                    text: modelData.star === 1 ? "★★★"
-                                        : modelData.star === 2 ? "★★☆" : "★☆☆"
-                                    font.pixelSize: 12
-                                    color: modelData.star === 1 ? "#FFD700"
-                                         : modelData.star === 2 ? "#C0C0C0" : "#CD7F32"
-                                }
-
-                                // Pastille équipe
-                                Rectangle {
-                                    radius: 3
-                                    color: root.teamColor(modelData.team)
-                                    width: 34; height: 20
-                                    Label {
-                                        anchors.centerIn: parent
-                                        text: modelData.team
-                                        color: root.teamTextColor(modelData.team)
-                                        font.pixelSize: 10; font.bold: true; font.family: "monospace"
-                                    }
-                                }
-
-                                // Nom du joueur
-                                Label {
-                                    text: modelData.name || ''
-                                    font.pixelSize: 13; font.bold: true
-                                    color: modelData.id > 0
-                                           ? Kirigami.Theme.highlightColor
-                                           : Kirigami.Theme.textColor
-                                    Layout.fillWidth: true
-                                    elide: Text.ElideRight
-                                }
-
-                                // Stats
-                                Label {
-                                    text: modelData.goals >= 0 && modelData.assists >= 0
-                                          ? modelData.goals + "G " + modelData.assists + "A"
-                                          : modelData.toi || ''
-                                    font.pixelSize: 11; opacity: 0.7
-                                    color: Kirigami.Theme.disabledTextColor
-                                }
-                            }
-                        }
-                    }
-                } // ColumnLayout
-            } // Item wrapper
+            active: nav.detail
+            asynchronous: true
+            visible: active && !nav.schedule && !nav.standings && !nav.bracket && !nav.teamHub && !nav.leaders && !nav.dayView && !nav.search && !nav.player
+            source: "views/DetailView.qml"
+            onLoaded: item.controller = root
         }
 
-
-        // ── Vue calendrier d'équipe ──────────────────────────────────────
-        Item {
+        // --- Vue Standings ---
+        Loader {
             anchors.fill: parent
-            visible: root.scheduleOpen && !root.playerOpen
-
-            ColumnLayout {
-                anchors.fill: parent
-                spacing: 0
-
-                // ── Barre navigation : [‹ Back]  [🏒 TEAM Titre]  [Stats / Calendrier]
-                RowLayout {
-                    Layout.fillWidth: true
-                    Layout.leftMargin: 4; Layout.rightMargin: 4
-                    Layout.topMargin: 4; Layout.bottomMargin: 2
-                    spacing: 4
-
-                    // Bouton retour
-                    Button {
-                        text: root.teamHubOpen ? i18n("‹ Team") : i18n("‹ Back")
-                        icon.name: "go-previous"
-                        flat: true
-                        onClicked: {
-                            root.scheduleOpen = false
-                            root.scheduleShowStats = false
-                            // Retourner au hub si on en vient
-                            if (root.teamHubOpen)
-                                root.teamHubOpen = true  // déjà true, juste forcer le rendu
-                        }
-                    }
-
-                    Item { Layout.fillWidth: true }
-
-                    // Logo équipe + titre centré
-                    RowLayout {
-                        spacing: 6
-                        Layout.alignment: Qt.AlignHCenter
-                        Image {
-                            source: root.teamLogoUrl(root.scheduleTeam)
-                            Layout.preferredWidth: 96
-                            Layout.preferredHeight: 96
-                            fillMode: Image.PreserveAspectFit
-                            smooth: true
-                        }
-                        Label {
-                            text: root.scheduleShowStats ? i18n("Stats") : i18n("Schedule")
-                            font.bold: true; font.pixelSize: 16
-                        }
-                    }
-
-                    Item { Layout.fillWidth: true }
-
-                    // Bouton bascule Calendrier ↔ Stats
-                    Button {
-                        text: root.scheduleShowStats ? i18n("Schedule") : i18n("Stats")
-                        icon.name: root.scheduleShowStats
-                            ? "view-calendar"
-                            : "view-statistics"
-                        flat: true
-                        onClicked: {
-                            root.scheduleShowStats = !root.scheduleShowStats
-                            if (root.scheduleShowStats
-                                    && root.scheduleSkaters.length === 0
-                                    && !root.scheduleStatsLoading) {
-                                root.fetchTeamStats(root.scheduleTeam)
-                            }
-                        }
-                    }
-                }
-
-                // Chargement / erreur
-                Label {
-                    Layout.alignment: Qt.AlignHCenter; Layout.topMargin: 20
-                    visible: root.scheduleLoading
-                    text: i18n("Loading…"); opacity: 0.6; font.italic: true
-                }
-                Label {
-                    Layout.alignment: Qt.AlignHCenter; Layout.topMargin: 20
-                    visible: !root.scheduleLoading && root.scheduleError !== ""
-                    text: root.scheduleError
-                    color: Kirigami.Theme.negativeTextColor
-                }
-
-                // Liste des matchs (mode calendrier)
-                ScrollView {
-                    Layout.fillWidth: true
-                    Layout.fillHeight: true
-                    visible: !root.scheduleShowStats && !root.scheduleLoading && root.scheduleError === ""
-                    contentWidth: availableWidth
-                    clip: true
-
-                    ListView {
-                        id: schedListView
-                        anchors.fill: parent
-                        model: root.scheduleGames
-                        spacing: 0
-
-                        delegate: Item {
-                            width: schedListView.width
-                            height: schedRow.implicitHeight + 10
-
-                            // Highlight aujourd'hui
-                            readonly property bool isToday: modelData.startMs > 0 &&
-                                isSameDay(new Date(modelData.startMs), new Date())
-                            readonly property bool isPast: modelData.isFinal
-
-                            Rectangle {
-                                anchors.fill: parent
-                                color: isToday
-                                    ? Qt.rgba(Kirigami.Theme.highlightColor.r,
-                                              Kirigami.Theme.highlightColor.g,
-                                              Kirigami.Theme.highlightColor.b, 0.12)
-                                    : "transparent"
-                                radius: 4
-                            }
-
-                            RowLayout {
-                                id: schedRow
-                                width: Math.min(340, parent.width - 16)
-                                anchors.horizontalCenter: parent.horizontalCenter
-                                anchors.verticalCenter: parent.verticalCenter
-                                spacing: 6
-                                opacity: isPast ? 0.65 : 1.0
-
-                                // Date
-                                Label {
-                                    text: modelData.startMs > 0
-                                        ? Qt.formatDate(new Date(modelData.startMs), "dd MMM")
-                                        : "–"
-                                    font.pixelSize: 14
-                                    color: Kirigami.Theme.disabledTextColor
-                                    Layout.preferredWidth: 42
-                                }
-
-                                // Équipe adversaire
-                                RowLayout {
-                                    spacing: 4
-                                    // @ ou vs
-                                    Label {
-                                        text: modelData.home === root.scheduleTeam ? i18n("vs") : i18n("@")
-                                        font.pixelSize: 12; opacity: 0.6
-                                        color: Kirigami.Theme.textColor
-                                    }
-                                    Rectangle {
-                                        radius: 3
-                                        width: oppLbl.implicitWidth + 8; height: oppLbl.implicitHeight + 4
-                                        color: root.teamColor(modelData.home === root.scheduleTeam
-                                                              ? modelData.away : modelData.home)
-                                        Label {
-                                            id: oppLbl
-                                            anchors.centerIn: parent
-                                            text: modelData.home === root.scheduleTeam
-                                                  ? modelData.away : modelData.home
-                                            color: root.teamTextColor(modelData.home === root.scheduleTeam
-                                                                      ? modelData.away : modelData.home)
-                                            font.pixelSize: 12; font.bold: true; font.family: "monospace"
-                                        }
-                                    }
-                                }
-
-                                Item { Layout.fillWidth: true }
-
-                                // Score ou heure
-                                Label {
-                                    visible: modelData.isFinal && modelData.ag >= 0
-                                    text: modelData.away + "  " + modelData.ag + " – " + modelData.hg + "  " + modelData.home
-                                    font.pixelSize: 14; font.bold: true
-                                    color: Kirigami.Theme.textColor
-                                }
-                                Label {
-                                    visible: modelData.isLive
-                                    text: i18n("LIVE")
-                                    font.pixelSize: 14; font.bold: true
-                                    color: root.liveColor
-                                }
-                                Label {
-                                    visible: !modelData.isFinal && !modelData.isLive
-                                    text: modelData.startMs > 0
-                                        ? Qt.formatTime(new Date(modelData.startMs), "hh:mm")
-                                        : "–"
-                                    font.pixelSize: 14
-                                    color: Kirigami.Theme.disabledTextColor
-                                }
-
-                                // Résultat W/L
-                                Rectangle {
-                                    visible: modelData.result !== ''
-                                    radius: 3
-                                    width: resultLbl.implicitWidth + 8; height: resultLbl.implicitHeight + 4
-                                    color: (modelData.result === 'W' || modelData.result === 'OTW')
-                                        ? Kirigami.Theme.positiveBackgroundColor
-                                        : Qt.rgba(Kirigami.Theme.negativeTextColor.r,
-                                                  Kirigami.Theme.negativeTextColor.g,
-                                                  Kirigami.Theme.negativeTextColor.b, 0.25)
-                                    Label {
-                                        id: resultLbl
-                                        anchors.centerIn: parent
-                                        text: modelData.result
-                                        font.pixelSize: 12; font.bold: true
-                                        color: (modelData.result === 'W' || modelData.result === 'OTW')
-                                            ? Kirigami.Theme.positiveTextColor
-                                            : Kirigami.Theme.negativeTextColor
-                                    }
-                                }
-                            }
-
-                            // Séparateur
-                            Rectangle {
-                                anchors { bottom: parent.bottom; left: parent.left; right: parent.right }
-                                height: 1; color: Kirigami.Theme.textColor; opacity: 0.08
-                            }
-                        }
-
-                        Label {
-                            anchors.centerIn: parent
-                            visible: !root.scheduleLoading && root.scheduleGames.length === 0
-                            text: i18n("No games")
-                            opacity: 0.5; font.italic: true
-                        }
-                    }
-                }
-
-                // ── Vue stats joueurs (mode stats) ─────────────────────
-                Item {
-                    Layout.fillWidth: true
-                    Layout.fillHeight: true
-                    visible: root.scheduleShowStats
-
-                    // Chargement / erreur stats
-                    Label {
-                        anchors.centerIn: parent
-                        visible: root.scheduleStatsLoading
-                        text: i18n("Loading…"); opacity: 0.6; font.italic: true
-                    }
-                    Label {
-                        anchors.centerIn: parent
-                        visible: !root.scheduleStatsLoading && root.scheduleStatsError !== ""
-                        text: root.scheduleStatsError
-                        color: Kirigami.Theme.negativeTextColor
-                        wrapMode: Text.Wrap; width: parent.width - 20
-                        horizontalAlignment: Text.AlignHCenter
-                    }
-
-                    // Liste stats
-                    ScrollView {
-                        anchors.fill: parent
-                        visible: !root.scheduleStatsLoading && root.scheduleStatsError === ""
-                        contentWidth: availableWidth
-                        clip: true
-
-                        ListView {
-                            id: statsListView
-                            anchors.fill: parent
-                            // Patineurs + séparateur + gardiens
-                            model: root.scheduleSkaters.length + root.scheduleGoalies.length
-                                   + (root.scheduleGoalies.length > 0 ? 1 : 0)
-                            spacing: 0
-
-                            header: Item {
-                                width: statsListView.width
-                                height: statsHeaderRow.implicitHeight + 6
-
-                                RowLayout {
-                                    id: statsHeaderRow
-                                    width: Math.min(360, parent.width - 16)
-                                    anchors.horizontalCenter: parent.horizontalCenter
-                                    anchors.verticalCenter: parent.verticalCenter
-                                    spacing: 0
-
-                                    Label { text: i18n("Player"); font.pixelSize: 12; font.bold: true;
-                                            opacity: 0.6; Layout.fillWidth: true }
-                                    Label { text: i18n("PJ");  font.pixelSize: 12; font.bold: true; opacity: 0.6
-                                            Layout.preferredWidth: 28; horizontalAlignment: Text.AlignRight }
-                                    Label { text: i18n("B");   font.pixelSize: 12; font.bold: true; opacity: 0.6
-                                            Layout.preferredWidth: 28; horizontalAlignment: Text.AlignRight }
-                                    Label { text: i18n("A");   font.pixelSize: 12; font.bold: true; opacity: 0.6
-                                            Layout.preferredWidth: 28; horizontalAlignment: Text.AlignRight }
-                                    Label { text: i18n("PTS"); font.pixelSize: 12; font.bold: true; opacity: 0.6
-                                            Layout.preferredWidth: 34; horizontalAlignment: Text.AlignRight }
-                                    Label { text: i18n("+/-"); font.pixelSize: 12; font.bold: true; opacity: 0.6
-                                            Layout.preferredWidth: 30; horizontalAlignment: Text.AlignRight }
-                                }
-                                Rectangle {
-                                    anchors { bottom: parent.bottom; left: parent.left; right: parent.right }
-                                    height: 1; color: Kirigami.Theme.textColor; opacity: 0.2
-                                }
-                            }
-
-                            delegate: Item {
-                                id: statsDelegate
-                                width: statsListView.width
-
-                                // Index réel dans skaters ou goalies
-                                readonly property int nSkaters:  root.scheduleSkaters.length
-                                readonly property int nGoalies:  root.scheduleGoalies.length
-                                readonly property bool isSep:    index === nSkaters
-                                readonly property bool isGoalie: !isSep && index > nSkaters
-                                readonly property int  skaterIdx: index
-                                readonly property int  goalieIdx: index - nSkaters - 1
-                                readonly property var  skater: (!isSep && !isGoalie && index < nSkaters)
-                                                               ? root.scheduleSkaters[skaterIdx] : null
-                                readonly property var  goalie: (isGoalie && goalieIdx >= 0 && goalieIdx < nGoalies)
-                                                               ? root.scheduleGoalies[goalieIdx] : null
-
-                                height: isSep ? sepRow.implicitHeight + 10
-                                      : isGoalie ? goalieRow.implicitHeight + 8
-                                      : skaterRow.implicitHeight + 8
-
-                                // ── Séparateur gardiens ─────────────────
-                                RowLayout {
-                                    id: sepRow
-                                    visible: isSep
-                                    anchors { left: parent.left; right: parent.right; verticalCenter: parent.verticalCenter }
-                                    anchors.leftMargin: 8; anchors.rightMargin: 8
-                                    spacing: 8
-                                    Rectangle { height: 1; Layout.fillWidth: true; color: Kirigami.Theme.textColor; opacity: 0.2 }
-                                    Label { text: i18n("Goalies"); font.pixelSize: 12; font.bold: true; opacity: 0.6
-                                            color: Kirigami.Theme.disabledTextColor }
-                                    Rectangle { height: 1; Layout.fillWidth: true; color: Kirigami.Theme.textColor; opacity: 0.2 }
-                                }
-
-                                // ── Ligne patineur ──────────────────────
-                                HoverHandler { enabled: !isSep && !isGoalie; cursorShape: Qt.PointingHandCursor }
-                                TapHandler {
-                                    enabled: !isSep && !isGoalie && skater !== null && (skater.id || 0) > 0
-                                    acceptedButtons: Qt.LeftButton
-                                    gesturePolicy: TapHandler.ReleaseWithinBounds
-                                    onTapped: root.openPlayer(skater.id, 'teamstats')
-                                }
-                                RowLayout {
-                                    id: skaterRow
-                                    visible: !isSep && !isGoalie && skater !== null
-                                    width: Math.min(360, statsDelegate.width - 16)
-                                    anchors.horizontalCenter: parent.horizontalCenter
-                                    anchors.verticalCenter: parent.verticalCenter
-                                    spacing: 0
-
-                                    RowLayout {
-                                        Layout.fillWidth: true
-                                        spacing: 4
-                                        Label {
-                                            text: skater ? skater.pos : ''
-                                            font.pixelSize: 11; font.bold: true
-                                            opacity: 0.5
-                                            color: Kirigami.Theme.disabledTextColor
-                                            Layout.preferredWidth: 16
-                                        }
-                                        Label {
-                                            text: skater ? skater.name : ''
-                                            font.pixelSize: 14
-                                            color: Kirigami.Theme.textColor
-                                            elide: Text.ElideRight
-                                            Layout.fillWidth: true
-                                        }
-                                    }
-                                    Label { text: skater ? skater.gp : ''; font.pixelSize: 14; opacity: 0.35
-                                            Layout.preferredWidth: 28; horizontalAlignment: Text.AlignRight }
-                                    Label { text: skater ? skater.g  : ''; font.pixelSize: 14
-                                            color: Kirigami.Theme.textColor
-                                            Layout.preferredWidth: 28; horizontalAlignment: Text.AlignRight }
-                                    Label { text: skater ? skater.a  : ''; font.pixelSize: 14
-                                            color: Kirigami.Theme.textColor
-                                            Layout.preferredWidth: 28; horizontalAlignment: Text.AlignRight }
-                                    Label { text: skater ? skater.pts : ''; font.pixelSize: 15; font.bold: true
-                                            color: Kirigami.Theme.textColor
-                                            Layout.preferredWidth: 34; horizontalAlignment: Text.AlignRight }
-                                    Label {
-                                        text: skater ? (skater.plusMinus >= 0 ? '+' + skater.plusMinus : skater.plusMinus) : ''
-                                        font.pixelSize: 14
-                                        color: skater ? (skater.plusMinus > 0 ? Kirigami.Theme.positiveTextColor
-                                                       : skater.plusMinus < 0 ? Kirigami.Theme.negativeTextColor
-                                                       : Kirigami.Theme.disabledTextColor) : "transparent"
-                                        Layout.preferredWidth: 30; horizontalAlignment: Text.AlignRight
-                                    }
-                                }
-
-                                // ── Ligne gardien ───────────────────────
-                                HoverHandler { enabled: isGoalie; cursorShape: Qt.PointingHandCursor }
-                                TapHandler {
-                                    enabled: isGoalie && goalie !== null && (goalie.id || 0) > 0
-                                    acceptedButtons: Qt.LeftButton
-                                    gesturePolicy: TapHandler.ReleaseWithinBounds
-                                    onTapped: root.openPlayer(goalie.id, 'teamstats')
-                                }
-                                RowLayout {
-                                    id: goalieRow
-                                    visible: isGoalie && goalie !== null
-                                    width: Math.min(360, statsDelegate.width - 16)
-                                    anchors.horizontalCenter: parent.horizontalCenter
-                                    anchors.verticalCenter: parent.verticalCenter
-                                    spacing: 0
-
-                                    Label {
-                                        text: goalie ? goalie.name : ''
-                                        font.pixelSize: 14; color: Kirigami.Theme.textColor
-                                        elide: Text.ElideRight; Layout.fillWidth: true
-                                    }
-                                    // PJ
-                                    Label { text: goalie ? goalie.gp : ''; font.pixelSize: 14; opacity: 0.35
-                                            Layout.preferredWidth: 28; horizontalAlignment: Text.AlignRight }
-                                    // V (wins)
-                                    Label { text: goalie ? goalie.wins : ''; font.pixelSize: 14
-                                            color: Kirigami.Theme.positiveTextColor
-                                            Layout.preferredWidth: 28; horizontalAlignment: Text.AlignRight }
-                                    // D (losses)
-                                    Label { text: goalie ? goalie.losses : ''; font.pixelSize: 14
-                                            color: Kirigami.Theme.negativeTextColor
-                                            Layout.preferredWidth: 28; horizontalAlignment: Text.AlignRight }
-                                    // MOY
-                                    Label { text: goalie ? goalie.gaa.toFixed(2) : ''; font.pixelSize: 14
-                                            color: Kirigami.Theme.textColor
-                                            Layout.preferredWidth: 34; horizontalAlignment: Text.AlignRight }
-                                    // %SV
-                                    Label { text: goalie ? ('.' + String(Math.round(goalie.svPct * 1000)).padStart(3,'0')) : ''
-                                            font.pixelSize: 14; font.bold: true
-                                            color: Kirigami.Theme.textColor
-                                            Layout.preferredWidth: 36; horizontalAlignment: Text.AlignRight }
-                                }
-
-                                // Séparateur ligne
-                                Rectangle {
-                                    visible: !isSep
-                                    anchors { bottom: parent.bottom; left: parent.left; right: parent.right }
-                                    height: 1; color: Kirigami.Theme.textColor; opacity: 0.06
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+            active: nav.standings
+            asynchronous: false
+            visible: active && !nav.schedule && !nav.bracket
+            source: "views/StandingsView.qml"
+            onLoaded: item.controller = root
         }
 
-        // ── Vue recherche de joueurs ─────────────────────────────────
-        Item {
+        // --- Vue Leaders ---
+        Loader {
             anchors.fill: parent
-            visible: root.searchOpen && !root.playerOpen
-
-            ColumnLayout {
-                anchors.fill: parent
-                spacing: 0
-
-                // Barre navigation
-                RowLayout {
-                    Layout.fillWidth: true
-                    Layout.leftMargin: 8; Layout.topMargin: 4; Layout.bottomMargin: 2
-                    Button {
-                        text: i18n("‹ Match")
-                        icon.name: "go-previous"; flat: true
-                        onClicked: {
-                            root.searchOpen = false
-                        }
-                    }
-                    Item { Layout.fillWidth: true }
-                    Label {
-                        text: i18n("Search")
-                        font.bold: true; font.pixelSize: 16
-                    }
-                    Item { Layout.fillWidth: true }
-                }
-
-                // Champ de recherche
-                RowLayout {
-                    Layout.fillWidth: true
-                    Layout.leftMargin: 12; Layout.rightMargin: 12; Layout.bottomMargin: 6
-                    spacing: 8
-
-                    TextField {
-                        id: searchField
-                        Layout.fillWidth: true
-                        placeholderText: i18n("Player name…")
-                        text: root.searchQuery
-                        onTextChanged: root.searchQuery = text
-                        Keys.onReturnPressed: root.fetchSearch(text)
-                        Keys.onEnterPressed: root.fetchSearch(text)
-                    }
-                    Button {
-                        text: i18n("🔍")
-                        onClicked: root.fetchSearch(searchField.text)
-                        enabled: searchField.text.length >= 2
-                    }
-                }
-
-                // États
-                Label {
-                    Layout.alignment: Qt.AlignHCenter; Layout.topMargin: 20
-                    visible: root.searchLoading
-                    text: i18n("Loading…"); opacity: 0.6; font.italic: true
-                }
-                Label {
-                    Layout.alignment: Qt.AlignHCenter; Layout.topMargin: 20
-                    visible: !root.searchLoading && root.searchError !== ''
-                    text: root.searchError
-                    color: Kirigami.Theme.negativeTextColor
-                }
-
-                // Résultats
-                ScrollView {
-                    Layout.fillWidth: true; Layout.fillHeight: true
-                    contentWidth: availableWidth
-                    ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
-                    visible: !root.searchLoading && root.searchResults.length > 0
-
-                    ColumnLayout {
-                        width: Math.min(360, parent.width)
-                        anchors.horizontalCenter: parent.horizontalCenter
-                        spacing: 2
-
-                        Repeater {
-                            model: root.searchResults
-                            delegate: ItemDelegate {
-                                Layout.fillWidth: true
-                                topPadding: 6; bottomPadding: 6
-                                leftPadding: 12; rightPadding: 12
-                                HoverHandler { cursorShape: Qt.PointingHandCursor }
-                                onClicked: root.openPlayer(modelData.id, 'search')
-
-                                contentItem: RowLayout {
-                                    spacing: 10
-
-                                    // Pastille équipe (si actif)
-                                    Rectangle {
-                                        visible: modelData.team !== ''
-                                        radius: 3
-                                        color: root.teamColor(modelData.team)
-                                        width: srchTeamLbl.implicitWidth + 6
-                                        height: srchTeamLbl.implicitHeight + 4
-                                        Label {
-                                            id: srchTeamLbl; anchors.centerIn: parent
-                                            text: modelData.team
-                                            color: root.teamTextColor(modelData.team)
-                                            font.pixelSize: 10; font.bold: true; font.family: "monospace"
-                                        }
-                                    }
-                                    // Icône retraité
-                                    Label {
-                                        visible: modelData.team === ''
-                                        text: "🏒"
-                                        font.pixelSize: 14; opacity: 0.5
-                                    }
-
-                                    // Nom + position
-                                    ColumnLayout {
-                                        spacing: 1; Layout.fillWidth: true
-                                        Label {
-                                            text: modelData.name
-                                            font.pixelSize: 13; font.bold: true
-                                            color: Kirigami.Theme.textColor
-                                            elide: Text.ElideRight
-                                            Layout.fillWidth: true
-                                        }
-                                        Label {
-                                            text: (modelData.position || '')
-                                                  + (modelData.active ? '' : '  ·  ' + i18n("Retired"))
-                                            font.pixelSize: 11; opacity: 0.6
-                                            color: Kirigami.Theme.disabledTextColor
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        Item { implicitHeight: 8 }
-                    }
-                }
-            }
+            active: nav.leaders
+            asynchronous: false
+            visible: active && !nav.player
+            source: "views/LeadersView.qml"
+            onLoaded: item.controller = root
         }
 
-        // ── Vue calendrier ───────────────────────────────────────────
-        Item {
+        // --- Vue Search ---
+        Loader {
             anchors.fill: parent
-            visible: root.calendarOpen
-
-            ColumnLayout {
-                anchors.fill: parent
-                spacing: 0
-
-                // Barre navigation
-                RowLayout {
-                    Layout.fillWidth: true
-                    Layout.leftMargin: 8; Layout.topMargin: 4; Layout.bottomMargin: 4
-                    Button {
-                        text: i18n("‹ Back"); icon.name: "go-previous"; flat: true
-                        onClicked: root.calendarOpen = false
-                    }
-                    // Charger les counts quand le calendrier s'ouvre ou change de mois
-                    Connections {
-                        target: root
-                        function onCalendarOpenChanged() {
-                            if (root.calendarOpen) root.fetchCalendarMonth(root.calYear, root.calMonth)
-                        }
-                        function onCalYearChanged() {
-                            if (root.calendarOpen) root.fetchCalendarMonth(root.calYear, root.calMonth)
-                        }
-                        function onCalMonthChanged() {
-                            if (root.calendarOpen) root.fetchCalendarMonth(root.calYear, root.calMonth)
-                        }
-                    }
-                    Item { Layout.fillWidth: true }
-                    // Mois/Année + navigation
-                    Button {
-                        text: "‹"; flat: true
-                        onClicked: {
-                            root.calMonth--
-                            if (root.calMonth < 0) { root.calMonth = 11; root.calYear-- }
-                        }
-                    }
-                    Label {
-                        text: {
-                            var months = [i18n("January"),i18n("February"),i18n("March"),i18n("April"),
-                                          i18n("May"),i18n("June"),i18n("July"),i18n("August"),
-                                          i18n("September"),i18n("October"),i18n("November"),i18n("December")]
-                            return months[root.calMonth]
-                        }
-                        font.bold: true; font.pixelSize: 14
-                        Layout.preferredWidth: 90
-                        horizontalAlignment: Text.AlignHCenter
-                    }
-                    // Menu déroulant année
-                    ComboBox {
-                        id: yearCombo
-                        model: {
-                            var years = []
-                            for (var y = new Date().getFullYear(); y >= 2006; y--)
-                                years.push(String(y))
-                            return years
-                        }
-                        currentIndex: new Date().getFullYear() - root.calYear
-                        onActivated: root.calYear = parseInt(currentText)
-                        implicitWidth: 90
-                        font.pixelSize: 13
-                    }
-                    Button {
-                        text: "›"; flat: true
-                        onClicked: {
-                            root.calMonth++
-                            if (root.calMonth > 11) { root.calMonth = 0; root.calYear++ }
-                        }
-                    }
-                    Item { Layout.fillWidth: true }
-                    // Revenir au mois courant
-                    Button {
-                        text: i18n("Today"); flat: true; font.pixelSize: 11
-                        onClicked: {
-                            root.calYear  = new Date().getFullYear()
-                            root.calMonth = new Date().getMonth()
-                            yearCombo.currentIndex = 0
-                        }
-                    }
-                }
-
-                // En-têtes jours semaine
-                RowLayout {
-                    Layout.fillWidth: true
-                    Layout.leftMargin: 8; Layout.rightMargin: 8
-                    spacing: 0
-                    Repeater {
-                        model: [i18n("Su"),i18n("Mo"),i18n("Tu"),i18n("We"),i18n("Th"),i18n("Fr"),i18n("Sa")]
-                        delegate: Label {
-                            text: modelData
-                            font.pixelSize: 11; font.bold: true; opacity: 0.5
-                            Layout.fillWidth: true
-                            horizontalAlignment: Text.AlignHCenter
-                            color: (index === 0 || index === 6)
-                                   ? Kirigami.Theme.highlightColor
-                                   : Kirigami.Theme.disabledTextColor
-                        }
-                    }
-                }
-
-                Rectangle {
-                    Layout.fillWidth: true; height: 1
-                    color: Kirigami.Theme.textColor; opacity: 0.1
-                }
-
-                // Grille des jours
-                ScrollView {
-                    Layout.fillWidth: true; Layout.fillHeight: true
-                    contentWidth: availableWidth
-                    ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
-
-                    GridLayout {
-                        id: calGrid
-                        width: parent.width
-                        columns: 7
-                        columnSpacing: 0; rowSpacing: 0
-
-                        property int firstDow: {
-                            var d = new Date(root.calYear, root.calMonth, 1)
-                            return d.getDay()  // 0=dim
-                        }
-                        property int daysInMonth: new Date(root.calYear, root.calMonth + 1, 0).getDate()
-                        property int todayY: new Date().getFullYear()
-                        property int todayM: new Date().getMonth()
-                        property int todayD: new Date().getDate()
-
-                        // Cellules vides avant le 1er
-                        Repeater {
-                            model: calGrid.firstDow
-                            delegate: Item {
-                                Layout.fillWidth: true
-                                implicitHeight: 38
-                            }
-                        }
-
-                        // Jours du mois
-                        Repeater {
-                            model: calGrid.daysInMonth
-                            delegate: Item {
-                                id: dayCell
-                                Layout.fillWidth: true
-                                implicitHeight: 38
-
-                                property int day: index + 1
-                                property bool isToday: day === calGrid.todayD
-                                    && root.calMonth === calGrid.todayM
-                                    && root.calYear  === calGrid.todayY
-                                property bool isFuture: {
-                                    var d = new Date(root.calYear, root.calMonth, day)
-                                    return d > new Date()
-                                }
-                                property string iso: root.calYear + "-"
-                                    + root.pad2(root.calMonth + 1) + "-"
-                                    + root.pad2(day)
-                                property bool isSelected: iso === root.dayViewDate
-
-                                // Fond
-                                Rectangle {
-                                    anchors.centerIn: parent
-                                    width: 32; height: 32; radius: 16
-                                    color: isToday    ? root.teamColor('MTL')
-                                         : isSelected ? Kirigami.Theme.highlightColor
-                                         : "transparent"
-                                    opacity: isToday ? 0.85 : isSelected ? 0.7 : 1.0
-                                }
-
-                                Label {
-                                    anchors.centerIn: parent
-                                    text: String(day)
-                                    font.pixelSize: 13
-                                    font.bold: isToday || isSelected
-                                    color: isToday || isSelected
-                                           ? "white"
-                                           : isFuture
-                                           ? Kirigami.Theme.disabledTextColor
-                                           : Kirigami.Theme.textColor
-                                    opacity: isFuture ? 0.5 : 1.0
-                                }
-
-                                // Pastille nombre de matchs
-                                Rectangle {
-                                    visible: !isFuture && (root.calGameCounts[iso] || 0) > 0
-                                    anchors.bottom: parent.bottom
-                                    anchors.horizontalCenter: parent.horizontalCenter
-                                    anchors.bottomMargin: 1
-                                    width: Math.max(14, String(root.calGameCounts[iso] || 0).length * 7 + 6)
-                                    height: 14; radius: 7
-                                    color: isSelected
-                                           ? "white"
-                                           : Kirigami.Theme.highlightColor
-                                    opacity: 0.85
-                                    Label {
-                                        anchors.centerIn: parent
-                                        text: String(root.calGameCounts[iso] || 0)
-                                        font.pixelSize: 9; font.bold: true
-                                        color: isSelected
-                                               ? Kirigami.Theme.highlightColor
-                                               : "white"
-                                    }
-                                }
-
-                                HoverHandler { cursorShape: Qt.PointingHandCursor }
-                                TapHandler {
-                                    acceptedButtons: Qt.LeftButton
-                                    gesturePolicy: TapHandler.ReleaseWithinBounds
-                                    onTapped: {
-                                        var iso = root.calYear + "-"
-                                            + root.pad2(root.calMonth + 1) + "-"
-                                            + root.pad2(index + 1)
-                                        root.calendarOpen = false
-                                        root.openDayView(iso)
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+            active: nav.search
+            asynchronous: false
+            visible: active && !nav.player
+            source: "views/SearchView.qml"
+            onLoaded: item.controller = root
         }
 
-        // ── Vue journée complète ─────────────────────────────────────
-        Item {
+        // --- Vue Player ---
+        Loader {
             anchors.fill: parent
-            visible: root.dayViewOpen && !root.detailOpen && !root.calendarOpen
-
-            ColumnLayout {
-                anchors.fill: parent
-                spacing: 0
-
-                RowLayout {
-                    Layout.fillWidth: true
-                    Layout.leftMargin: 8; Layout.topMargin: 4; Layout.bottomMargin: 2
-                    Button {
-                        text: i18n('✕'); flat: true
-                        onClicked: { root.dayViewOpen = false; root.expanded = false }
-                    }
-                    Item { Layout.fillWidth: true }
-                    Label {
-                        text: {
-                            var parts = root.dayViewDate.split('-')
-                            if (parts.length === 3) {
-                                var d = new Date(parseInt(parts[0]), parseInt(parts[1])-1, parseInt(parts[2]))
-                                return root.localeDateLong(d.getTime())
-                            }
-                            return root.dayViewDate
-                        }
-                        font.bold: true; font.pixelSize: 15
-                        Layout.alignment: Qt.AlignHCenter
-                    }
-                    Item { Layout.fillWidth: true }
-                    Button {
-                        text: "📅  " + i18n("Calendar")
-                        flat: true
-                        onClicked: root.calendarOpen = true
-                    }
-                }
-
-                Label {
-                    Layout.alignment: Qt.AlignHCenter; Layout.topMargin: 20
-                    visible: root.dayViewLoading
-                    text: i18n("Loading…"); opacity: 0.6; font.italic: true
-                }
-                Label {
-                    Layout.alignment: Qt.AlignHCenter; Layout.topMargin: 20
-                    visible: !root.dayViewLoading && root.dayViewError !== ''
-                    text: root.dayViewError; color: Kirigami.Theme.negativeTextColor
-                }
-                Label {
-                    Layout.alignment: Qt.AlignHCenter; Layout.topMargin: 20
-                    visible: !root.dayViewLoading && root.dayViewError === '' && root.dayViewGames.length === 0
-                    text: i18n("No games"); opacity: 0.6; font.italic: true
-                }
-
-                ScrollView {
-                    Layout.fillWidth: true; Layout.fillHeight: true
-                    contentWidth: availableWidth
-                    ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
-                    visible: !root.dayViewLoading && root.dayViewError === ''
-
-                    ColumnLayout {
-                        id: dayViewCol
-                        width: Math.min(340, parent.width)
-                        anchors.horizontalCenter: parent.horizontalCenter
-                        spacing: 4
-
-                        Repeater {
-                            model: root.dayViewGames
-                            delegate: ItemDelegate {
-                                Layout.fillWidth: true
-                                Layout.leftMargin: 4; Layout.rightMargin: 4
-                                topPadding: 6; bottomPadding: 6
-                                leftPadding: 10; rightPadding: 10
-                                implicitHeight: 52
-
-                                background: Rectangle {
-                                    radius: 6
-                                    color: modelData.status === 'LIVE'  ? Qt.rgba(0.0, 0.55, 0.1, 0.13)
-                                         : modelData.status === 'FINAL' ? Qt.rgba(0.5, 0.5, 0.5, 0.08)
-                                         : Qt.rgba(0.3, 0.5, 0.9, 0.10)
-                                    border.color: modelData.status === 'LIVE'  ? Qt.rgba(0.0, 0.7, 0.1, 0.35)
-                                                : modelData.status === 'FINAL' ? Qt.rgba(0.5, 0.5, 0.5, 0.2)
-                                                : Qt.rgba(0.3, 0.5, 0.9, 0.25)
-                                    border.width: 1
-                                }
-
-                                contentItem: Item {
-                                    implicitHeight: 52
-                                    RowLayout {
-                                        anchors.centerIn: parent
-                                        spacing: 12
-
-                                        Rectangle {
-                                            radius: 3; color: root.teamColor(modelData.away)
-                                            width: awDayLbl.implicitWidth + 10; height: awDayLbl.implicitHeight + 6
-                                            Label {
-                                                id: awDayLbl; anchors.centerIn: parent
-                                                text: modelData.away
-                                                color: root.teamTextColor(modelData.away)
-                                                font.bold: true; font.pixelSize: 13; font.family: "monospace"
-                                            }
-                                        }
-
-                                        ColumnLayout {
-                                            spacing: 1
-                                            Label {
-                                                Layout.alignment: Qt.AlignHCenter
-                                                text: modelData.status === 'UPCOMING'
-                                                      ? root.dayViewTimeLabel(new Date(modelData.start).getTime(), modelData.homeAbbrev || modelData.home)
-                                                      : modelData.ag + " – " + modelData.hg
-                                                font.pixelSize: 15; font.bold: true
-                                                color: Kirigami.Theme.textColor
-                                            }
-                                            Label {
-                                                Layout.alignment: Qt.AlignHCenter
-                                                visible: modelData.status === 'UPCOMING'
-                                                text: root.dateMode === 'venue'
-                                                      ? "(" + i18n("arena") + ")"
-                                                      : "(" + i18n("local") + ")"
-                                                font.pixelSize: 10; opacity: 0.5
-                                                color: Kirigami.Theme.disabledTextColor
-                                            }
-                                            Label {
-                                                Layout.alignment: Qt.AlignHCenter
-                                                visible: modelData.status !== 'UPCOMING'
-                                                text: {
-                                                    if (modelData.status === 'FINAL') return i18n("Final")
-                                                    if (modelData.inIntermission)     return "INT"
-                                                    return root.livePeriodText(modelData.periodType, modelData.period)
-                                                           + (modelData.remain ? "  " + modelData.remain : "")
-                                                }
-                                                font.pixelSize: 11; opacity: 0.7
-                                                color: modelData.status === 'LIVE' ? "#44cc44" : Kirigami.Theme.disabledTextColor
-                                            }
-                                        }
-
-                                        Rectangle {
-                                            radius: 3; color: root.teamColor(modelData.home)
-                                            width: hmDayLbl.implicitWidth + 10; height: hmDayLbl.implicitHeight + 6
-                                            Label {
-                                                id: hmDayLbl; anchors.centerIn: parent
-                                                text: modelData.home
-                                                color: root.teamTextColor(modelData.home)
-                                                font.bold: true; font.pixelSize: 13; font.family: "monospace"
-                                            }
-                                        }
-                                    }
-                                }
-
-                                onClicked: root.openDetail(
-                                    modelData.gameId, modelData.away, modelData.home,
-                                    modelData.ag, modelData.hg, modelData.status,
-                                    modelData.periodType, modelData.period,
-                                    modelData.remain,
-                                    modelData.start ? new Date(modelData.start).getTime() : 0,
-                                    modelData.inIntermission, '1551')
-                                HoverHandler { cursorShape: Qt.PointingHandCursor }
-                            }
-                        }
-                        Item { implicitHeight: 8 }
-                    }
-                }
-            }
+            active: nav.player
+            asynchronous: false
+            source: "views/PlayerView.qml"
+            onLoaded: item.controller = root
         }
 
-        // ── Vue meneurs de la ligue ───────────────────────────────────
-        Item {
+        // --- Vue Team Hub ---
+        Loader {
             anchors.fill: parent
-            visible: root.leadersOpen && !root.playerOpen
-
-            ColumnLayout {
-                anchors.fill: parent
-                spacing: 0
-
-                RowLayout {
-                    Layout.fillWidth: true
-                    Layout.leftMargin: 8; Layout.topMargin: 4; Layout.bottomMargin: 2
-                    Button {
-                        text: i18n("‹ Match")
-                        icon.name: "go-previous"; flat: true
-                        onClicked: { root.leadersOpen = false }
-                    }
-                    Item { Layout.fillWidth: true }
-                    Label {
-                        text: i18n("Leaders")
-                        font.bold: true; font.pixelSize: 16
-                        Layout.alignment: Qt.AlignHCenter
-                    }
-                    Item { Layout.fillWidth: true }
-                }
-
-                Label {
-                    Layout.alignment: Qt.AlignHCenter; Layout.topMargin: 20
-                    visible: root.leadersLoading
-                    text: i18n("Loading…"); opacity: 0.6; font.italic: true
-                }
-                Label {
-                    Layout.alignment: Qt.AlignHCenter; Layout.topMargin: 20
-                    visible: !root.leadersLoading && root.leadersError !== ''
-                    text: root.leadersError; color: Kirigami.Theme.negativeTextColor
-                }
-
-                ScrollView {
-                    id: leadersScrollView
-                    Layout.fillWidth: true; Layout.fillHeight: true
-                    contentWidth: availableWidth
-                    ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
-                    visible: !root.leadersLoading && root.leadersError === ''
-
-                    ColumnLayout {
-                        width: Math.min(340, leadersScrollView.availableWidth)
-                        anchors.horizontalCenter: parent.horizontalCenter
-                        spacing: 4
-
-                        // Patineurs
-                        // Section "🏒 " + i18n("Points")
-                        ColumnLayout {
-                            Layout.fillWidth: true
-                            spacing: 2
-
-                            Label {
-                                Layout.leftMargin: 12; Layout.topMargin: 4
-                                text: "🏒 " + i18n("Points")
-                                font.pixelSize: 13; font.bold: true
-                                color: Kirigami.Theme.textColor
-                            }
-
-                            Repeater {
-                                model: root.leadersPoints
-                                delegate: ItemDelegate {
-                                    Layout.fillWidth: true
-                                    topPadding: 2; bottomPadding: 2
-                                    leftPadding: 12; rightPadding: 12
-                                    HoverHandler { cursorShape: Qt.PointingHandCursor }
-                                    onClicked: if (modelData.id) root.openPlayer(modelData.id, 'leaders')
-                                    contentItem: RowLayout {
-                                        spacing: 8
-                                        Label {
-                                            text: (index + 1) + "."
-                                            font.pixelSize: 12; opacity: 0.45
-                                            color: Kirigami.Theme.textColor
-                                            Layout.preferredWidth: 20
-                                        }
-                                        Rectangle {
-                                            radius: 2
-                                            color: root.teamColor(modelData.team || '')
-                                            width: ldrTeamLblleadersPoints.implicitWidth + 6
-                                            height: ldrTeamLblleadersPoints.implicitHeight + 2
-                                            Label {
-                                                id: ldrTeamLblleadersPoints;
-                                                anchors.centerIn: parent
-                                                text: modelData.team || ''
-                                                color: root.teamTextColor(modelData.team || '')
-                                                font.pixelSize: 10; font.bold: true; font.family: "monospace"
-                                            }
-                                        }
-                                        Label {
-                                            text: modelData.name || ''
-                                            font.pixelSize: 12
-                                            color: Kirigami.Theme.textColor
-                                            Layout.fillWidth: true
-                                            elide: Text.ElideRight
-                                        }
-                                        Label {
-                                            text: 0 > 0
-                                                  ? Number(modelData.value).toFixed(0)
-                                                  : String(modelData.value || 0)
-                                            font.pixelSize: 13; font.bold: true
-                                            color: index === 0 ? Kirigami.Theme.highlightColor : Kirigami.Theme.textColor
-                                            Layout.preferredWidth: 40
-                                            horizontalAlignment: Text.AlignRight
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        // Section "🎯 " + i18n("Goals")
-                        ColumnLayout {
-                            Layout.fillWidth: true
-                            spacing: 2
-
-                            Label {
-                                Layout.leftMargin: 12; Layout.topMargin: 4
-                                text: "🎯 " + i18n("Goals")
-                                font.pixelSize: 13; font.bold: true
-                                color: Kirigami.Theme.textColor
-                            }
-
-                            Repeater {
-                                model: root.leadersGoals
-                                delegate: ItemDelegate {
-                                    Layout.fillWidth: true
-                                    topPadding: 2; bottomPadding: 2
-                                    leftPadding: 12; rightPadding: 12
-                                    HoverHandler { cursorShape: Qt.PointingHandCursor }
-                                    onClicked: if (modelData.id) root.openPlayer(modelData.id, 'leaders')
-                                    contentItem: RowLayout {
-                                        spacing: 8
-                                        Label {
-                                            text: (index + 1) + "."
-                                            font.pixelSize: 12; opacity: 0.45
-                                            color: Kirigami.Theme.textColor
-                                            Layout.preferredWidth: 20
-                                        }
-                                        Rectangle {
-                                            radius: 2
-                                            color: root.teamColor(modelData.team || '')
-                                            width: ldrTeamLblleadersGoals.implicitWidth + 6
-                                            height: ldrTeamLblleadersGoals.implicitHeight + 2
-                                            Label {
-                                                id: ldrTeamLblleadersGoals;
-                                                anchors.centerIn: parent
-                                                text: modelData.team || ''
-                                                color: root.teamTextColor(modelData.team || '')
-                                                font.pixelSize: 10; font.bold: true; font.family: "monospace"
-                                            }
-                                        }
-                                        Label {
-                                            text: modelData.name || ''
-                                            font.pixelSize: 12
-                                            color: Kirigami.Theme.textColor
-                                            Layout.fillWidth: true
-                                            elide: Text.ElideRight
-                                        }
-                                        Label {
-                                            text: 0 > 0
-                                                  ? Number(modelData.value).toFixed(0)
-                                                  : String(modelData.value || 0)
-                                            font.pixelSize: 13; font.bold: true
-                                            color: index === 0 ? Kirigami.Theme.highlightColor : Kirigami.Theme.textColor
-                                            Layout.preferredWidth: 40
-                                            horizontalAlignment: Text.AlignRight
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        // Section "🍎 " + i18n("Assists")
-                        ColumnLayout {
-                            Layout.fillWidth: true
-                            spacing: 2
-
-                            Label {
-                                Layout.leftMargin: 12; Layout.topMargin: 4
-                                text: "🍎 " + i18n("Assists")
-                                font.pixelSize: 13; font.bold: true
-                                color: Kirigami.Theme.textColor
-                            }
-
-                            Repeater {
-                                model: root.leadersAssists
-                                delegate: ItemDelegate {
-                                    Layout.fillWidth: true
-                                    topPadding: 2; bottomPadding: 2
-                                    leftPadding: 12; rightPadding: 12
-                                    HoverHandler { cursorShape: Qt.PointingHandCursor }
-                                    onClicked: if (modelData.id) root.openPlayer(modelData.id, 'leaders')
-                                    contentItem: RowLayout {
-                                        spacing: 8
-                                        Label {
-                                            text: (index + 1) + "."
-                                            font.pixelSize: 12; opacity: 0.45
-                                            color: Kirigami.Theme.textColor
-                                            Layout.preferredWidth: 20
-                                        }
-                                        Rectangle {
-                                            radius: 2
-                                            color: root.teamColor(modelData.team || '')
-                                            width: ldrTeamLblleadersAssists.implicitWidth + 6
-                                            height: ldrTeamLblleadersAssists.implicitHeight + 2
-                                            Label {
-                                                id: ldrTeamLblleadersAssists;
-                                                anchors.centerIn: parent
-                                                text: modelData.team || ''
-                                                color: root.teamTextColor(modelData.team || '')
-                                                font.pixelSize: 10; font.bold: true; font.family: "monospace"
-                                            }
-                                        }
-                                        Label {
-                                            text: modelData.name || ''
-                                            font.pixelSize: 12
-                                            color: Kirigami.Theme.textColor
-                                            Layout.fillWidth: true
-                                            elide: Text.ElideRight
-                                        }
-                                        Label {
-                                            text: 0 > 0
-                                                  ? Number(modelData.value).toFixed(0)
-                                                  : String(modelData.value || 0)
-                                            font.pixelSize: 13; font.bold: true
-                                            color: index === 0 ? Kirigami.Theme.highlightColor : Kirigami.Theme.textColor
-                                            Layout.preferredWidth: 40
-                                            horizontalAlignment: Text.AlignRight
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        // Section "👊 " + i18n("PIM")
-                        ColumnLayout {
-                            Layout.fillWidth: true
-                            spacing: 2
-
-                            Label {
-                                Layout.leftMargin: 12; Layout.topMargin: 4
-                                text: "👊 " + i18n("PIM")
-                                font.pixelSize: 13; font.bold: true
-                                color: Kirigami.Theme.textColor
-                            }
-
-                            Repeater {
-                                model: root.leadersPim
-                                delegate: ItemDelegate {
-                                    Layout.fillWidth: true
-                                    topPadding: 2; bottomPadding: 2
-                                    leftPadding: 12; rightPadding: 12
-                                    HoverHandler { cursorShape: Qt.PointingHandCursor }
-                                    onClicked: if (modelData.id) root.openPlayer(modelData.id, 'leaders')
-                                    contentItem: RowLayout {
-                                        spacing: 8
-                                        Label {
-                                            text: (index + 1) + "."
-                                            font.pixelSize: 12; opacity: 0.45
-                                            color: Kirigami.Theme.textColor
-                                            Layout.preferredWidth: 20
-                                        }
-                                        Rectangle {
-                                            radius: 2
-                                            color: root.teamColor(modelData.team || '')
-                                            width: ldrTeamLblleadersPim.implicitWidth + 6
-                                            height: ldrTeamLblleadersPim.implicitHeight + 2
-                                            Label {
-                                                id: ldrTeamLblleadersPim;
-                                                anchors.centerIn: parent
-                                                text: modelData.team || ''
-                                                color: root.teamTextColor(modelData.team || '')
-                                                font.pixelSize: 10; font.bold: true; font.family: "monospace"
-                                            }
-                                        }
-                                        Label {
-                                            text: modelData.name || ''
-                                            font.pixelSize: 12
-                                            color: Kirigami.Theme.textColor
-                                            Layout.fillWidth: true
-                                            elide: Text.ElideRight
-                                        }
-                                        Label {
-                                            text: 0 > 0
-                                                  ? Number(modelData.value).toFixed(0)
-                                                  : String(modelData.value || 0)
-                                            font.pixelSize: 13; font.bold: true
-                                            color: index === 0 ? Kirigami.Theme.highlightColor : Kirigami.Theme.textColor
-                                            Layout.preferredWidth: 40
-                                            horizontalAlignment: Text.AlignRight
-                                        }
-                                    }
-                                }
-                            }
-                        }
-
-                        // Séparateur gardiens
-                        Rectangle {
-                            Layout.fillWidth: true; Layout.leftMargin: 8; Layout.rightMargin: 8
-                            height: 1; color: Kirigami.Theme.textColor; opacity: 0.15
-                        }
-                        Label {
-                            Layout.leftMargin: 12
-                            text: i18n("Goalies")
-                            font.pixelSize: 13; font.bold: true
-                            color: Kirigami.Theme.disabledTextColor
-                        }
-                        // Section "🏆 " + i18n("Wins")
-                        ColumnLayout {
-                            Layout.fillWidth: true
-                            spacing: 2
-
-                            Label {
-                                Layout.leftMargin: 12; Layout.topMargin: 4
-                                text: "🏆 " + i18n("Wins")
-                                font.pixelSize: 13; font.bold: true
-                                color: Kirigami.Theme.textColor
-                            }
-
-                            Repeater {
-                                model: root.leadersWins
-                                delegate: ItemDelegate {
-                                    Layout.fillWidth: true
-                                    topPadding: 2; bottomPadding: 2
-                                    leftPadding: 12; rightPadding: 12
-                                    HoverHandler { cursorShape: Qt.PointingHandCursor }
-                                    onClicked: if (modelData.id) root.openPlayer(modelData.id, 'leaders')
-                                    contentItem: RowLayout {
-                                        spacing: 8
-                                        Label {
-                                            text: (index + 1) + "."
-                                            font.pixelSize: 12; opacity: 0.45
-                                            color: Kirigami.Theme.textColor
-                                            Layout.preferredWidth: 20
-                                        }
-                                        Rectangle {
-                                            radius: 2
-                                            color: root.teamColor(modelData.team || '')
-                                            width: ldrTeamLblleadersWins.implicitWidth + 6
-                                            height: ldrTeamLblleadersWins.implicitHeight + 2
-                                            Label {
-                                                id: ldrTeamLblleadersWins;
-                                                anchors.centerIn: parent
-                                                text: modelData.team || ''
-                                                color: root.teamTextColor(modelData.team || '')
-                                                font.pixelSize: 10; font.bold: true; font.family: "monospace"
-                                            }
-                                        }
-                                        Label {
-                                            text: modelData.name || ''
-                                            font.pixelSize: 12
-                                            color: Kirigami.Theme.textColor
-                                            Layout.fillWidth: true
-                                            elide: Text.ElideRight
-                                        }
-                                        Label {
-                                            text: 0 > 0
-                                                  ? Number(modelData.value).toFixed(0)
-                                                  : String(modelData.value || 0)
-                                            font.pixelSize: 13; font.bold: true
-                                            color: index === 0 ? Kirigami.Theme.highlightColor : Kirigami.Theme.textColor
-                                            Layout.preferredWidth: 40
-                                            horizontalAlignment: Text.AlignRight
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        // Section "🥅 " + i18n("Shutouts")
-                        ColumnLayout {
-                            Layout.fillWidth: true
-                            spacing: 2
-
-                            Label {
-                                Layout.leftMargin: 12; Layout.topMargin: 4
-                                text: "🥅 " + i18n("Shutouts")
-                                font.pixelSize: 13; font.bold: true
-                                color: Kirigami.Theme.textColor
-                            }
-
-                            Repeater {
-                                model: root.leadersSho
-                                delegate: ItemDelegate {
-                                    Layout.fillWidth: true
-                                    topPadding: 2; bottomPadding: 2
-                                    leftPadding: 12; rightPadding: 12
-                                    HoverHandler { cursorShape: Qt.PointingHandCursor }
-                                    onClicked: if (modelData.id) root.openPlayer(modelData.id, 'leaders')
-                                    contentItem: RowLayout {
-                                        spacing: 8
-                                        Label {
-                                            text: (index + 1) + "."
-                                            font.pixelSize: 12; opacity: 0.45
-                                            color: Kirigami.Theme.textColor
-                                            Layout.preferredWidth: 20
-                                        }
-                                        Rectangle {
-                                            radius: 2
-                                            color: root.teamColor(modelData.team || '')
-                                            width: ldrTeamLblleadersSho.implicitWidth + 6
-                                            height: ldrTeamLblleadersSho.implicitHeight + 2
-                                            Label {
-                                                id: ldrTeamLblleadersSho;
-                                                anchors.centerIn: parent
-                                                text: modelData.team || ''
-                                                color: root.teamTextColor(modelData.team || '')
-                                                font.pixelSize: 10; font.bold: true; font.family: "monospace"
-                                            }
-                                        }
-                                        Label {
-                                            text: modelData.name || ''
-                                            font.pixelSize: 12
-                                            color: Kirigami.Theme.textColor
-                                            Layout.fillWidth: true
-                                            elide: Text.ElideRight
-                                        }
-                                        Label {
-                                            text: 0 > 0
-                                                  ? Number(modelData.value).toFixed(0)
-                                                  : String(modelData.value || 0)
-                                            font.pixelSize: 13; font.bold: true
-                                            color: index === 0 ? Kirigami.Theme.highlightColor : Kirigami.Theme.textColor
-                                            Layout.preferredWidth: 40
-                                            horizontalAlignment: Text.AlignRight
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        // Section "📉 " + i18n("GAA")
-                        ColumnLayout {
-                            Layout.fillWidth: true
-                            spacing: 2
-
-                            Label {
-                                Layout.leftMargin: 12; Layout.topMargin: 4
-                                text: "📉 " + i18n("GAA")
-                                font.pixelSize: 13; font.bold: true
-                                color: Kirigami.Theme.textColor
-                            }
-
-                            Repeater {
-                                model: root.leadersGaa
-                                delegate: ItemDelegate {
-                                    Layout.fillWidth: true
-                                    topPadding: 2; bottomPadding: 2
-                                    leftPadding: 12; rightPadding: 12
-                                    HoverHandler { cursorShape: Qt.PointingHandCursor }
-                                    onClicked: if (modelData.id) root.openPlayer(modelData.id, 'leaders')
-                                    contentItem: RowLayout {
-                                        spacing: 8
-                                        Label {
-                                            text: (index + 1) + "."
-                                            font.pixelSize: 12; opacity: 0.45
-                                            color: Kirigami.Theme.textColor
-                                            Layout.preferredWidth: 20
-                                        }
-                                        Rectangle {
-                                            radius: 2
-                                            color: root.teamColor(modelData.team || '')
-                                            width: ldrTeamLblleadersGaa.implicitWidth + 6
-                                            height: ldrTeamLblleadersGaa.implicitHeight + 2
-                                            Label {
-                                                id: ldrTeamLblleadersGaa;
-                                                anchors.centerIn: parent
-                                                text: modelData.team || ''
-                                                color: root.teamTextColor(modelData.team || '')
-                                                font.pixelSize: 10; font.bold: true; font.family: "monospace"
-                                            }
-                                        }
-                                        Label {
-                                            text: modelData.name || ''
-                                            font.pixelSize: 12
-                                            color: Kirigami.Theme.textColor
-                                            Layout.fillWidth: true
-                                            elide: Text.ElideRight
-                                        }
-                                        Label {
-                                            text: 2 > 0
-                                                  ? Number(modelData.value).toFixed(2)
-                                                  : String(modelData.value || 0)
-                                            font.pixelSize: 13; font.bold: true
-                                            color: index === 0 ? Kirigami.Theme.highlightColor : Kirigami.Theme.textColor
-                                            Layout.preferredWidth: 40
-                                            horizontalAlignment: Text.AlignRight
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        // Section "🛡️ " + i18n("SV%")
-                        ColumnLayout {
-                            Layout.fillWidth: true
-                            spacing: 2
-
-                            Label {
-                                Layout.leftMargin: 12; Layout.topMargin: 4
-                                text: "🛡️ " + i18n("SV%")
-                                font.pixelSize: 13; font.bold: true
-                                color: Kirigami.Theme.textColor
-                            }
-
-                            Repeater {
-                                model: root.leadersSvp
-                                delegate: ItemDelegate {
-                                    Layout.fillWidth: true
-                                    topPadding: 2; bottomPadding: 2
-                                    leftPadding: 12; rightPadding: 12
-                                    HoverHandler { cursorShape: Qt.PointingHandCursor }
-                                    onClicked: if (modelData.id) root.openPlayer(modelData.id, 'leaders')
-                                    contentItem: RowLayout {
-                                        spacing: 8
-                                        Label {
-                                            text: (index + 1) + "."
-                                            font.pixelSize: 12; opacity: 0.45
-                                            color: Kirigami.Theme.textColor
-                                            Layout.preferredWidth: 20
-                                        }
-                                        Rectangle {
-                                            radius: 2
-                                            color: root.teamColor(modelData.team || '')
-                                            width: ldrTeamLblleadersSvp.implicitWidth + 6
-                                            height: ldrTeamLblleadersSvp.implicitHeight + 2
-                                            Label {
-                                                id: ldrTeamLblleadersSvp;
-                                                anchors.centerIn: parent
-                                                text: modelData.team || ''
-                                                color: root.teamTextColor(modelData.team || '')
-                                                font.pixelSize: 10; font.bold: true; font.family: "monospace"
-                                            }
-                                        }
-                                        Label {
-                                            text: modelData.name || ''
-                                            font.pixelSize: 12
-                                            color: Kirigami.Theme.textColor
-                                            Layout.fillWidth: true
-                                            elide: Text.ElideRight
-                                        }
-                                        Label {
-                                            text: 3 > 0
-                                                  ? Number(modelData.value).toFixed(3)
-                                                  : String(modelData.value || 0)
-                                            font.pixelSize: 13; font.bold: true
-                                            color: index === 0 ? Kirigami.Theme.highlightColor : Kirigami.Theme.textColor
-                                            Layout.preferredWidth: 40
-                                            horizontalAlignment: Text.AlignRight
-                                        }
-                                    }
-                                }
-                            }
-                        }
-
-                        Item { implicitHeight: 8 }
-                    }
-                }
-            }
+            active: nav.teamHub
+            asynchronous: false
+            visible: active && !nav.schedule
+            source: "views/TeamHubView.qml"
+            onLoaded: item.controller = root
         }
 
-                // ── Vue hub d'équipe ─────────────────────────────────────────
-        Item {
+        // --- Vue Schedule (Équipe) ---
+        Loader {
             anchors.fill: parent
-            visible: root.teamHubOpen && !root.scheduleOpen
-
-            ColumnLayout {
-                anchors.fill: parent
-                spacing: 0
-
-                // ── Barre navigation ─────────────────────────────────
-                RowLayout {
-                    Layout.fillWidth: true
-                    Layout.leftMargin: 8; Layout.topMargin: 4; Layout.bottomMargin: 2
-                    Button {
-                        text: root.teamHubFrom === 'standings'
-                              ? i18n("‹ Standings") : i18n("‹ Match")
-                        icon.name: "go-previous"; flat: true
-                        onClicked: {
-                            root.teamHubOpen = false
-                            if (root.teamHubFrom === 'standings')
-                                root.standingsOpen = true
-                        }
-                    }
-                    Item { Layout.fillWidth: true }
-                }
-
-                Label {
-                    Layout.alignment: Qt.AlignHCenter; Layout.topMargin: 20
-                    visible: root.teamHubLoading
-                    text: i18n("Loading…"); opacity: 0.6; font.italic: true
-                }
-
-                ScrollView {
-                    Layout.fillWidth: true; Layout.fillHeight: true
-                    contentWidth: availableWidth
-                    ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
-                    visible: !root.teamHubLoading
-
-                    ColumnLayout {
-                        width: Math.min(340, parent.width)
-                        anchors.horizontalCenter: parent.horizontalCenter
-                        spacing: 10
-
-                        // ── En-tête : logo + nom + entraîneur ────────
-                        ColumnLayout {
-                            Layout.fillWidth: true
-                            Layout.topMargin: 6
-                            spacing: 4
-
-                            // Logo centré, plus grand
-                            Image {
-                                Layout.alignment: Qt.AlignHCenter
-                                source: root.teamLogoUrl(root.teamHubCode)
-                                width: 72; height: 72
-                                fillMode: Image.PreserveAspectFit
-                                smooth: true
-                                sourceSize.width: 144
-                                sourceSize.height: 144
-                            }
-
-                            // Nom complet de l'équipe
-                            Label {
-                                Layout.alignment: Qt.AlignHCenter
-                                Layout.fillWidth: true
-                                text: root.teamHubFullName !== ''
-                                      ? root.teamHubFullName
-                                      : root.teamHubCode
-                                font.bold: true; font.pixelSize: 17
-                                color: root.teamColorAdapted(root.teamHubCode)
-                                horizontalAlignment: Text.AlignHCenter
-                                wrapMode: Text.WordWrap
-                            }
-
-                            // Entraîneur centré
-                            Label {
-                                Layout.alignment: Qt.AlignHCenter
-                                visible: root.teamHubCoach !== ''
-                                text: "🧑‍💼 " + root.teamHubCoach
-                                font.pixelSize: 11; opacity: 0.7
-                                color: Kirigami.Theme.disabledTextColor
-                                horizontalAlignment: Text.AlignHCenter
-                            }
-                        }
-
-                        // ── Grille stats centrée ──────────────────────
-                        Rectangle {
-                            Layout.fillWidth: true; Layout.leftMargin: 8; Layout.rightMargin: 8
-                            height: 1; color: root.teamColor(root.teamHubCode); opacity: 0.4
-                        }
-
-                        // 5 colonnes GP W L OT PTS — espacées uniformément
-                        Row {
-                            anchors.horizontalCenter: undefined
-                            Layout.alignment: Qt.AlignHCenter
-                            spacing: 20
-
-                            Repeater {
-                                model: [
-                                    { v: String(root.teamHubGP),  l: "GP"  },
-                                    { v: String(root.teamHubW),   l: "W"   },
-                                    { v: String(root.teamHubL),   l: "L"   },
-                                    { v: String(root.teamHubOT),  l: "OT"  },
-                                    { v: String(root.teamHubPts), l: "PTS" }
-                                ]
-                                delegate: Column {
-                                    spacing: 2; width: 40
-                                    Label {
-                                        width: parent.width
-                                        text: modelData.l
-                                        font.pixelSize: 10; opacity: 0.55
-                                        color: Kirigami.Theme.disabledTextColor
-                                        horizontalAlignment: Text.AlignHCenter
-                                    }
-                                    Label {
-                                        width: parent.width
-                                        text: modelData.v
-                                        font.pixelSize: 18; font.bold: true
-                                        color: Kirigami.Theme.textColor
-                                        horizontalAlignment: Text.AlignHCenter
-                                    }
-                                }
-                            }
-                        }
-
-                        // Position classement sous les stats
-                        Label {
-                            Layout.alignment: Qt.AlignHCenter
-                            visible: root.teamHubStanding !== ''
-                            text: root.teamHubStanding
-                            font.pixelSize: 11; opacity: 0.6
-                            color: Kirigami.Theme.disabledTextColor
-                        }
-
-                        // ── Derniers matchs ───────────────────────────
-                        Rectangle {
-                            Layout.fillWidth: true; Layout.leftMargin: 8; Layout.rightMargin: 8
-                            height: 1; color: Kirigami.Theme.textColor; opacity: 0.12
-                        }
-                        Label {
-                            Layout.leftMargin: 12
-                            text: i18n("Last games")
-                            font.pixelSize: 11; font.bold: true; opacity: 0.55
-                            color: Kirigami.Theme.disabledTextColor
-                        }
-
-                        Repeater {
-                            model: root.teamHubLastGames
-                            delegate: RowLayout {
-                                Layout.fillWidth: true
-                                Layout.leftMargin: 12; Layout.rightMargin: 12
-                                spacing: 6
-
-                                // Badge W/L/OT — largeur fixe
-                                Rectangle {
-                                    radius: 3
-                                    color: modelData.win
-                                           ? (modelData.ot ? "#1a6a3a" : "#1a7a2a")
-                                           : (modelData.ot ? "#5a3a1a" : "#7a1a1a")
-                                    width: 38; height: wlLbl.implicitHeight + 4
-                                    Label {
-                                        id: wlLbl; anchors.centerIn: parent
-                                        text: modelData.win
-                                              ? (modelData.ot ? "OTW" : "W")
-                                              : (modelData.ot ? "OTL" : "L")
-                                        color: "white"; font.bold: true; font.pixelSize: 11
-                                    }
-                                }
-
-                                // @/vs — largeur fixe
-                                Label {
-                                    text: modelData.home ? i18n("vs") : i18n("@")
-                                    font.pixelSize: 11; opacity: 0.55
-                                    Layout.preferredWidth: 18
-                                    horizontalAlignment: Text.AlignHCenter
-                                    color: Kirigami.Theme.textColor
-                                }
-
-                                // Pastille adversaire
-                                Rectangle {
-                                    radius: 3
-                                    color: root.teamColor(modelData.opp || '')
-                                    width: oppHubLbl.implicitWidth + 8
-                                    height: oppHubLbl.implicitHeight + 4
-                                    Label {
-                                        id: oppHubLbl; anchors.centerIn: parent
-                                        text: modelData.opp || '?'
-                                        color: root.teamTextColor(modelData.opp || '')
-                                        font.bold: true; font.pixelSize: 11
-                                        font.family: "monospace"
-                                    }
-                                }
-
-                                Item { Layout.fillWidth: true }
-
-                                // Score
-                                Label {
-                                    text: (modelData.gf || 0) + " – " + (modelData.ga || 0)
-                                    font.pixelSize: 13; font.bold: true
-                                    color: modelData.win ? "#44bb44" : Kirigami.Theme.textColor
-                                }
-                            }
-                        }
-
-                        // ── Prochain match ────────────────────────────
-                        Rectangle {
-                            Layout.fillWidth: true; Layout.leftMargin: 8; Layout.rightMargin: 8
-                            height: 1; color: Kirigami.Theme.textColor; opacity: 0.12
-                        }
-
-                        RowLayout {
-                            visible: root.teamHubNextGame !== null
-                            Layout.fillWidth: true
-                            Layout.leftMargin: 12; Layout.rightMargin: 12
-                            spacing: 6
-
-                            Label {
-                                text: i18n("Next:")
-                                font.pixelSize: 11; font.bold: true; opacity: 0.55
-                                color: Kirigami.Theme.disabledTextColor
-                            }
-
-                            Label {
-                                text: root.teamHubNextGame
-                                      ? (root.teamHubNextGame.home ? i18n("vs") : i18n("@"))
-                                      : ''
-                                font.pixelSize: 12; opacity: 0.7
-                                color: Kirigami.Theme.textColor
-                            }
-
-                            // Pastille adversaire prochain match
-                            Rectangle {
-                                radius: 3
-                                visible: root.teamHubNextGame !== null
-                                color: root.teamColor(root.teamHubNextGame ? (root.teamHubNextGame.opp || '') : '')
-                                width: nextOppLbl.implicitWidth + 8
-                                height: nextOppLbl.implicitHeight + 4
-                                Label {
-                                    id: nextOppLbl; anchors.centerIn: parent
-                                    text: root.teamHubNextGame ? (root.teamHubNextGame.opp || '?') : ''
-                                    color: root.teamTextColor(root.teamHubNextGame ? (root.teamHubNextGame.opp || '') : '')
-                                    font.bold: true; font.pixelSize: 11; font.family: "monospace"
-                                }
-                            }
-
-                            Item { Layout.fillWidth: true }
-
-                            Label {
-                                text: root.teamHubNextGame && root.teamHubNextGame.start
-                                      ? Qt.formatDateTime(new Date(root.teamHubNextGame.start), "ddd d MMM · hh:mm")
-                                      : ''
-                                font.pixelSize: 11; opacity: 0.7
-                                color: Kirigami.Theme.disabledTextColor
-                            }
-                        }
-
-                        // ── Boutons ───────────────────────────────────
-                        Rectangle {
-                            Layout.fillWidth: true; Layout.leftMargin: 8; Layout.rightMargin: 8
-                            height: 1; color: Kirigami.Theme.textColor; opacity: 0.12
-                        }
-
-                        RowLayout {
-                            Layout.fillWidth: true
-                            Layout.leftMargin: 12; Layout.rightMargin: 12
-                            Layout.bottomMargin: 8
-                            spacing: 8
-                            Button {
-                                text: i18n("📅 Schedule"); flat: true; Layout.fillWidth: true
-                                onClicked: root.openSchedule(root.teamHubCode, false)
-                            }
-                            Button {
-                                text: i18n("📊 Stats"); flat: true; Layout.fillWidth: true
-                                onClicked: root.openSchedule(root.teamHubCode, true)
-                            }
-                        }
-                        Item { implicitHeight: 4 }
-                    }
-                }
-            }
+            active: nav.schedule
+            asynchronous: true
+            visible: active && !nav.player
+            source: "views/ScheduleView.qml"
+            onLoaded: item.controller = root
         }
 
-                // ── Vue fiche joueur ─────────────────────────────────────────
-        Item {
+        // --- Vue Bracket (Séries) ---
+        Loader {
             anchors.fill: parent
-            visible: root.playerOpen
-
-            ColumnLayout {
-                anchors.fill: parent
-                spacing: 0
-
-                // Barre navigation
-                RowLayout {
-                    Layout.fillWidth: true
-                    Layout.leftMargin: 8; Layout.topMargin: 4; Layout.bottomMargin: 2
-                    Button {
-                        text: root.playerFrom === 'teamstats' ? i18n("‹ Stats")
-                              : root.playerFrom === 'search'   ? i18n("‹ Search")
-                              : root.playerFrom === 'detail'   ? i18n("‹ Match")
-                              : i18n("‹ Leaders")
-                        icon.name: "go-previous"; flat: true
-                        onClicked: root.playerOpen = false
-                    }
-                    Item { Layout.fillWidth: true }
-                }
-
-                Label {
-                    Layout.alignment: Qt.AlignHCenter; Layout.topMargin: 20
-                    visible: root.playerLoading
-                    text: i18n("Loading…"); opacity: 0.6; font.italic: true
-                }
-                Label {
-                    Layout.alignment: Qt.AlignHCenter; Layout.topMargin: 20
-                    visible: !root.playerLoading && root.playerError !== ''
-                    text: root.playerError
-                    color: Kirigami.Theme.negativeTextColor
-                }
-
-                ScrollView {
-                    Layout.fillWidth: true; Layout.fillHeight: true
-                    contentWidth: availableWidth
-                    ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
-                    visible: !root.playerLoading && root.playerError === '' && root.playerData !== null
-
-                    ColumnLayout {
-                        width: Math.min(380, parent.width)
-                        anchors.horizontalCenter: parent.horizontalCenter
-                        spacing: 12
-
-                        // ── Photo + nom par-dessus ────────────────────────
-                        Item {
-                            Layout.fillWidth: true
-                            Layout.topMargin: 4
-                            implicitHeight: playerPhoto.implicitHeight
-
-                            Image {
-                                id: playerPhoto
-                                source: root.playerData ? (root.playerData.headshot || '') : ''
-                                width: parent.width
-                                fillMode: Image.PreserveAspectFit
-                                smooth: true
-                                visible: source !== ''
-                            }
-
-                            // Nom en overlay en bas de la photo
-                            Rectangle {
-                                anchors { left: parent.left; right: parent.right; bottom: parent.bottom }
-                                height: nameOverlay.implicitHeight + 12
-                                gradient: Gradient {
-                                    GradientStop { position: 0.0; color: "transparent" }
-                                    GradientStop { position: 1.0; color: Qt.rgba(0,0,0,0.72) }
-                                }
-                                visible: playerPhoto.visible
-
-                                Label {
-                                    id: nameOverlay
-                                    anchors { left: parent.left; right: parent.right; bottom: parent.bottom
-                                              leftMargin: 12; rightMargin: 12; bottomMargin: 8 }
-                                    text: root.playerData
-                                          ? ((root.playerData.firstName && root.playerData.firstName.default || '')
-                                             + ' ' +
-                                             (root.playerData.lastName && root.playerData.lastName.default || ''))
-                                          : ''
-                                    font.pixelSize: 20; font.bold: true
-                                    color: "white"
-                                    wrapMode: Text.WordWrap
-                                }
-                            }
-                        }
-
-                        // ── Infos sous la photo ───────────────────────────
-                        RowLayout {
-                            Layout.alignment: Qt.AlignHCenter
-                            Layout.leftMargin: 12; Layout.rightMargin: 12
-                            spacing: 8
-
-                            Label {
-                                text: root.playerData
-                                      ? (root.playerData.currentTeamAbbrev || '')
-                                        + '  #' + (root.playerData.sweaterNumber || '?')
-                                        + '  ·  ' + (root.playerData.position || '')
-                                        + '  ·  ' + (root.playerData.heightInCentimeters || '?') + ' cm'
-                                        + '  ·  ' + (root.playerData.weightInKilograms || '?') + ' kg'
-                                      : ''
-                                font.pixelSize: 13; color: Kirigami.Theme.textColor
-                            }
-                        }
-                        Label {
-                            Layout.alignment: Qt.AlignHCenter
-                            visible: root.playerData && root.playerData.birthDate
-                            text: root.playerData && root.playerData.birthDate
-                                  ? (root.playerData.birthDate.substring(0,10)
-                                     + (root.playerData.birthCity && root.playerData.birthCity.default
-                                        ? '  ·  ' + root.playerData.birthCity.default : ''))
-                                  : ''
-                            font.pixelSize: 11; opacity: 0.6
-                            color: Kirigami.Theme.disabledTextColor
-                        }
-
-                        // ── Stats saison courante ─────────────────────────
-                        Rectangle {
-                            Layout.fillWidth: true; Layout.leftMargin: 8; Layout.rightMargin: 8
-                            height: 1; color: Kirigami.Theme.textColor; opacity: 0.12
-                        }
-                        Label {
-                            Layout.alignment: Qt.AlignHCenter
-                            text: {
-                                var s = root.playerData && root.playerData.featuredStats
-                                    ? String(root.playerData.featuredStats.season || '') : ''
-                                if (s.length === 8)
-                                    return i18n("Season stats") + "  " + s.substring(0,4) + "–" + s.substring(4)
-                                return i18n("Season stats")
-                            }
-                            font.pixelSize: 12; font.bold: true; opacity: 0.6
-                            color: Kirigami.Theme.disabledTextColor
-                        }
-
-                        // Stats skater saison — centrées et espacées
-                        RowLayout {
-                            Layout.fillWidth: true
-                            Layout.leftMargin: 12; Layout.rightMargin: 12
-                            Layout.alignment: Qt.AlignHCenter
-                            visible: root.playerData && root.playerData.position !== 'G'
-                            spacing: 8
-                            property var ss: root.playerData
-                                && root.playerData.featuredStats
-                                && root.playerData.featuredStats.regularSeason
-                                && root.playerData.featuredStats.regularSeason.subSeason || null
-
-                            Repeater {
-                                model: {
-                                    var ss = parent.ss
-                                    if (!ss) return [{l:i18n("PJ"),v:"–"},{l:i18n("Goals"),v:"–"},{l:i18n("Assists"),v:"–"},{l:i18n("PTS"),v:"–"},{l:i18n("+/-"),v:"–"}]
-                                    var pm = ss.plusMinus || 0
-                                    return [
-                                        { l: i18n("PJ"),      v: String(ss.gamesPlayed || 0) },
-                                        { l: i18n("Goals"),   v: String(ss.goals || 0) },
-                                        { l: i18n("Assists"), v: String(ss.assists || 0) },
-                                        { l: i18n("PTS"),     v: String(ss.points || 0) },
-                                        { l: i18n("+/-"),     v: pm >= 0 ? '+'+pm : String(pm) }
-                                    ]
-                                }
-                                delegate: ColumnLayout {
-                                    spacing: 2; Layout.fillWidth: true
-                                    Label { Layout.alignment: Qt.AlignHCenter; text: modelData.l
-                                        font.pixelSize: 11; opacity: 0.6; color: Kirigami.Theme.disabledTextColor }
-                                    Label { Layout.alignment: Qt.AlignHCenter; text: modelData.v
-                                        font.pixelSize: 22; font.bold: true; color: Kirigami.Theme.textColor }
-                                }
-                            }
-                        }
-
-                        // Stats gardien saison — centrées et espacées
-                        RowLayout {
-                            Layout.fillWidth: true
-                            Layout.leftMargin: 12; Layout.rightMargin: 12
-                            Layout.alignment: Qt.AlignHCenter
-                            visible: root.playerData && root.playerData.position === 'G'
-                            spacing: 8
-                            property var ss: root.playerData
-                                && root.playerData.featuredStats
-                                && root.playerData.featuredStats.regularSeason
-                                && root.playerData.featuredStats.regularSeason.subSeason || null
-
-                            Repeater {
-                                model: {
-                                    var ss = parent.ss
-                                    if (!ss) return [{l:i18n("PJ"),v:"–"},{l:i18n("Wins"),v:"–"},{l:i18n("GAA"),v:"–"},{l:i18n("SV%"),v:"–"},{l:i18n("Shutouts"),v:"–"}]
-                                    return [
-                                        { l: i18n("PJ"),       v: String(ss.gamesPlayed || 0) },
-                                        { l: i18n("Wins"),     v: String(ss.wins || 0) },
-                                        { l: i18n("GAA"),      v: ss.goalsAgainstAverage !== undefined ? Number(ss.goalsAgainstAverage).toFixed(2) : "–" },
-                                        { l: i18n("SV%"),      v: ss.savePctg !== undefined ? Number(ss.savePctg).toFixed(3) : "–" },
-                                        { l: i18n("Shutouts"), v: String(ss.shutouts || 0) }
-                                    ]
-                                }
-                                delegate: ColumnLayout {
-                                    spacing: 2; Layout.fillWidth: true
-                                    Label { Layout.alignment: Qt.AlignHCenter; text: modelData.l
-                                        font.pixelSize: 11; opacity: 0.6; color: Kirigami.Theme.disabledTextColor }
-                                    Label { Layout.alignment: Qt.AlignHCenter; text: modelData.v
-                                        font.pixelSize: 20; font.bold: true; color: Kirigami.Theme.textColor }
-                                }
-                            }
-                        }
-
-                        // ── Historique par saison ─────────────────────────
-                        Rectangle {
-                            Layout.fillWidth: true; Layout.leftMargin: 8; Layout.rightMargin: 8
-                            height: 1; color: Kirigami.Theme.textColor; opacity: 0.12
-                        }
-                        Label {
-                            Layout.leftMargin: 12
-                            text: i18n("Season history")
-                            font.pixelSize: 12; font.bold: true; opacity: 0.6
-                            color: Kirigami.Theme.disabledTextColor
-                        }
-
-                        // En-têtes skater
-                        RowLayout {
-                            Layout.fillWidth: true; Layout.leftMargin: 12; Layout.rightMargin: 12
-                            visible: root.playerData && root.playerData.position !== 'G'
-                            spacing: 0
-                            Label { text: i18n("Season"); font.pixelSize: 10; font.bold: true; opacity: 0.5; color: Kirigami.Theme.disabledTextColor; Layout.preferredWidth: 52; horizontalAlignment: Text.AlignLeft }
-                            Label { text: i18n("League"); font.pixelSize: 10; font.bold: true; opacity: 0.5; color: Kirigami.Theme.disabledTextColor; Layout.preferredWidth: 36; horizontalAlignment: Text.AlignHCenter }
-                            Label { text: i18n("Team");   font.pixelSize: 10; font.bold: true; opacity: 0.5; color: Kirigami.Theme.disabledTextColor; Layout.preferredWidth: 60; horizontalAlignment: Text.AlignHCenter }
-                            Label { text: "GP";  font.pixelSize: 10; font.bold: true; opacity: 0.5; color: Kirigami.Theme.disabledTextColor; Layout.preferredWidth: 30; horizontalAlignment: Text.AlignHCenter }
-                            Label { text: "G";   font.pixelSize: 10; font.bold: true; opacity: 0.5; color: Kirigami.Theme.disabledTextColor; Layout.preferredWidth: 28; horizontalAlignment: Text.AlignHCenter }
-                            Label { text: "A";   font.pixelSize: 10; font.bold: true; opacity: 0.5; color: Kirigami.Theme.disabledTextColor; Layout.preferredWidth: 28; horizontalAlignment: Text.AlignHCenter }
-                            Label { text: "PTS"; font.pixelSize: 10; font.bold: true; opacity: 0.5; color: Kirigami.Theme.disabledTextColor; Layout.preferredWidth: 32; horizontalAlignment: Text.AlignHCenter }
-                            Label { text: "+/-"; font.pixelSize: 10; font.bold: true; opacity: 0.5; color: Kirigami.Theme.disabledTextColor; Layout.preferredWidth: 32; horizontalAlignment: Text.AlignHCenter }
-                        }
-
-                        // En-têtes gardien
-                        RowLayout {
-                            Layout.fillWidth: true; Layout.leftMargin: 12; Layout.rightMargin: 12
-                            visible: root.playerData && root.playerData.position === 'G'
-                            spacing: 0
-                            Label { text: i18n("Season"); font.pixelSize: 10; font.bold: true; opacity: 0.5; color: Kirigami.Theme.disabledTextColor; Layout.preferredWidth: 52; horizontalAlignment: Text.AlignLeft }
-                            Label { text: i18n("League"); font.pixelSize: 10; font.bold: true; opacity: 0.5; color: Kirigami.Theme.disabledTextColor; Layout.preferredWidth: 36; horizontalAlignment: Text.AlignHCenter }
-                            Label { text: i18n("Team");   font.pixelSize: 10; font.bold: true; opacity: 0.5; color: Kirigami.Theme.disabledTextColor; Layout.preferredWidth: 60; horizontalAlignment: Text.AlignHCenter }
-                            Label { text: "GP";  font.pixelSize: 10; font.bold: true; opacity: 0.5; color: Kirigami.Theme.disabledTextColor; Layout.preferredWidth: 30; horizontalAlignment: Text.AlignHCenter }
-                            Label { text: "W";   font.pixelSize: 10; font.bold: true; opacity: 0.5; color: Kirigami.Theme.disabledTextColor; Layout.preferredWidth: 28; horizontalAlignment: Text.AlignHCenter }
-                            Label { text: "GAA"; font.pixelSize: 10; font.bold: true; opacity: 0.5; color: Kirigami.Theme.disabledTextColor; Layout.preferredWidth: 36; horizontalAlignment: Text.AlignHCenter }
-                            Label { text: "SV%"; font.pixelSize: 10; font.bold: true; opacity: 0.5; color: Kirigami.Theme.disabledTextColor; Layout.preferredWidth: 38; horizontalAlignment: Text.AlignHCenter }
-                            Label { text: "SO";  font.pixelSize: 10; font.bold: true; opacity: 0.5; color: Kirigami.Theme.disabledTextColor; Layout.preferredWidth: 28; horizontalAlignment: Text.AlignHCenter }
-                        }
-
-                        // Lignes saisons
-                        Repeater {
-                            model: {
-                                if (!root.playerData || !root.playerData.seasonTotals) return []
-                                // Toutes les saisons régulières (gameTypeId=2), plus récent en premier
-                                return root.playerData.seasonTotals
-                                    .filter(function(s){ return s.gameTypeId === 2 })
-                                    .reverse()
-                            }
-                            delegate: RowLayout {
-                                Layout.fillWidth: true; Layout.leftMargin: 12; Layout.rightMargin: 12
-                                spacing: 0
-                                property bool isGoalie: root.playerData && root.playerData.position === 'G'
-                                property string seasonStr: {
-                                    var s = String(modelData.season || '')
-                                    return s.length === 8 ? s.substring(0,4) + '-' + s.substring(6) : s
-                                }
-
-                                // Saison
-                                Label {
-                                    text: seasonStr
-                                    font.pixelSize: 11; color: Kirigami.Theme.textColor
-                                    Layout.preferredWidth: 52
-                                }
-                                // Ligue
-                                Label {
-                                    text: modelData.leagueAbbrev || modelData.leagueName || '–'
-                                    font.pixelSize: 10; opacity: 0.65
-                                    color: Kirigami.Theme.disabledTextColor
-                                    Layout.preferredWidth: 36
-                                    horizontalAlignment: Text.AlignHCenter
-                                    elide: Text.ElideRight
-                                }
-                                // Équipe — pastille NHL ou texte tronqué
-                                Item {
-                                    Layout.preferredWidth: 60
-                                    height: parent.height
-                                    property string abbrev: modelData.leagueAbbrev === 'NHL'
-                                        ? root.resolveNHLAbbrev(modelData.teamCommonName) : ''
-                                    property bool isNHL: modelData.leagueAbbrev === 'NHL'
-
-
-                                    // Pastille colorée pour la NHL
-                                    Rectangle {
-                                        anchors.verticalCenter: parent.verticalCenter
-                                        anchors.left: parent.left
-                                        visible: parent.isNHL && parent.abbrev !== ''
-                                        radius: 2
-                                        color: root.teamColor(parent.abbrev)
-                                        width: nhlTeamLbl.implicitWidth + 6
-                                        height: nhlTeamLbl.implicitHeight + 2
-                                        Label {
-                                            id: nhlTeamLbl
-                                            anchors.centerIn: parent
-                                            text: parent.parent.abbrev
-                                            color: root.teamTextColor(parent.parent.abbrev)
-                                            font.pixelSize: 9; font.bold: true; font.family: "monospace"
-                                        }
-                                    }
-
-                                    // Texte pour les autres ligues
-                                    Label {
-                                        anchors.verticalCenter: parent.verticalCenter
-                                        anchors.left: parent.left
-                                        visible: !parent.isNHL || parent.abbrev === ''
-                                        text: modelData.teamName && modelData.teamName.default
-                                              ? modelData.teamName.default : '–'
-                                        font.pixelSize: 10
-                                        color: Kirigami.Theme.textColor
-                                        width: 60
-                                        elide: Text.ElideRight
-                                        clip: true
-                                    }
-                                }
-                                // Stats skater
-                                Label { visible: !isGoalie; width: visible ? undefined : 0
-                                    text: String(modelData.gamesPlayed || 0)
-                                    font.pixelSize: 11; Layout.preferredWidth: isGoalie ? 0 : 30
-                                    horizontalAlignment: Text.AlignHCenter }
-                                Label { visible: !isGoalie; width: visible ? undefined : 0
-                                    text: String(modelData.goals || 0)
-                                    font.pixelSize: 11; Layout.preferredWidth: isGoalie ? 0 : 28
-                                    horizontalAlignment: Text.AlignHCenter }
-                                Label { visible: !isGoalie; width: visible ? undefined : 0
-                                    text: String(modelData.assists || 0)
-                                    font.pixelSize: 11; Layout.preferredWidth: isGoalie ? 0 : 28
-                                    horizontalAlignment: Text.AlignHCenter }
-                                Label { visible: !isGoalie; width: visible ? undefined : 0
-                                    text: String(modelData.points || 0)
-                                    font.pixelSize: 11; font.bold: true
-                                    Layout.preferredWidth: isGoalie ? 0 : 32
-                                    horizontalAlignment: Text.AlignHCenter }
-                                Label { visible: !isGoalie; width: visible ? undefined : 0
-                                    text: modelData.plusMinus === undefined ? '–'
-                                          : (modelData.plusMinus >= 0 ? '+' : '') + String(modelData.plusMinus)
-                                    font.pixelSize: 11; Layout.preferredWidth: isGoalie ? 0 : 32
-                                    horizontalAlignment: Text.AlignHCenter
-                                    color: modelData.plusMinus === undefined ? Kirigami.Theme.disabledTextColor
-                                         : modelData.plusMinus > 0 ? "#44cc44"
-                                         : modelData.plusMinus < 0 ? "#cc4444"
-                                         : Kirigami.Theme.disabledTextColor }
-                                // Stats gardien
-                                Label { visible: isGoalie; width: visible ? undefined : 0
-                                    text: String(modelData.gamesPlayed || 0)
-                                    font.pixelSize: 11; Layout.preferredWidth: !isGoalie ? 0 : 30
-                                    horizontalAlignment: Text.AlignHCenter }
-                                Label { visible: isGoalie; width: visible ? undefined : 0
-                                    text: String(modelData.wins || 0)
-                                    font.pixelSize: 11; Layout.preferredWidth: !isGoalie ? 0 : 28
-                                    horizontalAlignment: Text.AlignHCenter }
-                                Label { visible: isGoalie; width: visible ? undefined : 0
-                                    text: modelData.goalsAgainstAverage !== undefined
-                                          ? Number(modelData.goalsAgainstAverage).toFixed(2) : "–"
-                                    font.pixelSize: 11; Layout.preferredWidth: !isGoalie ? 0 : 36
-                                    horizontalAlignment: Text.AlignHCenter }
-                                Label { visible: isGoalie; width: visible ? undefined : 0
-                                    text: modelData.savePctg !== undefined
-                                          ? Number(modelData.savePctg).toFixed(3) : "–"
-                                    font.pixelSize: 11; Layout.preferredWidth: !isGoalie ? 0 : 38
-                                    horizontalAlignment: Text.AlignHCenter }
-                                Label { visible: isGoalie; width: visible ? undefined : 0
-                                    text: String(modelData.shutouts || 0)
-                                    font.pixelSize: 11; Layout.preferredWidth: !isGoalie ? 0 : 28
-                                    horizontalAlignment: Text.AlignHCenter }
-                            }
-                        }
-
-                        // ── Total carrière NHL ────────────────────────────
-                        Rectangle {
-                            Layout.fillWidth: true; Layout.leftMargin: 8; Layout.rightMargin: 8
-                            height: 1; color: Kirigami.Theme.highlightColor; opacity: 0.4
-                        }
-
-                        // Total NHL — calculé en JS, affiché dans un seul Label par colonne
-                        RowLayout {
-                            Layout.fillWidth: true; Layout.leftMargin: 12; Layout.rightMargin: 12
-                            spacing: 0
-                            visible: root.playerData !== null
-
-                            Label {
-                                text: i18n("NHL Total")
-                                font.pixelSize: 11; font.bold: true
-                                color: Kirigami.Theme.highlightColor
-                                Layout.preferredWidth: 52
-                            }
-                            Item { Layout.preferredWidth: 36 }
-                            Item { Layout.preferredWidth: 60 }
-
-                            Repeater {
-                                model: {
-                                    if (!root.playerData || !root.playerData.seasonTotals) return []
-                                    var nhl = root.playerData.seasonTotals.filter(function(s){
-                                        return s.gameTypeId === 2 && s.leagueAbbrev === 'NHL'
-                                    })
-                                    var isG = root.playerData.position === 'G'
-                                    var r = { gp:0, g:0, a:0, pts:0, pm:0, w:0, so:0, gaa:0, svp:0, n:0 }
-                                    for (var i = 0; i < nhl.length; i++) {
-                                        var s = nhl[i]
-                                        r.gp  += s.gamesPlayed || 0
-                                        r.g   += s.goals       || 0
-                                        r.a   += s.assists     || 0
-                                        r.pts += s.points      || 0
-                                        r.pm  += s.plusMinus   || 0
-                                        r.w   += s.wins        || 0
-                                        r.so  += s.shutouts    || 0
-                                        if (s.goalsAgainstAverage !== undefined) { r.gaa += s.goalsAgainstAverage; r.n++ }
-                                        if (s.savePctg !== undefined) r.svp += s.savePctg
-                                    }
-                                    if (r.n > 0) { r.gaa = r.gaa / r.n; r.svp = r.svp / r.n }
-                                    var pmStr = (r.pm >= 0 ? '+' : '') + String(r.pm)
-                                    if (isG) return [
-                                        { v: String(r.gp),  w: 30, c: Kirigami.Theme.highlightColor },
-                                        { v: String(r.w),   w: 28, c: Kirigami.Theme.highlightColor },
-                                        { v: r.n > 0 ? Number(r.gaa).toFixed(2) : '–', w: 36, c: Kirigami.Theme.highlightColor },
-                                        { v: r.n > 0 ? Number(r.svp).toFixed(3) : '–', w: 38, c: Kirigami.Theme.highlightColor },
-                                        { v: String(r.so),  w: 28, c: Kirigami.Theme.highlightColor }
-                                    ]
-                                    return [
-                                        { v: String(r.gp),  w: 30, c: Kirigami.Theme.highlightColor },
-                                        { v: String(r.g),   w: 28, c: Kirigami.Theme.highlightColor },
-                                        { v: String(r.a),   w: 28, c: Kirigami.Theme.highlightColor },
-                                        { v: String(r.pts), w: 32, c: Kirigami.Theme.highlightColor },
-                                        { v: pmStr, w: 32,
-                                          c: r.pm > 0 ? '#44cc44' : r.pm < 0 ? '#cc4444' : Kirigami.Theme.disabledTextColor }
-                                    ]
-                                }
-                                delegate: Label {
-                                    text: modelData.v
-                                    font.pixelSize: 11; font.bold: true
-                                    color: modelData.c
-                                    Layout.preferredWidth: modelData.w
-                                    horizontalAlignment: Text.AlignHCenter
-                                }
-                            }
-                        }
-
-                        Item { implicitHeight: 8 }
-                    }
-                }
-            }
+            active: nav.bracket
+            asynchronous: true
+            source: "views/BracketView.qml"
+            onLoaded: item.controller = root
         }
 
-                // ── Vue bracket des séries éliminatoires ────────────────────
-        Item {
+        // --- Vue Calendar ---
+        Loader {
             anchors.fill: parent
-            visible: root.bracketOpen
-
-            ColumnLayout {
-                anchors.fill: parent
-                spacing: 0
-
-                // Barre de navigation
-                RowLayout {
-                    Layout.fillWidth: true
-                    Layout.leftMargin: 8; Layout.topMargin: 4; Layout.bottomMargin: 2
-                    Button {
-                        text: root.detailOpen ? i18n("‹ Match") : i18n("‹ Back")
-                        icon.name: "go-previous"; flat: true
-                        onClicked: root.bracketOpen = false
-                    }
-                    Item { Layout.fillWidth: true }
-                    Label {
-                        text: "🏆 " + i18n("Playoffs")
-                        font.bold: true; font.pixelSize: 16
-                        rightPadding: 12
-                    }
-                }
-
-                // Chargement / erreur
-                Label {
-                    Layout.alignment: Qt.AlignHCenter; Layout.topMargin: 20
-                    visible: root.bracketLoading
-                    text: i18n("Loading…"); opacity: 0.6; font.italic: true
-                }
-                Label {
-                    Layout.alignment: Qt.AlignHCenter; Layout.topMargin: 20
-                    visible: !root.bracketLoading && root.bracketError !== ''
-                    text: root.bracketError
-                    color: Kirigami.Theme.negativeTextColor
-                }
-
-                // Bracket
-                ScrollView {
-                    Layout.fillWidth: true
-                    Layout.fillHeight: true
-                    contentWidth: availableWidth
-                    visible: !root.bracketLoading && root.bracketError === '' && root.bracketData !== null
-
-                    ColumnLayout {
-                        width: parent.width
-                        spacing: 8
-
-                        Repeater {
-                            model: root.bracketData ? (root.bracketData.rounds || []) : []
-                            delegate: ColumnLayout {
-                                Layout.fillWidth: true
-                                spacing: 4
-
-                                // En-tête de ronde
-                                Label {
-                                    Layout.leftMargin: 12; Layout.topMargin: 4
-                                    text: root.playoffRoundLabel(modelData.roundNumber || 0)
-                                    font.bold: true; font.pixelSize: 14
-                                    color: Kirigami.Theme.disabledTextColor
-                                }
-
-                                // Séries de la ronde
-                                Repeater {
-                                    model: modelData.series || []
-                                    delegate: ItemDelegate {
-                                        Layout.fillWidth: true
-                                        Layout.leftMargin: 8; Layout.rightMargin: 8
-                                        contentItem: RowLayout {
-                                            spacing: 8
-
-                                            // Équipe visiteur
-                                            Rectangle {
-                                                radius: 3
-                                                color: root.teamColor(modelData.topSeedTeam
-                                                       ? modelData.topSeedTeam.abbrev : '')
-                                                width: awBracketLbl.implicitWidth + 10
-                                                height: awBracketLbl.implicitHeight + 6
-                                                Label {
-                                                    id: awBracketLbl
-                                                    anchors.centerIn: parent
-                                                    text: modelData.topSeedTeam ? modelData.topSeedTeam.abbrev : '?'
-                                                    color: root.teamTextColor(modelData.topSeedTeam
-                                                           ? modelData.topSeedTeam.abbrev : '')
-                                                    font.bold: true; font.pixelSize: 13
-                                                    font.family: "monospace"
-                                                }
-                                            }
-
-                                            // Score de série
-                                            Label {
-                                                text: (modelData.topSeedWins || 0) + " – " + (modelData.bottomSeedWins || 0)
-                                                font.bold: true; font.pixelSize: 16
-                                                color: Kirigami.Theme.textColor
-                                            }
-
-                                            // Équipe locale
-                                            Rectangle {
-                                                radius: 3
-                                                color: root.teamColor(modelData.bottomSeedTeam
-                                                       ? modelData.bottomSeedTeam.abbrev : '')
-                                                width: hmBracketLbl.implicitWidth + 10
-                                                height: hmBracketLbl.implicitHeight + 6
-                                                Label {
-                                                    id: hmBracketLbl
-                                                    anchors.centerIn: parent
-                                                    text: modelData.bottomSeedTeam ? modelData.bottomSeedTeam.abbrev : '?'
-                                                    color: root.teamTextColor(modelData.bottomSeedTeam
-                                                           ? modelData.bottomSeedTeam.abbrev : '')
-                                                    font.bold: true; font.pixelSize: 13
-                                                    font.family: "monospace"
-                                                }
-                                            }
-
-                                            Item { Layout.fillWidth: true }
-
-                                            // Statut de la série
-                                            Label {
-                                                text: modelData.seriesAbbrev || ''
-                                                font.pixelSize: 12
-                                                opacity: 0.7
-                                                color: Kirigami.Theme.disabledTextColor
-                                            }
-                                        }
-                                    }
-                                }
-
-                                // Séparateur entre rondes
-                                Rectangle {
-                                    Layout.fillWidth: true; height: 1
-                                    color: Kirigami.Theme.textColor; opacity: 0.1
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+            active: nav.calendar
+            asynchronous: true
+            source: "views/CalendarView.qml"
+            onLoaded: item.controller = root
         }
 
-        // ── Vue classement Wild Card ─────────────────────────────────
-        Item {
+        // --- Vue Day View ---
+        Loader {
             anchors.fill: parent
-            visible: root.standingsOpen && !root.scheduleOpen && !root.bracketOpen
-
-            ColumnLayout {
-                anchors.fill: parent
-                spacing: 0
-
-                // Barre de navigation
-                ColumnLayout {
-                    Layout.fillWidth: true
-                    spacing: 4
-
-                    // Ligne 1 : retour + titre
-                    RowLayout {
-                        Layout.fillWidth: true
-                        Layout.leftMargin: 8; Layout.topMargin: 4; Layout.rightMargin: 8
-                        Button {
-                            text: root.teamHubOpen ? i18n("‹ Team")
-                                  : root.detailOpen ? i18n("‹ Match")
-                                  : i18n("‹ Back")
-                            icon.name: "go-previous"
-                            flat: true
-                            onClicked: root.standingsOpen = false
-                        }
-                        Item { Layout.fillWidth: true }
-                        Label {
-                            text: i18n("Standings")
-                            font.bold: true; font.pixelSize: 16
-                        }
-                        Item { Layout.fillWidth: true }
-                    }
-
-                    // Ligne 2 : boutons toggle Wild Card | Divisions | Ligue
-                    RowLayout {
-                        Layout.fillWidth: true
-                        Layout.leftMargin: 8; Layout.rightMargin: 8; Layout.bottomMargin: 2
-                        spacing: 4
-
-                        Button {
-                            text: i18n("Wild Card")
-                            flat: root.standingsMode !== 'wildcard'
-                            highlighted: root.standingsMode === 'wildcard'
-                            Layout.fillWidth: true
-                            font.pixelSize: 11
-                            onClicked: {
-                                root.standingsMode = 'wildcard'
-                                root.buildStandingsModel()
-                            }
-                        }
-                        Button {
-                            text: i18n("Divisions")
-                            flat: root.standingsMode !== 'division'
-                            highlighted: root.standingsMode === 'division'
-                            Layout.fillWidth: true
-                            font.pixelSize: 11
-                            onClicked: {
-                                root.standingsMode = 'division'
-                                root.buildStandingsModel()
-                            }
-                        }
-                        Button {
-                            text: i18n("League")
-                            flat: root.standingsMode !== 'league'
-                            highlighted: root.standingsMode === 'league'
-                            Layout.fillWidth: true
-                            font.pixelSize: 11
-                            onClicked: {
-                                root.standingsMode = 'league'
-                                root.buildStandingsModel()
-                            }
-                        }
-                    }
-                }
-
-                // Chargement / erreur
-                Label {
-                    Layout.alignment: Qt.AlignHCenter
-                    Layout.topMargin: 20
-                    visible: root.standingsLoading
-                    text: i18n("Loading…")
-                    opacity: 0.6; font.italic: true
-                }
-                Label {
-                    Layout.alignment: Qt.AlignHCenter
-                    Layout.topMargin: 20
-                    visible: !root.standingsLoading && root.standingsError !== ""
-                    text: root.standingsError
-                    color: Kirigami.Theme.negativeTextColor
-                }
-
-                // Tableau — les deux conférences générées via JS pur
-                // pour éviter les chaînes parent.parent fragiles dans Repeater imbriqués
-                ScrollView {
-                    id: standingsScroll
-                    Layout.fillWidth: true
-                    Layout.fillHeight: true
-                    visible: !root.standingsLoading && root.standingsError === ""
-                    contentWidth: availableWidth
-                    ScrollBar.horizontal.policy: root.standingsMode === 'league' ? ScrollBar.AsNeeded : ScrollBar.AlwaysOff
-                    clip: true
-
-                    Item {
-                        width: standingsScroll.availableWidth
-                        height: standingsScroll.availableHeight
-
-                        ListView {
-                        id: standingsListView
-                        width: root.standingsMode === 'league'
-                               ? Math.max(580, parent.width)
-                               : Math.min(340, parent.width)
-                        height: parent.height
-                        anchors.horizontalCenter: parent.horizontalCenter
-                        model: standingsFlatModel
-                        interactive: true
-                        spacing: 0
-                        delegate: Item {
-                            // ── Capturer model.* ici — seul endroit où model est accessible
-                            property string rType:   model.type   || ""
-                            property string rLabel:  model.label  || ""
-                            property string rAbbrev: model.abbrev || ""
-                            property string rCity:   model.city   || ""
-                            property int    rGp:     model.gp     || 0
-                            property int    rW:      model.w      || 0
-                            property int    rL:      model.l      || 0
-                            property int    rOt:     model.ot     || 0
-                            property int    rPts:    model.pts    || 0
-                            property int    rGf:     model.gf     || 0
-                            property int    rGa:     model.ga     || 0
-                            property int    rSow:    model.sow    || 0
-                            property int    rSol:    model.sol    || 0
-                            property int    rHw:     model.hw     || 0
-                            property int    rHl:     model.hl     || 0
-                            property int    rHot:    model.hot    || 0
-                            property int    rRw:     model.rw     || 0
-                            property int    rRl:     model.rl     || 0
-                            property int    rRot:    model.rot    || 0
-                            property int    rL10w:   model.l10w   || 0
-                            property int    rL10l:   model.l10l   || 0
-                            property int    rL10ot:  model.l10ot  || 0
-                            property string rStreak: model.streak || ""
-
-                            width: standingsListView.width
-                            x: 0
-                            height: rType === "confHeader"   ? hdrLabel.implicitHeight + 8
-                                  : rType === "colHeader"    ? 18
-                                  : rType === "leagueHeader" ? 20
-                                  : rType === "leagueTeam"   ? leagueRow.implicitHeight + 4
-                                  : rType === "team"         ? teamRow.implicitHeight + 6
-                                  : rType === "wcSeparator"  ? 12
-                                  : hdrLabel.implicitHeight + 4
-
-                            // Fond coloré selon le type
-                            Rectangle {
-                                anchors.fill: parent
-                                visible: rType !== "wcSeparator"
-                                color: rType === "confHeader" ? Kirigami.Theme.alternateBackgroundColor
-                                     : rType === "divHeader"  ? Qt.rgba(Kirigami.Theme.highlightColor.r,
-                                                                        Kirigami.Theme.highlightColor.g,
-                                                                        Kirigami.Theme.highlightColor.b, 0.15)
-                                     : rType === "wcHeader"   ? Qt.rgba(Kirigami.Theme.positiveBackgroundColor.r,
-                                                                        Kirigami.Theme.positiveBackgroundColor.g,
-                                                                        Kirigami.Theme.positiveBackgroundColor.b, 0.25)
-                                     : "transparent"
-                            }
-                            // Ligne séparatrice Wild Card (entre les pos. 8 et 9)
-                            Rectangle {
-                                visible: rType === "wcSeparator"
-                                anchors.centerIn: parent
-                                width: parent.width * 0.85
-                                height: 1
-                                color: Kirigami.Theme.textColor
-                                opacity: 0.35
-                            }
-
-                            // Label centré : confHeader / divHeader / wcHeader
-                            Label {
-                                id: hdrLabel
-                                anchors.centerIn: parent
-                                visible: rType === "confHeader" || rType === "divHeader" || rType === "wcHeader"
-                                text: rLabel
-                                font.bold: true
-                                font.pixelSize: rType === "confHeader" ? 12 : 10
-                                opacity: rType === "confHeader" ? 1.0 : 0.85
-                            }
-
-                            // En-tête colonnes
-                            RowLayout {
-                                anchors { left: parent.left; right: parent.right
-                                          verticalCenter: parent.verticalCenter
-                                          leftMargin: 6; rightMargin: 6 }
-                                visible: rType === "colHeader"
-                                spacing: 0
-                                Item { width: 38 }  // largeur pastille équipe
-                                Label { text: i18n("Team"); font.pixelSize: 12; font.bold: true; opacity: 0.6; Layout.preferredWidth: 44 }
-                                Label { Layout.fillWidth: true }
-                                Label { text: "GP";  font.pixelSize: 12; font.bold: true; opacity: 0.6; Layout.preferredWidth: 28; horizontalAlignment: Text.AlignHCenter }
-                                Label { text: "W";   font.pixelSize: 12; font.bold: true; opacity: 0.6; Layout.preferredWidth: 24; horizontalAlignment: Text.AlignHCenter }
-                                Label { text: "L";   font.pixelSize: 12; font.bold: true; opacity: 0.6; Layout.preferredWidth: 24; horizontalAlignment: Text.AlignHCenter }
-                                Label { text: "OT";  font.pixelSize: 12; font.bold: true; opacity: 0.6; Layout.preferredWidth: 24; horizontalAlignment: Text.AlignHCenter }
-                                Label { text: "PTS"; font.pixelSize: 12; font.bold: true; opacity: 0.6; Layout.preferredWidth: 30; horizontalAlignment: Text.AlignHCenter }
-                            }
-
-                            // ── En-tête colonnes ligue (cliquable pour trier) ──────
-                            RowLayout {
-                                anchors { left: parent.left; right: parent.right
-                                          verticalCenter: parent.verticalCenter
-                                          leftMargin: 4; rightMargin: 4 }
-                                visible: rType === "leagueHeader"
-                                spacing: 0
-                                Repeater {
-                                    model: [
-                                        {k:"gp", t:"GP", w:26},{k:"w", t:"W", w:24},{k:"l", t:"L", w:24},
-                                        {k:"ot", t:"OT", w:24},{k:"pts", t:"PTS", w:28},{k:"gf", t:"GF", w:28},{k:"ga", t:"GA", w:28}
-                                    ]
-                                    delegate: Label {
-                                        text: modelData.t + (root.standingsSortKey === modelData.k ? (root.standingsSortAsc ? " ↑" : " ↓") : "")
-                                        font.pixelSize: 10; font.bold: true
-                                        opacity: root.standingsSortKey === modelData.k ? 1.0 : 0.55
-                                        color: root.standingsSortKey === modelData.k ? Kirigami.Theme.highlightColor : Kirigami.Theme.textColor
-                                        horizontalAlignment: Text.AlignHCenter
-                                        Layout.preferredWidth: modelData.w
-                                        HoverHandler { cursorShape: Qt.PointingHandCursor }
-                                        TapHandler {
-                                            acceptedButtons: Qt.LeftButton
-                                            onTapped: {
-                                                if (root.standingsSortKey === modelData.k)
-                                                    root.standingsSortAsc = !root.standingsSortAsc
-                                                else { root.standingsSortKey = modelData.k; root.standingsSortAsc = false }
-                                                root.buildStandingsModel()
-                                            }
-                                        }
-                                    }
-                                }
-                                Label {
-                                    text: "GF" + (root.standingsSortKey === "gf" ? (root.standingsSortAsc ? " ↑" : " ↓") : "")
-                                    font.pixelSize: 10; font.bold: true
-                                    opacity: root.standingsSortKey === "gf" ? 1.0 : 0.55
-                                    color: root.standingsSortKey === "gf" ? Kirigami.Theme.highlightColor : Kirigami.Theme.textColor
-                                    horizontalAlignment: Text.AlignHCenter; Layout.preferredWidth: 28
-                                    HoverHandler { cursorShape: Qt.PointingHandCursor }
-                                    TapHandler { acceptedButtons: Qt.LeftButton; onTapped: { if (root.standingsSortKey === "gf") root.standingsSortAsc = !root.standingsSortAsc; else { root.standingsSortKey = "gf"; root.standingsSortAsc = false }; root.buildStandingsModel() } }
-                                }
-                                Label {
-                                    text: "GA" + (root.standingsSortKey === "ga" ? (root.standingsSortAsc ? " ↑" : " ↓") : "")
-                                    font.pixelSize: 10; font.bold: true
-                                    opacity: root.standingsSortKey === "ga" ? 1.0 : 0.55
-                                    color: root.standingsSortKey === "ga" ? Kirigami.Theme.highlightColor : Kirigami.Theme.textColor
-                                    horizontalAlignment: Text.AlignHCenter; Layout.preferredWidth: 28
-                                    HoverHandler { cursorShape: Qt.PointingHandCursor }
-                                    TapHandler { acceptedButtons: Qt.LeftButton; onTapped: { if (root.standingsSortKey === "ga") root.standingsSortAsc = !root.standingsSortAsc; else { root.standingsSortKey = "ga"; root.standingsSortAsc = false }; root.buildStandingsModel() } }
-                                }
-                                Label { text: "S/O";  font.pixelSize: 10; font.bold: true; opacity: 0.55; Layout.preferredWidth: 30;  horizontalAlignment: Text.AlignHCenter }
-                                Label { text: "HOME"; font.pixelSize: 10; font.bold: true; opacity: 0.55; Layout.preferredWidth: 44;  horizontalAlignment: Text.AlignHCenter; Layout.leftMargin: 6 }
-                                Label { text: "AWAY"; font.pixelSize: 10; font.bold: true; opacity: 0.55; Layout.preferredWidth: 44;  horizontalAlignment: Text.AlignHCenter; Layout.leftMargin: 6 }
-                                Label { text: "L10";  font.pixelSize: 10; font.bold: true; opacity: 0.55; Layout.preferredWidth: 36;  horizontalAlignment: Text.AlignHCenter; Layout.leftMargin: 6 }
-                                Label { text: "STRK"; font.pixelSize: 10; font.bold: true; opacity: 0.55; Layout.preferredWidth: 34;  horizontalAlignment: Text.AlignHCenter }
-                            }
-
-                            // ── Ligne équipe ligue ────────────────────────────
-                            HoverHandler {
-                                enabled: rType === "leagueTeam"
-                                cursorShape: Qt.PointingHandCursor
-                            }
-                            TapHandler {
-                                enabled: rType === "leagueTeam"
-                                acceptedButtons: Qt.LeftButton
-                                gesturePolicy: TapHandler.ReleaseWithinBounds
-                                onTapped: root.openTeamHub(rAbbrev, 'standings')
-                            }
-                            RowLayout {
-                                id: leagueRow
-                                anchors { left: parent.left; right: parent.right
-                                          verticalCenter: parent.verticalCenter
-                                          leftMargin: 4; rightMargin: 4 }
-                                visible: rType === "leagueTeam"
-                                spacing: 0
-
-                                // Pastille + nom équipe
-                                Rectangle {
-                                    width: lgLbl.implicitWidth + 6; height: lgLbl.implicitHeight + 3; radius: 3
-                                    color: root.teamColor(rAbbrev)
-                                    Label { id: lgLbl; anchors.centerIn: parent; text: rAbbrev
-                                        color: root.teamTextColor(rAbbrev)
-                                        font.pixelSize: 10; font.bold: true; font.family: "monospace" }
-                                }
-                                Label {
-                                    text: rCity
-                                    font.pixelSize: 12
-                                    Layout.leftMargin: 4
-                                    elide: Text.ElideRight
-                                    Layout.preferredWidth: 70
-                                }
-                                Item { Layout.fillWidth: true }
-                                Label { text: rGp;  font.pixelSize: 12; Layout.preferredWidth: 26; horizontalAlignment: Text.AlignHCenter }
-                                Label { text: rW;   font.pixelSize: 12; Layout.preferredWidth: 24; horizontalAlignment: Text.AlignHCenter }
-                                Label { text: rL;   font.pixelSize: 12; Layout.preferredWidth: 24; horizontalAlignment: Text.AlignHCenter }
-                                Label { text: rOt;  font.pixelSize: 12; Layout.preferredWidth: 24; horizontalAlignment: Text.AlignHCenter }
-                                Label { text: rPts; font.pixelSize: 12; font.bold: true; Layout.preferredWidth: 28; horizontalAlignment: Text.AlignHCenter;
-                                    color: root.standingsSortKey === 'pts' ? Kirigami.Theme.highlightColor : Kirigami.Theme.textColor }
-                                Label { text: rGf;  font.pixelSize: 12; Layout.preferredWidth: 28; horizontalAlignment: Text.AlignHCenter }
-                                Label { text: rGa;  font.pixelSize: 12; Layout.preferredWidth: 28; horizontalAlignment: Text.AlignHCenter }
-                                Label { text: rSow + "-" + rSol; font.pixelSize: 12; Layout.preferredWidth: 30; horizontalAlignment: Text.AlignHCenter }
-                                Label { text: rHw + "-" + rHl + "-" + rHot; font.pixelSize: 12; Layout.preferredWidth: 44; horizontalAlignment: Text.AlignHCenter; Layout.leftMargin: 6 }
-                                Label { text: rRw + "-" + rRl + "-" + rRot; font.pixelSize: 12; Layout.preferredWidth: 44; horizontalAlignment: Text.AlignHCenter; Layout.leftMargin: 6 }
-                                Label { text: rL10w + "-" + rL10l + "-" + rL10ot; font.pixelSize: 12; Layout.preferredWidth: 36; horizontalAlignment: Text.AlignHCenter; Layout.leftMargin: 6 }
-                                Label {
-                                    text: rStreak
-                                    font.pixelSize: 12; font.bold: true
-                                    Layout.preferredWidth: 34; horizontalAlignment: Text.AlignHCenter
-                                    color: rStreak.startsWith("W") ? "#44cc44"
-                                         : rStreak.startsWith("L") ? "#cc4444"
-                                         : Kirigami.Theme.textColor
-                                }
-                            }
-
-                            // Ligne équipe cliquable → calendrier
-                            HoverHandler {
-                                enabled: rType === "team"
-                                cursorShape: Qt.PointingHandCursor
-                            }
-                            TapHandler {
-                                enabled: rType === "team"
-                                acceptedButtons: Qt.LeftButton
-                                gesturePolicy: TapHandler.ReleaseWithinBounds
-                                onTapped: root.openTeamHub(rAbbrev, 'standings')
-                            }
-                            RowLayout {
-                                id: teamRow
-                                anchors { left: parent.left; right: parent.right
-                                          verticalCenter: parent.verticalCenter
-                                          leftMargin: 6; rightMargin: 6 }
-                                visible: rType === "team"
-                                spacing: 0
-                                Rectangle {
-                                    width: abbrLbl.implicitWidth + 8
-                                    height: abbrLbl.implicitHeight + 4
-                                    radius: 4
-                                    color: root.teamColor(rAbbrev)
-                                    Label {
-                                        id: abbrLbl
-                                        anchors.centerIn: parent
-                                        text: rAbbrev !== "" ? rAbbrev : "?"
-                                        color: root.teamTextColor(rAbbrev)
-                                        font.pixelSize: 12; font.bold: true; font.family: "monospace"
-                                    }
-                                }
-                                Label { Layout.leftMargin: 6; text: rCity; font.pixelSize: 14; Layout.fillWidth: true; elide: Text.ElideRight }
-                                Label { text: rGp;  font.pixelSize: 14; Layout.preferredWidth: 28; horizontalAlignment: Text.AlignHCenter }
-                                Label { text: rW;   font.pixelSize: 14; Layout.preferredWidth: 24; horizontalAlignment: Text.AlignHCenter }
-                                Label { text: rL;   font.pixelSize: 14; Layout.preferredWidth: 24; horizontalAlignment: Text.AlignHCenter }
-                                Label { text: rOt;  font.pixelSize: 14; Layout.preferredWidth: 24; horizontalAlignment: Text.AlignHCenter }
-                                Label { text: rPts; font.pixelSize: 14; font.bold: true; Layout.preferredWidth: 30; horizontalAlignment: Text.AlignHCenter }
-                            }
-                        }
-                    } // fin ListView
-                    } // fin Item wrapper
-                } // fin ScrollView
-            }
+            active: nav.dayView
+            asynchronous: true
+            visible: active && !nav.detail && !nav.calendar
+            source: "views/DayView.qml"
+            onLoaded: item.controller = root
         }
     }
-
 
     // ══════════════════════════════════════════════════════════════════════
     // DESKTOP REPRESENTATION — liste de cartes enrichies, redimensionnable
     // ══════════════════════════════════════════════════════════════════════
     Component {
         id: desktopRepresentation
-        Item {
-            id: desktopRoot
-            implicitWidth:  360
-            implicitHeight: Math.max(200, desktopList.contentHeight + desktopHeader.implicitHeight + 16)
-
-            // ── En-tête ─────────────────────────────────────────────────
-            Item {
-                id: desktopHeader
-                anchors { top: parent.top; left: parent.left; right: parent.right }
-                height: headerRow.implicitHeight + 16
-
-                RowLayout {
-                    id: headerRow
-                    anchors.centerIn: parent
-                    width: Math.min(480, parent.width - 16)
-                    spacing: 6
-
-                    Label {
-                        text: i18n("NHL Scores")
-                        font.bold: true; font.pixelSize: 13
-                        color: Kirigami.Theme.textColor
-                    }
-                    Label {
-                        id: lastUpdatedLabel
-                        visible: root.lastUpdated instanceof Date
-                        font.pixelSize: 10; opacity: 0.5
-                        text: {
-                            if (!(root.lastUpdated instanceof Date)) return ""
-                            var diff = Math.floor((new Date() - root.lastUpdated) / 60000)
-                            if (diff < 1) return i18n("just now")
-                            if (diff === 1) return i18n("1 min ago")
-                            return diff + " " + i18n("min ago")
-                        }
-                        // Mettre à jour le texte chaque minute
-                        Timer {
-                            interval: 60000; repeat: true; running: true
-                            onTriggered: lastUpdatedLabel.text = lastUpdatedLabel.text
-                        }
-                    }
-                    Item { Layout.fillWidth: true }
-                    Button {
-                        text: i18n("Standings")
-                        icon.name: "view-list-symbolic"
-                        flat: true; font.pixelSize: 10
-                        onClicked: { root.standingsOpen = true; fetchStandings() }
-                    }
-                    Button {
-                        text: i18n("Leaders")
-                        icon.name: "view-statistics"
-                        flat: true; font.pixelSize: 10
-                        onClicked: { root.leadersOpen = true; fetchLeaders() }
-                    }
-                    Button {
-                        icon.name: "view-refresh"
-                        flat: true; font.pixelSize: 10
-                        ToolTip.text: i18n("Refresh now")
-                        ToolTip.visible: hovered
-                        onClicked: root.refresh()
-                    }
-                }
-            }
-
-            // Séparateur sous l'en-tête
-            Rectangle {
-                id: desktopSep
-                anchors { top: desktopHeader.bottom; left: parent.left; right: parent.right }
-                anchors.topMargin: 2
-                height: 1; color: Kirigami.Theme.textColor; opacity: 0.1
-            }
-
-            // ── Liste des cartes de matchs ──────────────────────────────
-            ListView {
-                id: desktopList
-                anchors {
-                    top: desktopSep.bottom; left: parent.left
-                    right: parent.right; bottom: parent.bottom
-                }
-                anchors.topMargin: 4
-                model: todayGames
-                spacing: 6
-                clip: true
-
-                delegate: Item {
-                    width: desktopList.width
-                    height: statusRole === 'DATE_SEP' ? dateSepDesktop.implicitHeight + 8 : card.implicitHeight + 8
-                    visible: gameIndex < maxGames
-
-                    // ── Séparateur de date (desktop) ────────────────────
-                    Rectangle {
-                        id: dateSepDesktop
-                        visible: statusRole === 'DATE_SEP'
-                        anchors.centerIn: parent
-                        implicitWidth: dateSepDesktopLbl.implicitWidth + 24
-                        implicitHeight: dateSepDesktopLbl.implicitHeight + 6
-                        radius: 4
-                        color: Kirigami.Theme.alternateBackgroundColor
-                        border.color: Kirigami.Theme.textColor; border.width: 1; opacity: 0.7
-
-                        Label {
-                            id: dateSepDesktopLbl
-                            anchors.centerIn: parent
-                            text: {
-                                var d = new Date(start)
-                                return root.localeDateLong(d.getTime())
-                            }
-                            font.pixelSize: 12; font.bold: true
-                            color: Kirigami.Theme.textColor
-                        }
-                        HoverHandler { cursorShape: Qt.PointingHandCursor }
-                        TapHandler {
-                            acceptedButtons: Qt.LeftButton
-                            gesturePolicy: TapHandler.ReleaseWithinBounds
-                            onTapped: {
-                                var d = new Date(start)
-                                var iso = d.getFullYear() + "-"
-                                        + root.pad2(d.getMonth() + 1) + "-"
-                                        + root.pad2(d.getDate())
-                                if (root.dayViewOpen && root.dayViewDate === iso) {
-                                    root.dayViewOpen = false
-                                } else {
-                                    root.openDayView(iso)
-                                }
-                            }
-                        }
-                    }
-
-                    // ── Propriétés locales ──────────────────────────────
-                    property string dAway:   away       || ""
-                    property string dHome:   home       || ""
-                    property int    dAg:     ag         || 0
-                    property int    dHg:     hg         || 0
-                    property string dStatus: statusRole || "UPCOMING"
-                    property string dRaw:    rawState   || ""
-                    property string dPType:  periodType || ""
-                    property int    dPeriod: period     || 0
-                    property string dRemain: liveRemain || ""
-                    property var    dStart:  start      || 0
-                    property string dHome2:  home       || ""
-                    property bool   dInterm: inIntermission || false
-                    property bool   dBlinkA: { var b = root.blinkingGames[String(gameId)]; return !!(b && (b==='away'||b==='both')) }
-                    property bool   dBlinkH: { var b = root.blinkingGames[String(gameId)]; return !!(b && (b==='home'||b==='both')) }
-
-                    // ── Carte ───────────────────────────────────────────
-                    Rectangle {
-                        id: card
-                        visible: statusRole !== 'DATE_SEP'
-                        readonly property int maxW: 480
-                        width: Math.min(maxW, parent.width - 12)
-                        anchors.horizontalCenter: parent.horizontalCenter
-                        anchors.verticalCenter: parent.verticalCenter
-                        implicitHeight: cardCol.implicitHeight + 12
-                        radius: 6
-                        color: Qt.rgba(Kirigami.Theme.backgroundColor.r,
-                                       Kirigami.Theme.backgroundColor.g,
-                                       Kirigami.Theme.backgroundColor.b, 0.6)
-                        border.color: Qt.rgba(Kirigami.Theme.textColor.r,
-                                              Kirigami.Theme.textColor.g,
-                                              Kirigami.Theme.textColor.b, 0.1)
-                        border.width: 1
-                        opacity: dStatus === 'FINAL' ? 0.6 : 1.0
-
-                        // Bandeau BUT récent (flash discret en haut de la carte)
-                        Rectangle {
-                            id: goalBannerDesk
-                            visible: root.blinkingGames[String(gameId)] !== undefined
-                            anchors { top: parent.top; left: parent.left; right: parent.right }
-                            height: visible ? goalBannerDesktopLabel.implicitHeight + 4 : 0
-                            radius: 6
-                            // Coins bas carrés pour rejoindre le contenu
-                            Rectangle {
-                                anchors { bottom: parent.bottom; left: parent.left; right: parent.right }
-                                height: parent.radius
-                                color: parent.color
-                            }
-                            color: Qt.rgba(Kirigami.Theme.positiveBackgroundColor.r,
-                                           Kirigami.Theme.positiveBackgroundColor.g,
-                                           Kirigami.Theme.positiveBackgroundColor.b, 0.85)
-                            opacity: root.blinkOn ? 1.0 : 0.4
-                            Label {
-                                id: goalBannerDesktopLabel
-                                anchors.centerIn: parent
-                                text: {
-                                    var b = root.blinkingGames[String(gameId)]
-                                    if (!b) return ""
-                                    var scorer = (b === 'away') ? dAway : (b === 'home') ? dHome : dAway + " / " + dHome
-                                    return "🚨  " + i18n("GOAL") + "  —  " + scorer
-                                }
-                                font.bold: true; font.pixelSize: 11
-                                color: Kirigami.Theme.positiveTextColor
-                            }
-                        }
-
-                        // Contenu principal de la carte
-                        ColumnLayout {
-                            id: cardCol
-                            anchors {
-                                top: goalBannerDesk.bottom; left: parent.left
-                                right: parent.right; margins: 10
-                            }
-                            anchors.topMargin: goalBannerDesk.visible ? 6 : 10
-                            spacing: 4
-
-                            // ── Ligne principale : équipes + scores ─────
-                            // Layout fixe centré : [pastille+score away] [badge statut] [score+pastille home]
-                            Item {
-                                Layout.fillWidth: true
-                                implicitHeight: scoreRow.implicitHeight
-
-                                RowLayout {
-                                    id: scoreRow
-                                    anchors.centerIn: parent
-                                    spacing: 8
-
-                                    // Équipe visiteur : pastille + score
-                                    RowLayout {
-                                        spacing: 6
-                                        Rectangle {
-                                            width: awayNameD.implicitWidth + 10
-                                            height: awayNameD.implicitHeight + 6
-                                            radius: 4
-                                            color: root.teamColor(dAway)
-                                            opacity: (dBlinkA && !root.blinkOn) ? 0.0 : 1.0
-                                            Label {
-                                                id: awayNameD
-                                                anchors.centerIn: parent
-                                                text: dAway
-                                                color: root.teamTextColor(dAway)
-                                                font.pixelSize: 13; font.bold: true; font.family: "monospace"
-                                            }
-                                        }
-                                        Label {
-                                            visible: dStatus !== 'UPCOMING'
-                                            text: dStatus !== 'UPCOMING' ? String(dAg) : ""
-                                            font.pixelSize: 26; font.bold: true
-                                            color: (dStatus === 'LIVE' && dAg > dHg)
-                                                ? Kirigami.Theme.positiveTextColor
-                                                : Kirigami.Theme.textColor
-                                            opacity: (dBlinkA && !root.blinkOn) ? 0.0 : 1.0
-                                        }
-                                    }
-
-                                    // Pastille statut centrale
-                                    Rectangle {
-                                        Layout.alignment: Qt.AlignVCenter
-                                        radius: 4
-                                        color: root.statusColor(dStatus)
-                                        opacity: 0.95
-                                        width: statusColD.implicitWidth + 10
-                                        height: statusColD.implicitHeight + 6
-                                        Column {
-                                            id: statusColD
-                                            anchors.centerIn: parent
-                                            spacing: 0
-                                            Label {
-                                                anchors.horizontalCenter: parent.horizontalCenter
-                                                text: root.badgeLine1(dStatus, dRaw, dPType, dPeriod,
-                                                                       dRemain, dStart, dHome2, dInterm)
-                                                color: "white"; font.pixelSize: 11; font.bold: true
-                                            }
-                                            Label {
-                                                anchors.horizontalCenter: parent.horizontalCenter
-                                                visible: text !== ''
-                                                text: root.badgeLine2(dStatus, dStart, dHome2, dPType)
-                                                color: "white"; font.pixelSize: 9; opacity: 0.85
-                                            }
-                                        }
-                                    }
-
-                                    // Équipe locale : score + pastille
-                                    RowLayout {
-                                        spacing: 6
-                                        Label {
-                                            visible: dStatus !== 'UPCOMING'
-                                            text: dStatus !== 'UPCOMING' ? String(dHg) : ""
-                                            font.pixelSize: 26; font.bold: true
-                                            color: (dStatus === 'LIVE' && dHg > dAg)
-                                                ? Kirigami.Theme.positiveTextColor
-                                                : Kirigami.Theme.textColor
-                                            opacity: (dBlinkH && !root.blinkOn) ? 0.0 : 1.0
-                                        }
-                                        Rectangle {
-                                            width: homeNameD.implicitWidth + 10
-                                            height: homeNameD.implicitHeight + 6
-                                            radius: 4
-                                            color: root.teamColor(dHome)
-                                            opacity: (dBlinkH && !root.blinkOn) ? 0.0 : 1.0
-                                            Label {
-                                                id: homeNameD
-                                                anchors.centerIn: parent
-                                                text: dHome
-                                                color: root.teamTextColor(dHome)
-                                                font.pixelSize: 13; font.bold: true; font.family: "monospace"
-                                            }
-                                        }
-                                    }
-                                } // RowLayout scoreRow
-                            } // Item centrant
-
-                            // ── Ligne secondaire : infos contextuelles ──
-                            RowLayout {
-                                Layout.fillWidth: true
-                                Layout.alignment: Qt.AlignHCenter
-                                visible: dStatus === 'LIVE' || dStatus === 'UPCOMING'
-                                spacing: 0
-
-                                // Période + temps restant (LIVE)
-                                Label {
-                                    visible: dStatus === 'LIVE' && !dInterm
-                                    Layout.fillWidth: true
-                                    text: {
-                                        if (dPType === 'OT') return i18n("Overtime")
-                                        if (dPType === 'SO') return i18n("Shootout")
-                                        var p = dPeriod
-                                        var names = [i18n("1st period"), i18n("2nd period"), i18n("3rd period")]
-                                        return p >= 1 && p <= 3 ? names[p-1] : i18n("Period") + " " + p
-                                    }
-                                    font.pixelSize: 10; opacity: 0.7
-                                    horizontalAlignment: Text.AlignHCenter
-                                }
-                                Label {
-                                    visible: dStatus === 'LIVE' && dInterm
-                                    Layout.fillWidth: true
-                                    text: {
-                                        var p = dPeriod
-                                        var names = [i18n("1st intermission"), i18n("2nd intermission"), i18n("3rd intermission")]
-                                        return p >= 1 && p <= 3 ? names[p-1] : i18n("Intermission")
-                                    }
-                                    font.pixelSize: 10; opacity: 0.7
-                                    horizontalAlignment: Text.AlignHCenter
-                                }
-
-
-                            }
-                        } // ColumnLayout cardCol
-                    } // Rectangle card
-
-                    // Clic sur la carte → vue détail
-                    TapHandler {
-                        acceptedButtons: Qt.LeftButton
-                        gesturePolicy: TapHandler.ReleaseWithinBounds
-                        cursorShape: Qt.PointingHandCursor
-                        onTapped: root.openDetail(gameId, dAway, dHome, dAg, dHg,
-                                                  dStatus, dPType, dPeriod, dRemain, dStart, dInterm, situationCode)
-                    }
-                } // delegate Item
-
-                // Message si aucun match
-                Label {
-                    anchors.centerIn: parent
-                    visible: desktopList.count === 0
-                    text: i18n("No games today")
-                    opacity: 0.5; font.italic: true
-                }
-            } // ListView desktopList
-
-            // ── Vue classement (réutilise le même standingsOpen) ────────
-            // Le détail et le classement s'affichent par-dessus via le fullRepresentation
-        } // Item desktopRoot
-    } // Component desktopRepresentation
+        Loader {
+            source: "views/DesktopRepresentation.qml"
+            onLoaded: item.controller = root
+        }
+    }
 
 
 }
