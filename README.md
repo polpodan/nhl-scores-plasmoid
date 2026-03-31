@@ -6,9 +6,6 @@ A real-time NHL scores applet for KDE Plasma 6. Displays live scores, schedules,
 
 <<<<<<< HEAD
 ![Version](https://img.shields.io/badge/version-5.0.0-blue)
-=======
-![Version](https://img.shields.io/badge/version-4.4-blue)
->>>>>>> 3d293ecdd641467d9b7fed09a638d08a03acd09f
 ![Plasma](https://img.shields.io/badge/Plasma-6-informational)
 ![License](https://img.shields.io/badge/license-GPL--3.0--or--later-green)
 
