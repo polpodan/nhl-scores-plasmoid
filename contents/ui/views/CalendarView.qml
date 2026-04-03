@@ -18,21 +18,26 @@ Item {
         }
     }
 
-    // Réagir aux changements via la syntaxe moderne (function onFoo)
     Connections {
-        target: controller
+        target: controller ? controller.cal : null
         enabled: !!controller
         ignoreUnknownSignals: true
         
-        function onCalYearChanged() {
+        function onYearChanged() {
             if (controller.nav.calendar) 
                 controller.fetchCalendarMonth(controller.cal.year, controller.cal.month)
         }
-        function onCalMonthChanged() {
+        function onMonthChanged() {
             if (controller.nav.calendar) 
                 controller.fetchCalendarMonth(controller.cal.year, controller.cal.month)
         }
-        function onCalendarOpenChanged() {
+    }
+
+    Connections {
+        target: controller ? controller.nav : null
+        enabled: !!controller
+        ignoreUnknownSignals: true
+        function onCalendarChanged() {
             if (controller.nav.calendar) 
                 controller.fetchCalendarMonth(controller.cal.year, controller.cal.month)
         }

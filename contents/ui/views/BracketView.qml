@@ -22,7 +22,14 @@ Item {
             Button {
                 text: (controller && controller.nav.detail) ? i18n("‹ Match") : i18n("‹ Back")
                 icon.name: "go-previous"; flat: true
-                onClicked: { if (controller) controller.nav.bracket = false }
+                onClicked: {
+                    if (controller) {
+                        controller.nav.bracket = false
+                        if (controller.nav.detail) {
+                            // Déjà ouvert en arrière-plan ou via DetailView
+                        }
+                    }
+                }
             }
             Item { Layout.fillWidth: true }
             Label {

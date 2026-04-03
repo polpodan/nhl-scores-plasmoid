@@ -10,7 +10,7 @@ APPLET_ID="org.dany.nhlscores"
 CATALOG="plasma_applet_${APPLET_ID}"
 
 # Langues à compiler
-LANGS=(fr fr_CA)
+LANGS=(fr fr_CA ru fi sv de cs sk)
 
 mkdir -p "$LOCALE_DIR"
 

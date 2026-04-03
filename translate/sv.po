@@ -1,0 +1,230 @@
+# Swedish translations for nhl-scores-plasmoid
+msgid ""
+msgstr ""
+"Project-Id-Version: nhl-scores-plasmoid 5.0\n"
+"Language: sv\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+msgid "NHL Scores"
+msgstr "NHL-resultat"
+
+msgid "No games"
+msgstr "Inga matcher"
+
+msgid "No games today"
+msgstr "Inga matcher idag"
+
+msgid "Refresh now"
+msgstr "Uppdatera nu"
+
+msgid "Loading…"
+msgstr "Laddar…"
+
+msgid "‹ Back"
+msgstr "‹ Tillbaka"
+
+msgid "‹ Match"
+msgstr "‹ Match"
+
+msgid "‹ Standings"
+msgstr "‹ Tabell"
+
+msgid "‹ Team"
+msgstr "‹ Lag"
+
+msgid "Final"
+msgstr "Slutresultat"
+
+msgid "Upcoming"
+msgstr "Kommande"
+
+msgid "LIVE"
+msgstr "LIVE"
+
+msgid "Overtime"
+msgstr "Förlängning"
+
+msgid "Shootout"
+msgstr "Straffar"
+
+msgid "Intermission"
+msgstr "Periodpaus"
+
+msgid "Period"
+msgstr "Period"
+
+msgid "1st"
+msgstr "1:a"
+
+msgid "2nd"
+msgstr "2:a"
+
+msgid "3rd"
+msgstr "3:e"
+
+msgid "SO"
+msgstr "STR"
+
+msgid "1st period"
+msgstr "Period 1"
+
+msgid "2nd period"
+msgstr "Period 2"
+
+msgid "3rd period"
+msgstr "Period 3"
+
+msgid "Power Play"
+msgstr "Powerplay"
+
+msgid "Standings"
+msgstr "Tabell"
+
+msgid "Leaders"
+msgstr "Poängligan"
+
+msgid "Season series"
+msgstr "Säsongens möten"
+
+msgid "Probable goalies"
+msgstr "Troliga målvakter"
+
+msgid "Points leaders (last 5 games)"
+msgstr "Poängligan (senaste 5)"
+
+msgid "Shots on Goal"
+msgstr "Skott på mål"
+
+msgid "GOAL"
+msgstr "MÅL"
+
+msgid "Goals"
+msgstr "Mål"
+
+msgid "Assists"
+msgstr "Assist"
+
+msgid "PTS"
+msgstr "P"
+
+msgid "W"
+msgstr "V"
+
+msgid "L"
+msgstr "F"
+
+msgid "PIM"
+msgstr "UTV"
+
+msgid "PJ"
+msgstr "M"
+
+msgid "Player"
+msgstr "Spelare"
+
+msgid "Team"
+msgstr "Lag"
+
+msgid "Goalies"
+msgstr "Målvakter"
+
+msgid "Wild Card"
+msgstr "Wild Card"
+
+msgid "Eastern Conference"
+msgstr "Eastern Conference"
+
+msgid "Western Conference"
+msgstr "Western Conference"
+
+msgid "Playoffs"
+msgstr "Slutspel"
+
+msgid "Points"
+msgstr "Poäng"
+
+msgid "Wins"
+msgstr "Vinster"
+
+msgid "Losses"
+msgstr "Förluster"
+
+msgid "Shutouts"
+msgstr "Hållna nollor"
+
+msgid "SHO"
+msgstr "HN"
+
+msgid "GAA"
+msgstr "GAA"
+
+msgid "SV%"
+msgstr "R%"
+
+msgid "Schedule"
+msgstr "Spelschema"
+
+msgid "Stats"
+msgstr "Statistik"
+
+msgid "Monday"
+msgstr "Måndag"
+
+msgid "Tuesday"
+msgstr "Tisdag"
+
+msgid "Wednesday"
+msgstr "Onsdag"
+
+msgid "Thursday"
+msgstr "Torsdag"
+
+msgid "Friday"
+msgstr "Fredag"
+
+msgid "Saturday"
+msgstr "Lördag"
+
+msgid "Sunday"
+msgstr "Söndag"
+
+msgid "Display"
+msgstr "Skärm"
+
+msgid "Layout"
+msgstr "Layout"
+
+msgid "Search"
+msgstr "Sök"
+
+msgid "Calendar"
+msgstr "Kalender"
+
+msgid "Today"
+msgstr "Idag"
+
+msgid "Atlantic"
+msgstr "Atlantic"
+
+msgid "Metropolitan"
+msgstr "Metropolitan"
+
+msgid "Central"
+msgstr "Central"
+
+msgid "Pacific"
+msgstr "Pacific"
+
+msgid "First Round"
+msgstr "Första rundan"
+
+msgid "Second Round"
+msgstr "Andra rundan"
+
+msgid "Conference Finals"
+msgstr "Conference Finals"
+
+msgid "Stanley Cup Final"
+msgstr "Stanley Cup-final"

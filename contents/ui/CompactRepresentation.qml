@@ -45,8 +45,8 @@ Item {
         id: hRow
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.verticalCenter: parent.verticalCenter
-        // Espacement ajusté : 3px pour normal (-25% de 4), 2px pour ultra (-10% de 2)
-        spacing: (controller && controller.ultraCompact) ? 2 : 3
+        // Espacement ajustable via config
+        spacing: controller ? controller.spacingBetweenGames : 3
         visible: controller && !controller.isVertical && controller.todayGamesModel && controller.todayGamesModel.count > 0
 
         Repeater {
@@ -192,32 +192,34 @@ Item {
 
     // --- MODE VERTICAL ---
     Column {
-        id: vCol; anchors.horizontalCenter: parent.horizontalCenter; anchors.verticalCenter: parent.verticalCenter; spacing: 1; visible: controller && controller.isVertical && controller.todayGamesModel && controller.todayGamesModel.count > 0
+        id: vCol; width: parent.width; anchors.horizontalCenter: parent.horizontalCenter; anchors.verticalCenter: parent.verticalCenter; 
+        spacing: controller ? controller.spacingBetweenGames : 4
+        visible: controller && controller.isVertical && controller.todayGamesModel && controller.todayGamesModel.count > 0
         Repeater {
             model: controller ? controller.todayGamesModel : null
             delegate: Column {
                 id: vDelegateWrapper
                 width: vCol.width
-                spacing: 1 // Resserré (-20%)
+                spacing: 2
                 readonly property bool isDateSep: model.statusRole === 'DATE_SEP'
                 readonly property var currentModel: model
 
                 Item {
-                    width: parent.width; height: vDelegateWrapper.isDateSep ? 20 : 42; visible: vDelegateWrapper.currentModel.gameIndex < controller.maxGames
+                    width: parent.width; height: vDelegateWrapper.isDateSep ? 20 : 88; visible: vDelegateWrapper.currentModel.gameIndex < controller.maxGames
                     Column {
                         visible: vDelegateWrapper.isDateSep; anchors.fill: parent; spacing: 0
                         Rectangle { width: parent.width * 0.6; height: 1; anchors.horizontalCenter: parent.horizontalCenter; color: Kirigami.Theme.textColor; opacity: 0.15 }
                         Text { width: parent.width; horizontalAlignment: Text.AlignHCenter; text: compactRoot.formatDate(vDelegateWrapper.currentModel.start); font.pixelSize: 9; font.bold: true; color: Kirigami.Theme.textColor; opacity: 0.4 }
                         Rectangle { width: parent.width * 0.6; height: 1; anchors.horizontalCenter: parent.horizontalCenter; color: Kirigami.Theme.textColor; opacity: 0.15 }
                     }
-                    Row {
+                    Column {
                         anchors.centerIn: parent; visible: !vDelegateWrapper.isDateSep; spacing: 3
-                        Loader { sourceComponent: controller.teamColumnComponent; property string code: vDelegateWrapper.currentModel.away; property int score: vDelegateWrapper.currentModel.ag; property int sz: 14; property string gameId: String(vDelegateWrapper.currentModel.gameId || ''); property string teamSide: 'away' }
+                        Loader { sourceComponent: controller.teamColumnComponent; property string code: vDelegateWrapper.currentModel.away; property int score: vDelegateWrapper.currentModel.ag; property int sz: 14; property string gameId: String(vDelegateWrapper.currentModel.gameId || ''); property string teamSide: 'away'; property string gameStatus: vDelegateWrapper.currentModel.statusRole }
                         Loader {
                             sourceComponent: controller.statusBadgeComponent
                             property string gameStatus: vDelegateWrapper.currentModel.statusRole; property string rawState: vDelegateWrapper.currentModel.rawState; property string periodType: vDelegateWrapper.currentModel.periodType; property int period: vDelegateWrapper.currentModel.period; property string liveRemain: vDelegateWrapper.currentModel.liveRemain; property var startMs: vDelegateWrapper.currentModel.start; property string awayTeam: vDelegateWrapper.currentModel.away; property string homeTeam: vDelegateWrapper.currentModel.home; property bool intermission: vDelegateWrapper.currentModel.inIntermission; property string intermissionRemain: vDelegateWrapper.currentModel.intermissionRemain || ""; property string situationCode: vDelegateWrapper.currentModel.situationCode || "1551"; property string penaltyTime: vDelegateWrapper.currentModel.penaltyTime || ""
                         }
-                        Loader { sourceComponent: controller.teamColumnComponent; property string code: vDelegateWrapper.currentModel.home; property int score: vDelegateWrapper.currentModel.hg; property int sz: 14; property string gameId: String(vDelegateWrapper.currentModel.gameId || ''); property string teamSide: 'home' }
+                        Loader { sourceComponent: controller.teamColumnComponent; property string code: vDelegateWrapper.currentModel.home; property int score: vDelegateWrapper.currentModel.hg; property int sz: 14; property string gameId: String(vDelegateWrapper.currentModel.gameId || ''); property string teamSide: 'home'; property string gameStatus: vDelegateWrapper.currentModel.statusRole }
                     }
                     MouseArea {
                         anchors.fill: parent
@@ -232,11 +234,11 @@ Item {
                         }
                     }
                 }
-                // Séparateur vertical (Moins subtil : 0.2)
+                // Séparateur vertical
                 Rectangle {
                     visible: index < (controller.todayGamesModel.count - 1) && !vDelegateWrapper.isDateSep
                     width: parent.width * 0.8; height: 1; anchors.horizontalCenter: parent.horizontalCenter
-                    color: Kirigami.Theme.textColor; opacity: 0.2
+                    color: Kirigami.Theme.textColor; opacity: 0.1
                 }
             }
         }

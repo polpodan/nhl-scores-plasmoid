@@ -23,6 +23,8 @@ Item {
   property bool   cfg_showAllTeams
   property int    cfg_maxGames
   property int    cfg_leadersLimit
+  property int    cfg_franchiseLeadersLimit
+  property int    cfg_spacingBetweenGames
   property int    cfg_lookaheadDays
   property bool   cfg_showToday
   property int    cfg_pastDays
@@ -47,6 +49,8 @@ Item {
   property bool   cfg_showAllTeamsDefault
   property int    cfg_maxGamesDefault
   property int    cfg_leadersLimitDefault
+  property int    cfg_franchiseLeadersLimitDefault
+  property int    cfg_spacingBetweenGamesDefault
   property int    cfg_lookaheadDaysDefault
   property bool   cfg_showTodayDefault
   property int    cfg_pastDaysDefault
@@ -450,8 +454,25 @@ Item {
           }
           onCurrentIndexChanged: if (ready) cfg_leadersLimit = model[currentIndex]
           Layout.alignment: Qt.AlignLeft
-        }
+          }
 
+          // Ligne 1c : Limite meneurs historiques
+          QQC2.Label {
+          text: i18n("Franchise leaders limit:")
+          Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
+          }
+          QQC2.ComboBox {
+          model: [10, 20, 50]
+          property bool ready: false
+          Component.onCompleted: {
+            var vals = [10, 20, 50]
+            var idx = vals.indexOf(cfg_franchiseLeadersLimit || 10)
+            currentIndex = idx >= 0 ? idx : 0
+            ready = true
+          }
+          onCurrentIndexChanged: if (ready) cfg_franchiseLeadersLimit = model[currentIndex]
+          Layout.alignment: Qt.AlignLeft
+          }
         // Ligne 2 : Jours à venir
         QQC2.Label {
           text: i18n("Days ahead:")

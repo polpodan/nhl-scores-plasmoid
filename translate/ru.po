@@ -1,0 +1,230 @@
+# Russian translations for nhl-scores-plasmoid
+msgid ""
+msgstr ""
+"Project-Id-Version: nhl-scores-plasmoid 5.0\n"
+"Language: ru\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+msgid "NHL Scores"
+msgstr "Результаты НХЛ"
+
+msgid "No games"
+msgstr "Нет матчей"
+
+msgid "No games today"
+msgstr "Сегодня матчей нет"
+
+msgid "Refresh now"
+msgstr "Обновить сейчас"
+
+msgid "Loading…"
+msgstr "Загрузка…"
+
+msgid "‹ Back"
+msgstr "‹ Назад"
+
+msgid "‹ Match"
+msgstr "‹ Матч"
+
+msgid "‹ Standings"
+msgstr "‹ Таблица"
+
+msgid "‹ Team"
+msgstr "‹ Команда"
+
+msgid "Final"
+msgstr "Завершен"
+
+msgid "Upcoming"
+msgstr "Предстоящий"
+
+msgid "LIVE"
+msgstr "LIVE"
+
+msgid "Overtime"
+msgstr "Овертайм"
+
+msgid "Shootout"
+msgstr "Буллиты"
+
+msgid "Intermission"
+msgstr "Перерыв"
+
+msgid "Period"
+msgstr "Период"
+
+msgid "1st"
+msgstr "1-й"
+
+msgid "2nd"
+msgstr "2-й"
+
+msgid "3rd"
+msgstr "3-й"
+
+msgid "SO"
+msgstr "Бул"
+
+msgid "1st period"
+msgstr "1-й период"
+
+msgid "2nd period"
+msgstr "2-й период"
+
+msgid "3rd period"
+msgstr "3-й период"
+
+msgid "Power Play"
+msgstr "Большинство"
+
+msgid "Standings"
+msgstr "Таблица"
+
+msgid "Leaders"
+msgstr "Лидеры"
+
+msgid "Season series"
+msgstr "Серия в сезоне"
+
+msgid "Probable goalies"
+msgstr "Вероятные вратари"
+
+msgid "Points leaders (last 5 games)"
+msgstr "Лидеры по очкам (последние 5 игр)"
+
+msgid "Shots on Goal"
+msgstr "Броски в створ"
+
+msgid "GOAL"
+msgstr "ГОЛ"
+
+msgid "Goals"
+msgstr "Голы"
+
+msgid "Assists"
+msgstr "Передачи"
+
+msgid "PTS"
+msgstr "Очки"
+
+msgid "W"
+msgstr "В"
+
+msgid "L"
+msgstr "П"
+
+msgid "PIM"
+msgstr "ШТ"
+
+msgid "PJ"
+msgstr "И"
+
+msgid "Player"
+msgstr "Игрок"
+
+msgid "Team"
+msgstr "Команда"
+
+msgid "Goalies"
+msgstr "Вратари"
+
+msgid "Wild Card"
+msgstr "Уайлд-кард"
+
+msgid "Eastern Conference"
+msgstr "Восточная конференция"
+
+msgid "Western Conference"
+msgstr "Западная конференция"
+
+msgid "Playoffs"
+msgstr "Плей-офф"
+
+msgid "Points"
+msgstr "Очки"
+
+msgid "Wins"
+msgstr "Победы"
+
+msgid "Losses"
+msgstr "Поражения"
+
+msgid "Shutouts"
+msgstr "Сухие матчи"
+
+msgid "SHO"
+msgstr "СМ"
+
+msgid "GAA"
+msgstr "КН"
+
+msgid "SV%"
+msgstr "%ОБ"
+
+msgid "Schedule"
+msgstr "Расписание"
+
+msgid "Stats"
+msgstr "Статистика"
+
+msgid "Monday"
+msgstr "Понедельник"
+
+msgid "Tuesday"
+msgstr "Вторник"
+
+msgid "Wednesday"
+msgstr "Среда"
+
+msgid "Thursday"
+msgstr "Четверг"
+
+msgid "Friday"
+msgstr "Пятница"
+
+msgid "Saturday"
+msgstr "Суббота"
+
+msgid "Sunday"
+msgstr "Воскресенье"
+
+msgid "Display"
+msgstr "Экран"
+
+msgid "Layout"
+msgstr "Макет"
+
+msgid "Search"
+msgstr "Поиск"
+
+msgid "Calendar"
+msgstr "Календарь"
+
+msgid "Today"
+msgstr "Сегодня"
+
+msgid "Atlantic"
+msgstr "Атлантический"
+
+msgid "Metropolitan"
+msgstr "Столичный"
+
+msgid "Central"
+msgstr "Центральный"
+
+msgid "Pacific"
+msgstr "Тихоокеанский"
+
+msgid "First Round"
+msgstr "Первый раунд"
+
+msgid "Second Round"
+msgstr "Второй раунд"
+
+msgid "Conference Finals"
+msgstr "Финалы конференций"
+
+msgid "Stanley Cup Final"
+msgstr "Финал Кубка Стэнли"

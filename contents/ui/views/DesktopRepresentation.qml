@@ -60,8 +60,7 @@ Item {
                 font.pixelSize: 10
                 onClicked: {
                     if (root) {
-                        root.nav.standings = true
-                        root.fetchStandings()
+                        root.openStandings()
                     }
                 }
             }
@@ -72,8 +71,7 @@ Item {
                 font.pixelSize: 10
                 onClicked: {
                     if (root) {
-                        root.nav.leaders = true
-                        root.fetchLeaders()
+                        root.openLeaders()
                     }
                 }
             }
@@ -110,7 +108,7 @@ Item {
         anchors.bottom: parent.bottom
         anchors.topMargin: 4
         model: root ? root.todayGamesModel : null
-        spacing: 8
+        spacing: root ? root.spacingBetweenGames : 8
         clip: true
 
         delegate: Item {

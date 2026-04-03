@@ -44,8 +44,7 @@ ScrollView {
                 icon.name: "view-list-symbolic"
                 flat: true
                 onClicked: {
-                    controller.nav.standings = true
-                    controller.fetchStandings()
+                    controller.openStandings()
                 }
             }
             Item {
@@ -56,8 +55,7 @@ ScrollView {
                 icon.name: "view-statistics"
                 flat: true
                 onClicked: {
-                    controller.nav.leaders = true
-                    controller.fetchLeaders()
+                    controller.openLeaders()
                 }
             }
             Item {
@@ -424,6 +422,13 @@ ScrollView {
                             font.pixelSize: 22
                             font.bold: true
                         }
+                        Button {
+                            text: "🏆"
+                            flat: true
+                            onClicked: controller.openPlayoffBracket()
+                            ToolTip.text: i18n("Playoffs")
+                            ToolTip.visible: hovered
+                        }
                     }
                 }
 
@@ -777,6 +782,7 @@ ScrollView {
                     font.pixelSize: 14
                     color: controller.det.view === 'goals' ? Kirigami.Theme.textColor : Kirigami.Theme.disabledTextColor
                     opacity: font.bold ? 1.0 : 0.45
+                    HoverHandler { cursorShape: Qt.PointingHandCursor }
                     TapHandler {
                         onTapped: {
                             controller.det.view = 'goals'
@@ -796,6 +802,7 @@ ScrollView {
                     font.pixelSize: 14
                     color: controller.det.view === 'penalties' ? Kirigami.Theme.textColor : Kirigami.Theme.disabledTextColor
                     opacity: font.bold ? 1.0 : 0.45
+                    HoverHandler { cursorShape: Qt.PointingHandCursor }
                     TapHandler {
                         onTapped: {
                             controller.det.view = 'penalties'
@@ -815,6 +822,7 @@ ScrollView {
                     font.pixelSize: 14
                     color: controller.det.view === 'stars' ? Kirigami.Theme.textColor : Kirigami.Theme.disabledTextColor
                     opacity: font.bold ? 1.0 : 0.45
+                    HoverHandler { cursorShape: Qt.PointingHandCursor }
                     TapHandler {
                         onTapped: {
                             controller.det.view = 'stars'
@@ -882,6 +890,7 @@ ScrollView {
                                     text: (modelData.goalsToDate > 0 ? (modelData.scorer || "") + " (" + modelData.goalsToDate + ")" : (modelData.scorer || "")) + (modelData.ppg ? " PP" : "") + (modelData.shg ? " SH" : "") + (modelData.en ? " EN" : "")
                                     font.bold: true
                                     color: controller.teamColorAdapted(modelData.team || "")
+                                    HoverHandler { cursorShape: Qt.PointingHandCursor }
                                     TapHandler {
                                         onTapped: {
                                             controller.openPlayer(modelData.scorerId, 'detail')
@@ -904,6 +913,7 @@ ScrollView {
                                             font.pixelSize: 11
                                             color: controller.teamColorAdapted(modelData.team || "")
                                             opacity: 0.9
+                                            HoverHandler { cursorShape: Qt.PointingHandCursor }
                                             TapHandler {
                                                 onTapped: {
                                                     controller.openPlayer(modelData.id, 'detail')
@@ -991,6 +1001,7 @@ ScrollView {
                                     text: (modelData.player || "") + (modelData.number > 0 ? " #" + modelData.number : "")
                                     font.bold: true
                                     color: controller.teamColorAdapted(modelData.team || "")
+                                    HoverHandler { cursorShape: Qt.PointingHandCursor }
                                     TapHandler {
                                         onTapped: {
                                             controller.openPlayer(modelData.playerId, 'detail')
@@ -1038,6 +1049,7 @@ ScrollView {
                             font.bold: true
                             Layout.fillWidth: true
                             color: controller.teamColorAdapted(modelData.team || "")
+                            HoverHandler { cursorShape: Qt.PointingHandCursor }
                             TapHandler {
                                 onTapped: {
                                     controller.openPlayer(modelData.id, 'detail')

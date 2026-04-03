@@ -55,6 +55,10 @@ Item {
   property int    cfg_pollIntervalDefault
   property int    cfg_blinkDuration
   property int    cfg_blinkDurationDefault
+  property int    cfg_leadersLimit
+  property int    cfg_leadersLimitDefault
+  property int    cfg_spacingBetweenGames
+  property int    cfg_spacingBetweenGamesDefault
 
   function indexFromValue(v) { return (String(v)==='inline') ? 1 : 0 }
   function valueFromIndex(i) { return (i===1) ? 'inline' : 'stack' }
@@ -242,6 +246,19 @@ Item {
       text: page.isDesktop ? i18n("N/A (desktop widget)") : i18n("Fixed (vertical panel)")
       opacity: 0.5
       font.italic: true
+    }
+
+    QQC2.ComboBox {
+      Kirigami.FormData.label: i18n("Spacing between games:")
+      model: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+      property bool ready: false
+      Component.onCompleted: {
+        var vals = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+        var idx = vals.indexOf(page.cfg_spacingBetweenGames !== undefined ? page.cfg_spacingBetweenGames : 2)
+        currentIndex = idx >= 0 ? idx : 2
+        ready = true
+      }
+      onCurrentIndexChanged: if (ready) page.cfg_spacingBetweenGames = model[currentIndex]
     }
 
     QQC2.ComboBox {

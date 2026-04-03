@@ -256,6 +256,7 @@ Item {
                             Label { text: rRw + "-" + rRl + "-" + rRot; font.pixelSize: s.fonts.small + 1; Layout.preferredWidth: 44; horizontalAlignment: Text.AlignHCenter; Layout.leftMargin: 6 }
                             Label { text: rL10w + "-" + rL10l + "-" + rL10ot; font.pixelSize: s.fonts.small + 1; Layout.preferredWidth: 36; horizontalAlignment: Text.AlignHCenter; Layout.leftMargin: 6 }
                             Label { text: rStreak; font.pixelSize: s.fonts.small + 1; font.bold: true; Layout.preferredWidth: 34; horizontalAlignment: Text.AlignHCenter; color: rStreak.startsWith("W") ? "#44cc44" : (rStreak.startsWith("L") ? "#cc4444" : Kirigami.Theme.textColor) }
+                            HoverHandler { cursorShape: Qt.PointingHandCursor }
                             TapHandler { onTapped: controller.openTeamHub(rAbbrev, 'standings') }
                         }
                         RowLayout {
@@ -271,6 +272,7 @@ Item {
                             Label { text: rL; font.pixelSize: s.fonts.main; Layout.preferredWidth: 24; horizontalAlignment: Text.AlignHCenter }
                             Label { text: rOt; font.pixelSize: s.fonts.main; Layout.preferredWidth: 24; horizontalAlignment: Text.AlignHCenter }
                             Label { text: rPts; font.pixelSize: s.fonts.main; font.bold: true; Layout.preferredWidth: 30; horizontalAlignment: Text.AlignHCenter }
+                            HoverHandler { cursorShape: Qt.PointingHandCursor }
                             TapHandler { onTapped: controller.openTeamHub(rAbbrev, 'standings') }
                         }
                     }

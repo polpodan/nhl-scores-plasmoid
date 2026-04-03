@@ -118,6 +118,8 @@ Item {
                         topPadding: 8; bottomPadding: 8
                         leftPadding: 16; rightPadding: 16
                         
+                        HoverHandler { cursorShape: Qt.PointingHandCursor }
+
                         background: Rectangle {
                             color: hovered ? Qt.rgba(1, 1, 1, 0.05) : "transparent"
                             radius: 4

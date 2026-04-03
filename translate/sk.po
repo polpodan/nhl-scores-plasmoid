@@ -1,0 +1,221 @@
+# Slovak translations for nhl-scores-plasmoid
+msgid ""
+msgstr ""
+"Project-Id-Version: nhl-scores-plasmoid 5.0\n"
+"Language: sk\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+msgid "NHL Scores"
+msgstr "Výsledky NHL"
+
+msgid "No games"
+msgstr "Žiadne zápasy"
+
+msgid "No games today"
+msgstr "Dnes sa nehrajú žiadne zápasy"
+
+msgid "Refresh now"
+msgstr "Obnoviť teraz"
+
+msgid "Loading…"
+msgstr "Načítavanie…"
+
+msgid "‹ Back"
+msgstr "‹ Späť"
+
+msgid "‹ Match"
+msgstr "‹ Zápas"
+
+msgid "‹ Standings"
+msgstr "‹ Tabuľka"
+
+msgid "‹ Team"
+msgstr "‹ Tým"
+
+msgid "Final"
+msgstr "Koniec"
+
+msgid "Upcoming"
+msgstr "Nadchádzajúci"
+
+msgid "LIVE"
+msgstr "NAŽIVO"
+
+msgid "Overtime"
+msgstr "Predĺženie"
+
+msgid "Shootout"
+msgstr "Nájazdy"
+
+msgid "Intermission"
+msgstr "Prestávka"
+
+msgid "Period"
+msgstr "Tretina"
+
+msgid "1st"
+msgstr "1."
+
+msgid "2nd"
+msgstr "2."
+
+msgid "3rd"
+msgstr "3."
+
+msgid "SO"
+msgstr "SN"
+
+msgid "1st period"
+msgstr "1. tretina"
+
+msgid "2nd period"
+msgstr "2. tretina"
+
+msgid "3rd period"
+msgstr "3. tretina"
+
+msgid "Power Play"
+msgstr "Presilovka"
+
+msgid "Standings"
+msgstr "Tabuľka"
+
+msgid "Leaders"
+msgstr "Lídri"
+
+msgid "Season series"
+msgstr "Séria v sezóne"
+
+msgid "Probable goalies"
+msgstr "Predpokladaní brankári"
+
+msgid "Points leaders (last 5 games)"
+msgstr "Lídri bodovania (posledných 5 zápasov)"
+
+msgid "Shots on Goal"
+msgstr "Strely на bránku"
+
+msgid "GOAL"
+msgstr "GÓL"
+
+msgid "Goals"
+msgstr "Góly"
+
+msgid "Assists"
+msgstr "Asistencie"
+
+msgid "PTS"
+msgstr "B"
+
+msgid "W"
+msgstr "V"
+
+msgid "L"
+msgstr "P"
+
+msgid "PIM"
+msgstr "TM"
+
+msgid "PJ"
+msgstr "Z"
+
+msgid "Player"
+msgstr "Hráč"
+
+msgid "Team"
+msgstr "Tým"
+
+msgid "Goalies"
+msgstr "Brankári"
+
+msgid "Playoffs"
+msgstr "Play-off"
+
+msgid "Points"
+msgstr "Body"
+
+msgid "Wins"
+msgstr "Výhry"
+
+msgid "Losses"
+msgstr "Prehry"
+
+msgid "Shutouts"
+msgstr "Čisté kontá"
+
+msgid "SHO"
+msgstr "SO"
+
+msgid "GAA"
+msgstr "Pru"
+
+msgid "SV%"
+msgstr "Úsp%"
+
+msgid "Schedule"
+msgstr "Rozpis"
+
+msgid "Stats"
+msgstr "Štatistiky"
+
+msgid "Monday"
+msgstr "Pondelok"
+
+msgid "Tuesday"
+msgstr "Utorok"
+
+msgid "Wednesday"
+msgstr "Streda"
+
+msgid "Thursday"
+msgstr "Štvrtok"
+
+msgid "Friday"
+msgstr "Piatok"
+
+msgid "Saturday"
+msgstr "Sobota"
+
+msgid "Sunday"
+msgstr "Nedeľa"
+
+msgid "Display"
+msgstr "Zobrazenie"
+
+msgid "Layout"
+msgstr "Rozvrhnutie"
+
+msgid "Search"
+msgstr "Hľadať"
+
+msgid "Calendar"
+msgstr "Kalendár"
+
+msgid "Today"
+msgstr "Dnes"
+
+msgid "Atlantic"
+msgstr "Atlantická"
+
+msgid "Metropolitan"
+msgstr "Metropolitná"
+
+msgid "Central"
+msgstr "Centrálna"
+
+msgid "Pacific"
+msgstr "Pacifická"
+
+msgid "First Round"
+msgstr "Prvé kolo"
+
+msgid "Second Round"
+msgstr "Druhé kolo"
+
+msgid "Conference Finals"
+msgstr "Finále konferencií"
+
+msgid "Stanley Cup Final"
+msgstr "Finále Stanley Cupu"

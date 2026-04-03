@@ -115,23 +115,23 @@ function getStatusFromGame(g) {
     return 'UPCOMING';
 }
 
-function getStatusSuffix(rawState, periodType, showOvertimeSuffix) {
+function getStatusSuffix(rawState, periodType, showOvertimeSuffix, labels) {
     if (!showOvertimeSuffix) return '';
     var s = (rawState || '').toUpperCase();
     var pd = (periodType || '').toUpperCase();
-    if (s.indexOf('OT') >= 0 || pd === 'OT') return ' OT';
-    if (s.indexOf('SO') >= 0 || pd === 'SO') return ' SO';
+    if (s.indexOf('OT') >= 0 || pd === 'OT') return ' ' + (labels.OT || 'OT');
+    if (s.indexOf('SO') >= 0 || pd === 'SO') return ' ' + (labels.SO || 'SO');
     return '';
 }
 
-function getLiveClockText(periodType, period, timeRemaining) {
+function getLiveClockText(periodType, period, timeRemaining, labels) {
     if (!timeRemaining) { return ""; }
     if (periodType === "OT") { return "OT " + timeRemaining; }
     if (periodType === "SO") { return "SO"; }
-    if (period === 1) { return "1st " + timeRemaining; }
-    if (period === 2) { return "2nd " + timeRemaining; }
-    if (period === 3) { return "3rd " + timeRemaining; }
-    return "";
+    if (period === 1) { return (labels.first || "1st") + " " + timeRemaining; }
+    if (period === 2) { return (labels.second || "2nd") + " " + timeRemaining; }
+    if (period === 3) { return (labels.third || "3rd") + " " + timeRemaining; }
+    return (period > 3 ? (period - 3) + "OT" : "") + " " + timeRemaining;
 }
 
 function getLivePeriodText(periodType, period, labels) {
@@ -215,18 +215,38 @@ function parseSituation(code, away, home) {
 function httpGet(url, cb) {
     let xhr = new XMLHttpRequest();
     xhr.open("GET", url);
+    // Timeout de 10 secondes pour éviter que l'UI ne reste figée
+    xhr.timeout = 10000;
+    xhr.ontimeout = function() {
+        cb(new Error("Timeout (10s) @ " + url), null);
+    };
     xhr.onreadystatechange = function() {
         if (xhr.readyState === XMLHttpRequest.DONE) {
             if (xhr.status === 200) {
                 try { cb(null, JSON.parse(xhr.responseText)); } catch(e) { cb(e, null); }
-            } else { cb(new Error("HTTP " + xhr.status + " @ " + url), null); }
+            } else if (xhr.status > 0) {
+                cb(new Error("HTTP " + xhr.status + " @ " + url), null);
+            }
         }
     };
     xhr.send();
 }
 
+function getFranchiseId(code) {
+    var table = {
+        'MTL': 1, 'TOR': 5, 'BOS': 6, 'DET': 12, 'CHI': 11, 'NYR': 10,
+        'PHI': 16, 'PIT': 17, 'NYI': 22, 'NJD': 23, 'WSH': 24, 'BUF': 19,
+        'VAN': 20, 'CGY': 21, 'EDM': 25, 'WPG': 35, 'OTT': 30, 'TBL': 31,
+        'FLA': 33, 'CAR': 26, 'COL': 27, 'DAL': 15, 'STL': 18, 'NSH': 34,
+        'MIN': 37, 'CBJ': 36, 'SJS': 29, 'ANA': 32, 'LAK': 14, 'VGK': 38,
+        'SEA': 39, 'UTA': 40
+    };
+    return table[String(code || '').toUpperCase()] || 0;
+}
+
 const ApiService = {
     BASE_URL: "https://api-web.nhle.com/v1",
+    STATS_BASE_URL: "https://api.nhle.com/stats/rest/en",
     SEARCH_URL: "https://search.d3.nhle.com/api/v1",
 
     getScoreboard: function(date, cb) {
@@ -273,9 +293,74 @@ const ApiService = {
     getTeamStats: function(teamCode, cb) {
         httpGet(this.BASE_URL + "/club-stats/" + teamCode + "/now", cb);
     },
-    searchPlayers: function(query, cb) {
-        var url = this.SEARCH_URL + "/search/player?q=" + encodeURIComponent(query) + "&culture=fr-CA&limit=20";
+    getFranchiseLeaders: function(teamCode, category, limit, activeOnly, cb) {
+        var fid = getFranchiseId(teamCode);
+        if (fid === 0) { cb(new Error("Unknown franchise ID for " + teamCode), null); return; }
+        // Utilisation de l'API Stats pour les records historiques (agrégés)
+        var cayenne = "franchiseId=" + fid;
+        if (activeOnly) cayenne += " and active=1";
+        
+        var url = this.STATS_BASE_URL + "/skater/summary" 
+                + "?isAggregate=true&isGame=false"
+                + "&sort=[{\"property\":\"" + category + "\",\"direction\":\"DESC\"}]"
+                + "&start=0&limit=" + limit
+                + "&cayenneExp=" + encodeURIComponent(cayenne);
         httpGet(url, cb);
+    },
+    searchPlayers: function(query, cb) {
+        var self = this;
+        var url = this.SEARCH_URL + "/search/player?q=" + encodeURIComponent(query) + "&culture=en-US&limit=20";
+        
+        httpGet(url, function(err, data) {
+            if (!err && data && data.length > 0) {
+                cb(null, data);
+                return;
+            }
+            
+            // FALLBACK: Si l'API de recherche dédiée échoue, on interroge l'API Stats
+            // On cherche dans les patineurs (skaters) ET les gardiens (goalies)
+            var results = [];
+            var pending = 2;
+            function done() {
+                pending--;
+                if (pending <= 0) {
+                    if (results.length > 0) cb(null, results);
+                    else cb(new Error("No results"), null);
+                }
+            }
+
+            var skaterUrl = self.STATS_BASE_URL + "/skater/summary?isAggregate=true&isGame=false&limit=20&cayenneExp=skaterFullName%20like%20%27%25" + encodeURIComponent(query) + "%25%27";
+            httpGet(skaterUrl, function(e1, d1) {
+                if (!e1 && d1 && d1.data) {
+                    d1.data.forEach(function(p) {
+                        results.push({
+                            playerId: p.playerId,
+                            name: p.skaterFullName,
+                            lastName: p.lastName,
+                            teamAbbrev: p.teamAbbrevs || "",
+                            positionCode: p.positionCode
+                        });
+                    });
+                }
+                done();
+            });
+
+            var goalieUrl = self.STATS_BASE_URL + "/goalie/summary?isAggregate=true&isGame=false&limit=10&cayenneExp=goalieFullName%20like%20%27%25" + encodeURIComponent(query) + "%25%27";
+            httpGet(goalieUrl, function(e2, d2) {
+                if (!e2 && d2 && d2.data) {
+                    d2.data.forEach(function(p) {
+                        results.push({
+                            playerId: p.playerId,
+                            name: p.goalieFullName,
+                            lastName: p.lastName,
+                            teamAbbrev: p.teamAbbrevs || "",
+                            positionCode: "G"
+                        });
+                    });
+                }
+                done();
+            });
+        });
     }
 };
 

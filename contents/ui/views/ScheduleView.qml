@@ -364,7 +364,7 @@ Item {
                             Label { text: goalie ? goalie.wins : ''; font.pixelSize: 14; color: Kirigami.Theme.positiveTextColor; Layout.preferredWidth: 30; horizontalAlignment: Text.AlignHCenter }
                             Label { text: goalie ? goalie.losses : ''; font.pixelSize: 14; color: Kirigami.Theme.negativeTextColor; Layout.preferredWidth: 30; horizontalAlignment: Text.AlignHCenter }
                             Label { text: goalie ? goalie.gaa : ''; font.pixelSize: 14; color: Kirigami.Theme.textColor; Layout.preferredWidth: 36; horizontalAlignment: Text.AlignHCenter }
-                            Label { text: goalie ? (Number(goalie.svPct * 100).toFixed(1) + '%') : ''; font.pixelSize: 14; font.bold: true; color: Kirigami.Theme.textColor; Layout.preferredWidth: 44; horizontalAlignment: Text.AlignHCenter }
+                            Label { text: goalie ? Number(goalie.svPct).toFixed(3) : ''; font.pixelSize: 14; font.bold: true; color: Kirigami.Theme.textColor; Layout.preferredWidth: 44; horizontalAlignment: Text.AlignHCenter }
                             
                             TapHandler { 
                                 enabled: goalie !== null && (goalie.id || 0) > 0

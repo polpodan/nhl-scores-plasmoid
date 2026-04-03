@@ -36,6 +36,14 @@
       <default>10</default>
     </entry>
 
+    <entry name="franchiseLeadersLimit" type="Int">
+      <default>10</default>
+    </entry>
+
+    <entry name="spacingBetweenGames" type="Int">
+      <default>2</default>
+    </entry>
+
     <entry name="lookaheadDays" type="Int">
       <default>2</default>
     </entry>

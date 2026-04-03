@@ -206,6 +206,18 @@ msgstr "Gardiens"
 msgid "Wild Card"
 msgstr "Wild Card"
 
+msgid "Atlantic"
+msgstr "Atlantique"
+
+msgid "Metropolitan"
+msgstr "Métropolitaine"
+
+msgid "Central"
+msgstr "Centrale"
+
+msgid "Pacific"
+msgstr "Pacifique"
+
 msgid "Eastern Conference"
 msgstr "Conférence Est"
 
@@ -293,6 +305,9 @@ msgstr "📊 Statistiques"
 msgid "Schedule"
 msgstr "Calendrier"
 
+msgid "Season Calendar"
+msgstr "Calendrier de la saison"
+
 msgid "Stats"
 msgstr "Statistiques"
 
@@ -373,6 +388,12 @@ msgstr "Nombre max de parties :"
 
 msgid "Leaders limit:"
 msgstr "Limite meneurs :"
+
+msgid "Franchise leaders limit:"
+msgstr "Limite meneurs historiques :"
+
+msgid "Spacing between games:"
+msgstr "Espacement entre les matchs :"
 
 msgid "Days ahead:"
 msgstr "Jours à venir :"
@@ -489,6 +510,30 @@ msgstr "aréna"
 
 msgid "local"
 msgstr "local"
+
+msgid "Height:"
+msgstr "Taille :"
+
+msgid "Weight:"
+msgstr "Poids :"
+
+msgid "Born:"
+msgstr "Né le :"
+
+msgid "Birthplace:"
+msgstr "Lieu de naissance :"
+
+msgid "years"
+msgstr "ans"
+
+msgid "Franchise Leaders"
+msgstr "Meneurs historiques"
+
+msgid "History"
+msgstr "Historique"
+
+msgid "Active player"
+msgstr "Joueur actif"
 
 msgid "NHL Total"
 msgstr "Total NHL"

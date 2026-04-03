@@ -1,0 +1,230 @@
+# Finnish translations for nhl-scores-plasmoid
+msgid ""
+msgstr ""
+"Project-Id-Version: nhl-scores-plasmoid 5.0\n"
+"Language: fi\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+msgid "NHL Scores"
+msgstr "NHL-tulokset"
+
+msgid "No games"
+msgstr "Ei otteluita"
+
+msgid "No games today"
+msgstr "Ei otteluita tänään"
+
+msgid "Refresh now"
+msgstr "Päivitä nyt"
+
+msgid "Loading…"
+msgstr "Ladataan…"
+
+msgid "‹ Back"
+msgstr "‹ Takaisin"
+
+msgid "‹ Match"
+msgstr "‹ Ottelu"
+
+msgid "‹ Standings"
+msgstr "‹ Sarjataulukko"
+
+msgid "‹ Team"
+msgstr "‹ Joukkue"
+
+msgid "Final"
+msgstr "Lopputulos"
+
+msgid "Upcoming"
+msgstr "Tuleva"
+
+msgid "LIVE"
+msgstr "LIVE"
+
+msgid "Overtime"
+msgstr "Jatkoaika"
+
+msgid "Shootout"
+msgstr "Voittomaalikilpailu"
+
+msgid "Intermission"
+msgstr "Erätauko"
+
+msgid "Period"
+msgstr "Erä"
+
+msgid "1st"
+msgstr "1."
+
+msgid "2nd"
+msgstr "2."
+
+msgid "3rd"
+msgstr "3."
+
+msgid "SO"
+msgstr "VL"
+
+msgid "1st period"
+msgstr "1. erä"
+
+msgid "2nd period"
+msgstr "2. erä"
+
+msgid "3rd period"
+msgstr "3. erä"
+
+msgid "Power Play"
+msgstr "Ylivoima"
+
+msgid "Standings"
+msgstr "Sarjataulukko"
+
+msgid "Leaders"
+msgstr "Tilastokärjet"
+
+msgid "Season series"
+msgstr "Kauden kohtaamiset"
+
+msgid "Probable goalies"
+msgstr "Oletetut maalivahdit"
+
+msgid "Points leaders (last 5 games)"
+msgstr "Pistepörssi (viimeiset 5 ottelua)"
+
+msgid "Shots on Goal"
+msgstr "Laukaukset"
+
+msgid "GOAL"
+msgstr "MAALI"
+
+msgid "Goals"
+msgstr "Maalit"
+
+msgid "Assists"
+msgstr "Syötöt"
+
+msgid "PTS"
+msgstr "Pist"
+
+msgid "W"
+msgstr "V"
+
+msgid "L"
+msgstr "H"
+
+msgid "PIM"
+msgstr "R"
+
+msgid "PJ"
+msgstr "O"
+
+msgid "Player"
+msgstr "Pelaaja"
+
+msgid "Team"
+msgstr "Joukkue"
+
+msgid "Goalies"
+msgstr "Maalivahdit"
+
+msgid "Wild Card"
+msgstr "Villi kortti"
+
+msgid "Eastern Conference"
+msgstr "Itäinen konferenssi"
+
+msgid "Western Conference"
+msgstr "Läntinen konferenssi"
+
+msgid "Playoffs"
+msgstr "Pudotuspelit"
+
+msgid "Points"
+msgstr "Pisteet"
+
+msgid "Wins"
+msgstr "Voitot"
+
+msgid "Losses"
+msgstr "Häviöt"
+
+msgid "Shutouts"
+msgstr "Nollapelit"
+
+msgid "SHO"
+msgstr "NP"
+
+msgid "GAA"
+msgstr "PMK"
+
+msgid "SV%"
+msgstr "T%"
+
+msgid "Schedule"
+msgstr "Otteluohjelma"
+
+msgid "Stats"
+msgstr "Tilastot"
+
+msgid "Monday"
+msgstr "Maanantai"
+
+msgid "Tuesday"
+msgstr "Tiistai"
+
+msgid "Wednesday"
+msgstr "Keskiviikko"
+
+msgid "Thursday"
+msgstr "Torstai"
+
+msgid "Friday"
+msgstr "Perjantai"
+
+msgid "Saturday"
+msgstr "Lauantai"
+
+msgid "Sunday"
+msgstr "Sunnuntai"
+
+msgid "Display"
+msgstr "Näyttö"
+
+msgid "Layout"
+msgstr "Asettelu"
+
+msgid "Search"
+msgstr "Haku"
+
+msgid "Calendar"
+msgstr "Kalenteri"
+
+msgid "Today"
+msgstr "Tänään"
+
+msgid "Atlantic"
+msgstr "Atlantti"
+
+msgid "Metropolitan"
+msgstr "Metropolialue"
+
+msgid "Central"
+msgstr "Keskinen"
+
+msgid "Pacific"
+msgstr "Tyynenmeri"
+
+msgid "First Round"
+msgstr "Ensimmäinen kierros"
+
+msgid "Second Round"
+msgstr "Toinen kierros"
+
+msgid "Conference Finals"
+msgstr "Konferenssifinaalit"
+
+msgid "Stanley Cup Final"
+msgstr "Stanley Cup -finaalit"

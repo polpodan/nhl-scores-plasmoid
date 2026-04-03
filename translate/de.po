@@ -1,0 +1,230 @@
+# German translations for nhl-scores-plasmoid
+msgid ""
+msgstr ""
+"Project-Id-Version: nhl-scores-plasmoid 5.0\n"
+"Language: de\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+msgid "NHL Scores"
+msgstr "NHL-Ergebnisse"
+
+msgid "No games"
+msgstr "Keine Spiele"
+
+msgid "No games today"
+msgstr "Heute keine Spiele"
+
+msgid "Refresh now"
+msgstr "Jetzt aktualisieren"
+
+msgid "Loading…"
+msgstr "Laden…"
+
+msgid "‹ Back"
+msgstr "‹ Zurück"
+
+msgid "‹ Match"
+msgstr "‹ Spiel"
+
+msgid "‹ Standings"
+msgstr "‹ Tabelle"
+
+msgid "‹ Team"
+msgstr "‹ Team"
+
+msgid "Final"
+msgstr "Endstand"
+
+msgid "Upcoming"
+msgstr "Anstehend"
+
+msgid "LIVE"
+msgstr "LIVE"
+
+msgid "Overtime"
+msgstr "Verlängerung"
+
+msgid "Shootout"
+msgstr "Penaltyschießen"
+
+msgid "Intermission"
+msgstr "Drittelpause"
+
+msgid "Period"
+msgstr "Drittel"
+
+msgid "1st"
+msgstr "1."
+
+msgid "2nd"
+msgstr "2."
+
+msgid "3rd"
+msgstr "3."
+
+msgid "SO"
+msgstr "PS"
+
+msgid "1st period"
+msgstr "1. Drittel"
+
+msgid "2nd period"
+msgstr "2. Drittel"
+
+msgid "3rd period"
+msgstr "3. Drittel"
+
+msgid "Power Play"
+msgstr "Überzahl"
+
+msgid "Standings"
+msgstr "Tabelle"
+
+msgid "Leaders"
+msgstr "Top-Scorer"
+
+msgid "Season series"
+msgstr "Saisonserie"
+
+msgid "Probable goalies"
+msgstr "Voraussichtliche Torhüter"
+
+msgid "Points leaders (last 5 games)"
+msgstr "Top-Scorer (letzte 5 Spiele)"
+
+msgid "Shots on Goal"
+msgstr "Schüsse aufs Tor"
+
+msgid "GOAL"
+msgstr "TOR"
+
+msgid "Goals"
+msgstr "Tore"
+
+msgid "Assists"
+msgstr "Vorlagen"
+
+msgid "PTS"
+msgstr "Pkt"
+
+msgid "W"
+msgstr "S"
+
+msgid "L"
+msgstr "N"
+
+msgid "PIM"
+msgstr "STR"
+
+msgid "PJ"
+msgstr "Sp"
+
+msgid "Player"
+msgstr "Spieler"
+
+msgid "Team"
+msgstr "Team"
+
+msgid "Goalies"
+msgstr "Torhüter"
+
+msgid "Wild Card"
+msgstr "Wild Card"
+
+msgid "Eastern Conference"
+msgstr "Eastern Conference"
+
+msgid "Western Conference"
+msgstr "Western Conference"
+
+msgid "Playoffs"
+msgstr "Playoffs"
+
+msgid "Points"
+msgstr "Punkte"
+
+msgid "Wins"
+msgstr "Siege"
+
+msgid "Losses"
+msgstr "Niederlagen"
+
+msgid "Shutouts"
+msgstr "Shutouts"
+
+msgid "SHO"
+msgstr "SO"
+
+msgid "GAA"
+msgstr "GAA"
+
+msgid "SV%"
+msgstr "SVS%"
+
+msgid "Schedule"
+msgstr "Spielplan"
+
+msgid "Stats"
+msgstr "Statistiken"
+
+msgid "Monday"
+msgstr "Montag"
+
+msgid "Tuesday"
+msgstr "Dienstag"
+
+msgid "Wednesday"
+msgstr "Mittwoch"
+
+msgid "Thursday"
+msgstr "Donnerstag"
+
+msgid "Friday"
+msgstr "Freitag"
+
+msgid "Saturday"
+msgstr "Samstag"
+
+msgid "Sunday"
+msgstr "Sonntag"
+
+msgid "Display"
+msgstr "Anzeige"
+
+msgid "Layout"
+msgstr "Layout"
+
+msgid "Search"
+msgstr "Suche"
+
+msgid "Calendar"
+msgstr "Kalender"
+
+msgid "Today"
+msgstr "Heute"
+
+msgid "Atlantic"
+msgstr "Atlantik"
+
+msgid "Metropolitan"
+msgstr "Metropol"
+
+msgid "Central"
+msgstr "Zentraler"
+
+msgid "Pacific"
+msgstr "Pazifik"
+
+msgid "First Round"
+msgstr "Erste Runde"
+
+msgid "Second Round"
+msgstr "Zweite Runde"
+
+msgid "Conference Finals"
+msgstr "Konferenz-Finale"
+
+msgid "Stanley Cup Final"
+msgstr "Stanley Cup Finale"

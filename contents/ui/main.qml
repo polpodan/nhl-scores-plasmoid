@@ -70,6 +70,13 @@ PlasmoidItem {
     property bool showAllTeams: Plasmoid.configuration.showAllTeams || false
     property int  maxGames:     Plasmoid.configuration.maxGames || 10
     property int  leadersLimit: Plasmoid.configuration.leadersLimit || 10
+    property int  franchiseLeadersLimit: Plasmoid.configuration.franchiseLeadersLimit || 10
+    onFranchiseLeadersLimitChanged: {
+        if (nav.franchiseLeaders && flead.team !== "") {
+            fetchFranchiseLeaders(flead.team)
+        }
+    }
+    property int  spacingBetweenGames: Plasmoid.configuration.spacingBetweenGames !== undefined ? Plasmoid.configuration.spacingBetweenGames : 2
     property bool ultraCompact: Plasmoid.configuration.ultraCompact || false
     property int lookaheadDays: Plasmoid.configuration.lookaheadDays !== undefined
                                  ? Plasmoid.configuration.lookaheadDays : 2
@@ -105,6 +112,16 @@ PlasmoidItem {
         property bool detail:    false
         property bool schedule:  false
         property bool scheduleShowStats: false
+        property bool franchiseLeaders: false
+    }
+
+    readonly property QtObject flead: QtObject {
+        property bool loading: false
+        property string error: ""
+        property string team: ""
+        property var points: []
+        property var goals: []
+        property var assists: []
     }
 
     readonly property QtObject glob: QtObject {
@@ -347,6 +364,7 @@ PlasmoidItem {
     readonly property QtObject sch: QtObject {
         property string team:      ''
         property var    games:     []
+        property var    gamesMap:  ({})
         property bool   loading:   false
         property string error:     ''
         property var    skaters:   []
@@ -429,6 +447,30 @@ PlasmoidItem {
                 std.data = d.standings || []
             }
         })
+    }
+
+    function openStandings() {
+        nav.standings = true
+        nav.leaders   = false
+        nav.search    = false
+        nav.bracket   = false
+        nav.schedule  = false
+        nav.calendar  = false
+        nav.dayView   = false
+        nav.franchiseLeaders = false
+        fetchStandings()
+    }
+
+    function openLeaders() {
+        nav.leaders   = true
+        nav.standings = false
+        nav.search    = false
+        nav.bracket   = false
+        nav.schedule  = false
+        nav.calendar  = false
+        nav.dayView   = false
+        nav.franchiseLeaders = false
+        fetchLeaders()
     }
 
     // ── Clignotement de score sur but ────────────────────────────────────
@@ -800,11 +842,13 @@ PlasmoidItem {
     function statusFromGame(g) { return Logic.getStatusFromGame(g) }
 
     function statusSuffix(rawState, periodType) {
-        return Logic.getStatusSuffix(rawState, periodType, Plasmoid.configuration.showOvertimeSuffix)
+        var labels = { OT: i18n("OT"), SO: i18n("SO") }
+        return Logic.getStatusSuffix(rawState, periodType, Plasmoid.configuration.showOvertimeSuffix, labels)
     }
 
     function liveClockText(periodType, period, timeRemaining) {
-        return Logic.getLiveClockText(periodType, period, timeRemaining)
+        var labels = { first: i18n("1st"), second: i18n("2nd"), third: i18n("3rd"), SO: i18n("SO") }
+        return Logic.getLiveClockText(periodType, period, timeRemaining, labels)
     }
 
     function livePeriodText(periodType, period) {
@@ -997,6 +1041,7 @@ PlasmoidItem {
         nav.player     = false
         nav.search     = false
         nav.calendar   = false
+        nav.franchiseLeaders = false
 
         // Choisir l'endpoint selon la date
         var todayISO = root.dateISO(new Date())
@@ -1213,10 +1258,13 @@ PlasmoidItem {
         srch.results = []
         srch.error   = ''
         srch.query   = ''
-        // Fermer les autres vues sauf nav.detail
+        // Fermer les autres overlays
         nav.standings = false
         nav.leaders   = false
-        nav.player    = false
+        nav.bracket   = false
+        nav.schedule  = false
+        nav.calendar  = false
+        nav.dayView   = false
     }
 
     function fetchSearch(query) {
@@ -1227,15 +1275,18 @@ PlasmoidItem {
         Logic.ApiService.searchPlayers(query, function(err, data) {
             srch.loading = false
             if (err) { srch.error = String(err); return }
-            var players = data.players || data || []
-            if (!Array.isArray(players)) { srch.error = "No results"; return }
+            
+            // data peut être soit le format search (players:[]) soit le format fallback (liste directe)
+            var players = data.players || (Array.isArray(data) ? data : (data.data || []))
+            if (!Array.isArray(players) || players.length === 0) { srch.error = i18n("No results"); return }
+            
             srch.results = players.map(function(p) {
                 return {
-                    id:       p.playerId || 0,
-                    name:     (p.name || p.fullName || ''),
-                    team:     p.currentTeamAbbrev || '',
+                    id:       p.playerId || p.id || 0,
+                    name:     p.skaterFullName || p.goalieFullName || p.name || p.fullName || (p.firstName ? p.firstName.default + ' ' + p.lastName.default : ''),
+                    team:     p.teamAbbrev || p.currentTeamAbbrev || p.teamAbbrevs || '',
                     position: p.positionCode || p.position || '',
-                    active:   p.isActive !== false,
+                    active:   p.active === 1 || p.isActive !== false,
                     headshot: p.headshot || ''
                 }
             })
@@ -1346,7 +1397,6 @@ PlasmoidItem {
         nav.bracket   = false
         nav.calendar  = false
         nav.dayView   = false
-
         Logic.ApiService.getPlayerLanding(playerId, function(err, data) {
                 ply.loading = false
                 if (err) { ply.error = String(err); return }
@@ -1372,6 +1422,7 @@ PlasmoidItem {
     function openTeamHub(teamCode, from) {
         nav.teamHub    = true
         hub.code    = teamCode
+        sch.team    = teamCode // Important pour le calendrier
         hub.from    = from || 'detail'
         hub.loading = true
         hub.error   = ''
@@ -1387,15 +1438,23 @@ PlasmoidItem {
         hub.lastGames = []
         hub.nextGame  = null
 
-        // Fermer les autres vues
-        nav.schedule  = false
-        nav.bracket   = false
-        nav.standings = false
+        // Fermer les autres vues pour éviter les conflits
+        nav.standings    = false
+        nav.leaders      = false
+        nav.bracket      = false
+        nav.schedule     = false
+        nav.detail       = false
+        nav.player       = false
+        nav.search       = false
+        nav.calendar     = false
+        nav.dayView      = false
+        nav.franchiseLeaders = false
 
         let pending = 3   // schedule, standings, entraîneur(direct)
         function done() { pending--; if (pending <= 0) hub.loading = false }
 
         // 1. Calendrier → derniers matchs + prochain
+        fetchSchedule(teamCode) // Pour peupler sch.gamesMap
         Logic.ApiService.getTeamSchedule(teamCode, function(err, data) {
                 if (!err && data && data.games) {
                     let now = Date.now()
@@ -1709,6 +1768,7 @@ PlasmoidItem {
         Components.TeamBadge {
             code: parent.code; score: parent.score; sz: parent.sz
             gameId: parent.gameId; teamSide: parent.teamSide
+            showScore: parent.gameStatus !== 'UPCOMING'
             blinkingGames: glob.blinkingGames; blinkOn: glob.blinkOn
         }
     }
@@ -1737,7 +1797,16 @@ PlasmoidItem {
     compactRepresentation: CompactRepresentation { controller: root }
 
     function openSchedule(team, showStats) {
-        nav.scheduleShowStats    = showStats === true
+        nav.schedule      = true
+        nav.scheduleShowStats = showStats === true
+        // Fermer les autres overlays
+        nav.standings     = false
+        nav.leaders       = false
+        nav.bracket       = false
+        nav.search        = false
+        nav.calendar      = false
+        nav.dayView       = false
+
         sch.skaters      = []
         sch.goalies      = []
         sch.statsError   = ''
@@ -1746,9 +1815,102 @@ PlasmoidItem {
         sch.games   = []
         sch.error   = ''
         sch.loading = true
-        nav.schedule    = true
         fetchSchedule(team)
         if (showStats === true) fetchTeamStats(team)
+    }
+
+    function openPlayoffBracket() {
+        nav.bracket   = true
+        // Fermer les autres overlays
+        nav.standings = false
+        nav.leaders   = false
+        nav.search    = false
+        nav.schedule  = false
+        nav.calendar  = false
+        nav.dayView   = false
+        fetchPlayoffBracket()
+    }
+
+    function openFranchiseLeaders(teamCode) {
+        nav.franchiseLeaders = true
+        // Fermer les autres overlays si nécessaire
+        nav.standings = false
+        nav.leaders   = false
+        nav.search    = false
+        nav.bracket   = false
+        nav.schedule  = false
+        nav.calendar  = false
+        nav.dayView   = false
+        
+        flead.team = teamCode
+        fetchFranchiseLeaders(teamCode)
+    }
+
+    function fetchFranchiseLeaders(teamCode) {
+        flead.loading = true
+        flead.error = ""
+        flead.points = []
+        flead.goals = []
+        flead.assists = []
+        
+        var pending = 4
+        var activeIds = {}
+        var limit = (root.franchiseLeadersLimit > 0) ? root.franchiseLeadersLimit : 10
+        
+        function done() { 
+            pending--
+            if (pending <= 0) {
+                var applyActive = function(list) {
+                    return list.map(function(p) {
+                        p.active = !!activeIds[p.id]
+                        return p
+                    })
+                }
+                flead.points = applyActive(flead.points)
+                flead.goals = applyActive(flead.goals)
+                flead.assists = applyActive(flead.assists)
+                flead.loading = false 
+            }
+        }
+
+        // 0. Fetch list of all active players for this franchise (to mark them in the top 10)
+        Logic.ApiService.getFranchiseLeaders(teamCode, "points", 100, true, function(err, data) {
+            if (!err && data && data.data) {
+                data.data.forEach(function(l) { activeIds[l.playerId] = true })
+            }
+            done()
+        })
+
+        // 1. Points
+        Logic.ApiService.getFranchiseLeaders(teamCode, "points", limit, false, function(err, data) {
+            if (err) { flead.error = String(err) }
+            else if (data && data.data) {
+                flead.points = data.data.map(function(l) {
+                    return { id: l.playerId, name: l.skaterFullName, value: l.points, active: false }
+                })
+            }
+            done()
+        })
+
+        // 2. Goals
+        Logic.ApiService.getFranchiseLeaders(teamCode, "goals", limit, false, function(err, data) {
+            if (!err && data && data.data) {
+                flead.goals = data.data.map(function(l) {
+                    return { id: l.playerId, name: l.skaterFullName, value: l.goals, active: false }
+                })
+            }
+            done()
+        })
+
+        // 3. Assists
+        Logic.ApiService.getFranchiseLeaders(teamCode, "assists", limit, false, function(err, data) {
+            if (!err && data && data.data) {
+                flead.assists = data.data.map(function(l) {
+                    return { id: l.playerId, name: l.skaterFullName, value: l.assists, active: false }
+                })
+            }
+            done()
+        })
     }
 
     function fetchSchedule(team) {
@@ -1768,7 +1930,9 @@ PlasmoidItem {
                 // Garder les N derniers matchs joués + tous les futurs
                 var recent = past.slice(-5)  // 5 derniers matchs joués
                 var result = recent.concat(future)
-                sch.games = result.map(function(g) {
+                
+                var gmap = {}
+                var allGames = games.map(function(g) {
                     var st = (g.gameState || '').toUpperCase()
                     var isFinal = (st === 'FINAL' || st === 'OFF' || st === 'OFFICIAL')
                     var isLive  = (st === 'LIVE' || st === 'IN_PROGRESS')
@@ -1777,6 +1941,8 @@ PlasmoidItem {
                     var ag    = g.awayTeam  ? (g.awayTeam.score   !== undefined ? g.awayTeam.score  : -1) : -1
                     var hg    = g.homeTeam  ? (g.homeTeam.score   !== undefined ? g.homeTeam.score  : -1) : -1
                     var startMs = new Date(g.startTimeUTC || '').getTime() || 0
+                    var iso   = g.startTimeUTC ? g.startTimeUTC.substring(0, 10) : ""
+                    
                     // Résultat W/L/OTW/OTL pour l'équipe sélectionnée
                     var matchResult = ''
                     if (isFinal && ag >= 0 && hg >= 0) {
@@ -1788,16 +1954,30 @@ PlasmoidItem {
                         if (teamScore > oppScore) matchResult = wasOT ? 'OTW' : 'W'
                         else                      matchResult = wasOT ? 'OTL' : 'L'
                     }
-                    return {
+                    
+                    var obj = {
                         away: away, home: home,
                         ag: ag, hg: hg,
                         startMs: startMs,
+                        dateISO: iso,
                         isFinal: isFinal,
                         isLive:  isLive,
                         result:  matchResult,
                         gameId:  g.id || 0
                     }
+                    if (iso) gmap[iso] = obj
+                    return obj
                 })
+
+                sch.gamesMap = gmap
+                // Filtrer pour la liste simplifiée (5 derniers + futurs)
+                var simplified = []
+                for (var j=0; j<result.length; j++) {
+                    var gid = result[j].id
+                    var found = allGames.find(function(x){ return x.gameId === gid })
+                    if (found) simplified.push(found)
+                }
+                sch.games = simplified
             } catch(e) { sch.error = String(e) }
         })
     }
@@ -1849,7 +2029,7 @@ PlasmoidItem {
                         losses: g.losses        || 0,
                         ot:     g.otLosses      || 0,
                         gaa:    g.goalsAgainstAverage !== undefined
-                                    ? Math.round(g.goalsAgainstAverage * 100) / 100 : 0,
+                                    ? Number(g.goalsAgainstAverage).toFixed(3) : "0.000",
                         svPct:  (function(goalie) {
                                     if (goalie.savePercentage !== undefined && goalie.savePercentage > 0) return goalie.savePercentage
                                     if (goalie.savePctg !== undefined && goalie.savePctg > 0) return goalie.savePctg
@@ -1881,8 +2061,6 @@ PlasmoidItem {
         nav.leaders       = false
         nav.dayView       = false
         nav.player        = false
-        nav.search        = false
-        nav.calendar      = false
         det.threeStars    = []
         det.penalties     = []
         det.playerMap    = {}
@@ -1922,6 +2100,18 @@ PlasmoidItem {
         det.penaltyBoxAway = JSON.stringify(pmEntry.away)
         det.penaltyBoxHome = JSON.stringify(pmEntry.home)
         det.error   = ''
+        // Fermer les overlays pour voir le détail
+        nav.standings = false
+        nav.leaders   = false
+        nav.search    = false
+        nav.bracket   = false
+        nav.schedule  = false
+        nav.calendar  = false
+        nav.dayView   = false
+        nav.teamHub   = false
+        nav.player    = false
+        nav.franchiseLeaders = false
+
         nav.detail    = true
         fetchDetail(gid)
         // Ouvrir le fullRepresentation (popup natif Plasma)
@@ -2005,14 +2195,14 @@ PlasmoidItem {
                                     recStr = (r.wins||0) + '-' + (r.losses||0) + (r.otLosses !== undefined ? '-' + r.otLosses : '')
                                 }
                             }
-                            var gaa = g.gaa !== undefined ? parseFloat(g.gaa).toFixed(2)
-                                    : g.goalsAgainstAverage !== undefined ? parseFloat(g.goalsAgainstAverage).toFixed(2) : '–'
-                            var svp = g.savePctg !== undefined ? g.savePctg : null
+                            var gaa = g.gaa !== undefined ? parseFloat(g.gaa).toFixed(3)
+                                    : g.goalsAgainstAverage !== undefined ? parseFloat(g.goalsAgainstAverage).toFixed(3) : '–'
+                            var svp = g.savePctg !== undefined ? g.savePctg : (g.savePercentage !== undefined ? g.savePercentage : null)
                             return {
                                 name:   name,
                                 record: recStr,
                                 gaa:    gaa,
-                                svPct:  svp !== null ? ('.' + String(Math.round(svp*1000)).padStart(3,'0')) : '–'
+                                svPct:  svp !== null ? Number(svp).toFixed(3) : '–'
                             }
                         }
                         var glComp = (d.matchup && d.matchup.goalieComparison) || null
@@ -2219,7 +2409,7 @@ PlasmoidItem {
         standingsFlatModel.remove(0)
 
         var rows = []
-        var labels = { atlantic: "Atlantique", metro: "Métropolitaine", central: "Centrale", pacific: "Pacifique", 
+        var labels = { atlantic: i18n("Atlantic"), metro: i18n("Metropolitan"), central: i18n("Central"), pacific: i18n("Pacific"), 
                        east: i18n("Eastern Conference"), west: i18n("Western Conference"), wc: i18n("Wild Card") }
 
         if (std.mode === 'league') {
@@ -2241,6 +2431,21 @@ PlasmoidItem {
     }
 
 
+    readonly property string activeView: {
+        if (nav.player)    return "player"
+        if (nav.franchiseLeaders) return "franchiseLeaders"
+        if (nav.leaders)   return "leaders"
+        if (nav.standings) return "standings"
+        if (nav.search)    return "search"
+        if (nav.bracket)   return "bracket"
+        if (nav.calendar)  return "calendar"
+        if (nav.dayView)   return "dayView"
+        if (nav.schedule)  return "schedule"
+        if (nav.teamHub)   return "teamHub"
+        if (nav.detail)    return "detail"
+        return "desktop"
+    }
+
     fullRepresentation: Item {
         id: fullRoot
         implicitWidth:  root.isDesktop ? 400 : 440
@@ -2248,22 +2453,20 @@ PlasmoidItem {
         Layout.fillWidth:  root.isDesktop
         Layout.fillHeight: root.isDesktop
 
-        // --- Vue desktop enrichie (cartes de matchs) ---
+        // --- Vue bureau (Fond) ---
         Loader {
             anchors.fill: parent
             active: root.isDesktop
-            visible: root.isDesktop && !nav.detail && !nav.standings
-                     && !nav.leaders && !nav.bracket && !nav.teamHub && !nav.dayView
-                     && !nav.schedule && !nav.player && !nav.search && !nav.calendar
+            visible: active && root.activeView === "desktop"
             sourceComponent: desktopRepresentation
         }
 
-        // --- Vue Détail ---
+        // --- Vue Détail Match ---
         Loader {
             anchors.fill: parent
             active: nav.detail
             asynchronous: true
-            visible: active && !nav.schedule && !nav.standings && !nav.bracket && !nav.teamHub && !nav.leaders && !nav.dayView && !nav.search && !nav.player
+            visible: active && root.activeView === "detail"
             source: "views/DetailView.qml"
             onLoaded: item.controller = root
         }
@@ -2273,8 +2476,18 @@ PlasmoidItem {
             anchors.fill: parent
             active: nav.standings
             asynchronous: false
-            visible: active && !nav.schedule && !nav.bracket
+            visible: active && root.activeView === "standings"
             source: "views/StandingsView.qml"
+            onLoaded: item.controller = root
+        }
+
+        // --- Vue Franchise Leaders ---
+        Loader {
+            anchors.fill: parent
+            active: nav.franchiseLeaders
+            asynchronous: false
+            visible: active && root.activeView === "franchiseLeaders"
+            source: "views/FranchiseLeadersView.qml"
             onLoaded: item.controller = root
         }
 
@@ -2283,7 +2496,7 @@ PlasmoidItem {
             anchors.fill: parent
             active: nav.leaders
             asynchronous: false
-            visible: active && !nav.player
+            visible: active && root.activeView === "leaders"
             source: "views/LeadersView.qml"
             onLoaded: item.controller = root
         }
@@ -2293,17 +2506,8 @@ PlasmoidItem {
             anchors.fill: parent
             active: nav.search
             asynchronous: false
-            visible: active && !nav.player
+            visible: active && root.activeView === "search"
             source: "views/SearchView.qml"
-            onLoaded: item.controller = root
-        }
-
-        // --- Vue Player ---
-        Loader {
-            anchors.fill: parent
-            active: nav.player
-            asynchronous: false
-            source: "views/PlayerView.qml"
             onLoaded: item.controller = root
         }
 
@@ -2312,48 +2516,26 @@ PlasmoidItem {
             anchors.fill: parent
             active: nav.teamHub
             asynchronous: false
-            visible: active && !nav.schedule
+            visible: active && root.activeView === "teamHub"
             source: "views/TeamHubView.qml"
             onLoaded: item.controller = root
         }
 
-        // --- Vue Schedule (Équipe) ---
+        // --- Vue Player ---
         Loader {
             anchors.fill: parent
-            active: nav.schedule
-            asynchronous: true
-            visible: active && !nav.player
-            source: "views/ScheduleView.qml"
+            active: nav.player
+            asynchronous: false
+            visible: active && root.activeView === "player"
+            source: "views/PlayerView.qml"
             onLoaded: item.controller = root
         }
 
-        // --- Vue Bracket (Séries) ---
-        Loader {
-            anchors.fill: parent
-            active: nav.bracket
-            asynchronous: true
-            source: "views/BracketView.qml"
-            onLoaded: item.controller = root
-        }
-
-        // --- Vue Calendar ---
-        Loader {
-            anchors.fill: parent
-            active: nav.calendar
-            asynchronous: true
-            source: "views/CalendarView.qml"
-            onLoaded: item.controller = root
-        }
-
-        // --- Vue Day View ---
-        Loader {
-            anchors.fill: parent
-            active: nav.dayView
-            asynchronous: true
-            visible: active && !nav.detail && !nav.calendar
-            source: "views/DayView.qml"
-            onLoaded: item.controller = root
-        }
+        // --- Vues utilitaires ---
+        Loader { anchors.fill: parent; active: nav.schedule; visible: active && root.activeView === "schedule"; source: "views/ScheduleView.qml"; onLoaded: item.controller = root }
+        Loader { anchors.fill: parent; active: nav.bracket;  visible: active && root.activeView === "bracket";  source: "views/BracketView.qml";  onLoaded: item.controller = root }
+        Loader { anchors.fill: parent; active: nav.calendar; visible: active && root.activeView === "calendar"; source: "views/CalendarView.qml"; onLoaded: item.controller = root }
+        Loader { anchors.fill: parent; active: nav.dayView;  visible: active && root.activeView === "dayView";  source: "views/DayView.qml";      onLoaded: item.controller = root }
     }
 
     // ══════════════════════════════════════════════════════════════════════
