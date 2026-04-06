@@ -115,18 +115,31 @@ Item {
                             spacing: 10
 
                             // Away Team
-                            Rectangle {
-                                radius: 3
-                                color: Logic.getTeamColor(modelData.away)
-                                width: 42
-                                height: 24
-                                Label {
-                                    anchors.centerIn: parent
-                                    text: modelData.away
-                                    color: Logic.getTeamTextColor(modelData.away)
-                                    font.bold: true
-                                    font.pixelSize: 13
-                                    font.family: "monospace"
+                            Item {
+                                width: awayBadge.width; height: awayBadge.height; Layout.alignment: Qt.AlignVCenter
+                                Rectangle {
+                                    id: awayBadge
+                                    visible: !controller.showLogos
+                                    radius: 3
+                                    color: Logic.getTeamColor(modelData.away)
+                                    width: 42
+                                    height: 24
+                                    Label {
+                                        anchors.centerIn: parent
+                                        text: modelData.away
+                                        color: Logic.getTeamTextColor(modelData.away)
+                                        font.bold: true
+                                        font.pixelSize: 13
+                                        font.family: "monospace"
+                                    }
+                                }
+                                Image {
+                                    visible: controller.showLogos
+                                    anchors.fill: parent
+                                    source: controller.showLogos ? controller.teamLogoUrl(modelData.away) : ""
+                                    sourceSize.width: width * 2
+                                    sourceSize.height: height * 2
+                                    fillMode: Image.PreserveAspectFit; smooth: true
                                 }
                             }
 
@@ -164,18 +177,31 @@ Item {
                             }
 
                             // Home Team
-                            Rectangle {
-                                radius: 3
-                                color: Logic.getTeamColor(modelData.home)
-                                width: 42
-                                height: 24
-                                Label {
-                                    anchors.centerIn: parent
-                                    text: modelData.home
-                                    color: Logic.getTeamTextColor(modelData.home)
-                                    font.bold: true
-                                    font.pixelSize: 13
-                                    font.family: "monospace"
+                            Item {
+                                width: homeBadge.width; height: homeBadge.height; Layout.alignment: Qt.AlignVCenter
+                                Rectangle {
+                                    id: homeBadge
+                                    visible: !controller.showLogos
+                                    radius: 3
+                                    color: Logic.getTeamColor(modelData.home)
+                                    width: 42
+                                    height: 24
+                                    Label {
+                                        anchors.centerIn: parent
+                                        text: modelData.home
+                                        color: Logic.getTeamTextColor(modelData.home)
+                                        font.bold: true
+                                        font.pixelSize: 13
+                                        font.family: "monospace"
+                                    }
+                                }
+                                Image {
+                                    visible: controller.showLogos
+                                    anchors.fill: parent
+                                    source: controller.showLogos ? controller.teamLogoUrl(modelData.home) : ""
+                                    sourceSize.width: width * 2
+                                    sourceSize.height: height * 2
+                                    fillMode: Image.PreserveAspectFit; smooth: true
                                 }
                             }
                         }

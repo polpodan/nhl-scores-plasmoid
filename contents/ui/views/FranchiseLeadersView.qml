@@ -63,8 +63,8 @@ Item {
                 // Logo et Nom de l'équipe
                 Image {
                     source: controller ? controller.teamLogoUrl(controller.flead.team) : ""
-                    width: 64
-                    height: 64
+                    Layout.preferredWidth: 240
+                    Layout.preferredHeight: 240
                     fillMode: Image.PreserveAspectFit
                     smooth: true
                     Layout.alignment: Qt.AlignHCenter

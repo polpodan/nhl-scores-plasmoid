@@ -20,10 +20,20 @@ Rectangle {
     property string homeTeam: ""
 
     readonly property var sit: Logic.parseSituation(situationCode, awayTeam, homeTeam)
+    
+    // Filtrage pour l'applet : on ne considère comme PP que les vraies supériorités numériques
+    readonly property bool isStandardPP: {
+        if (!sit || !sit.isSpecial) return false;
+        // On exclut les égalités (4v4, 3v3) et les filets déserts (le nombre de patineurs doit être différent)
+        // Les paires valides sont (5,4), (4,5), (5,3), (3,5), (4,3), (3,4)
+        return (sit.awaySkaters !== sit.homeSkaters) && !sit.emptyNet;
+    }
 
     radius: (controller && controller.styles) ? controller.styles.badge.radius : 4
-    color: bgColor
+    color: (isStandardPP && sit.ppTeam) ? Logic.getTeamColor(sit.ppTeam) : bgColor
     opacity: 0.95
+    border.color: isStandardPP ? "white" : "transparent"
+    border.width: isStandardPP ? 1.5 : 0
 
     Column {
         id: contentCol
@@ -32,16 +42,16 @@ Rectangle {
         Text {
             id: t1
             anchors.horizontalCenter: parent.horizontalCenter
-            text: badgeRoot.line1
+            text: isStandardPP ? sit.ppType : badgeRoot.line1
             color: 'white'
-            font.pixelSize: badgeRoot.fontSize1
+            font.pixelSize: isStandardPP ? badgeRoot.fontSize1 - 1 : badgeRoot.fontSize1
             font.bold: true
         }
         Text {
             id: t2
             anchors.horizontalCenter: parent.horizontalCenter
             visible: text !== ''
-            text: badgeRoot.line2
+            text: (isStandardPP && badgeRoot.penaltyTime !== "") ? badgeRoot.penaltyTime : badgeRoot.line2
             color: 'white'
             font.pixelSize: badgeRoot.fontSize2
             font.bold: true
@@ -49,34 +59,15 @@ Rectangle {
         }
     }
 
-    // Indicateur de situation (PP ou EN)
+    // Le filet désert est maintenant masqué dans le badge (applet)
+    // Il reste géré par le ppBanner dans DetailView.qml
+    /*
     Rectangle {
-        visible: !!sit && (sit.isSpecial || sit.emptyNet)
-        anchors.top: parent.bottom
-        anchors.horizontalCenter: parent.horizontalCenter
-        anchors.topMargin: 2
-        width: sitText.implicitWidth + 4
-        height: Math.max(10, badgeRoot.fontSize2 + 1)
-        radius: 2
-        color: (sit && sit.ppTeam) ? Logic.getTeamColor(sit.ppTeam) : (sit && (sit.emptyNet || sit.isSpecial) ? "#444" : "gray")
-        border.color: "white"
-        border.width: 0.5
-        Text {
-            id: sitText
-            anchors.centerIn: parent
-            text: {
-                if (!sit) return ""
-                if (sit.emptyNet) return "🥅"
-                var type = sit.ppType || ""
-                var time = badgeRoot.penaltyTime || ""
-                return type + (time !== "" ? " " + time : "")
-            }
-            color: "white"
-            font.pixelSize: Math.max(7, badgeRoot.fontSize2 - 1)
-            font.bold: true
-        }
+        visible: !!sit && sit.emptyNet
+        ...
     }
+    */
 
     width:  Math.max(t1.contentWidth, t2.contentWidth) + 10
-    height: (line2 !== '' ? (badgeRoot.fontSize1 + badgeRoot.fontSize2 + 6) : (badgeRoot.fontSize1 + 8))
+    height: (controller && controller.styles) ? controller.styles.teamBadge.height : 28 // Hauteur fixe identique aux TeamBadges
 }

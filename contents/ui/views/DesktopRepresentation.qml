@@ -3,6 +3,7 @@ import QtQuick.Layouts 1.15
 import QtQuick.Controls 2.15
 import org.kde.kirigami 2.20 as Kirigami
 import "../logic.js" as Logic
+import "../components" as Components
 
 Item {
     id: desktopRoot
@@ -118,6 +119,7 @@ Item {
             visible: model.gameIndex < (root ? root.maxGames : 10)
 
             Rectangle {
+                id: dateSepRect
                 visible: model.statusRole === 'DATE_SEP'
                 anchors.centerIn: parent
                 width: dateSepLbl.implicitWidth + 24
@@ -133,6 +135,15 @@ Item {
                     text: root ? root.localeDateLong(new Date(model.start).getTime()) : ""
                     font.pixelSize: 11
                     font.bold: true
+                }
+                MouseArea {
+                    anchors.fill: parent
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: {
+                        var d = new Date(model.start)
+                        var iso = d.getFullYear() + "-" + Logic.pad2(d.getMonth() + 1) + "-" + Logic.pad2(d.getDate())
+                        if (root) root.openDayView(iso)
+                    }
                 }
             }
 
@@ -184,21 +195,19 @@ Item {
                     RowLayout {
                         Layout.fillWidth: true
                         spacing: 8
-                        Rectangle {
-                            width: 50
-                            height: 32
-                            radius: 4
-                            color: Logic.getTeamColor(dAway)
-                            opacity: (dBlinkA && root && !root.glob.blinkOn) ? 0.0 : 1.0
-                            Label {
-                                anchors.centerIn: parent
-                                text: dAway
-                                color: Logic.getTeamTextColor(dAway)
-                                font.pixelSize: 15
-                                font.bold: true
-                                font.family: "monospace"
-                            }
+                        
+                        Components.TeamBadge {
+                            code: dAway
+                            score: dAg
+                            sz: root.showLogos ? 48 : 18
+                            gameId: String(model.gameId)
+                            teamSide: 'away'
+                            showScore: false
+                            controller: root
+                            blinkingGames: root.glob.blinkingGames
+                            blinkOn: root.glob.blinkOn
                         }
+
                         Label {
                             visible: dStatus !== 'UPCOMING'
                             text: String(dAg)
@@ -245,20 +254,17 @@ Item {
                             opacity: (dBlinkH && root && !root.glob.blinkOn) ? 0.0 : 1.0
                             Layout.alignment: Qt.AlignVCenter
                         }
-                        Rectangle {
-                            width: 50
-                            height: 32
-                            radius: 4
-                            color: Logic.getTeamColor(dHome)
-                            opacity: (dBlinkH && root && !root.glob.blinkOn) ? 0.0 : 1.0
-                            Label {
-                                anchors.centerIn: parent
-                                text: dHome
-                                color: Logic.getTeamTextColor(dHome)
-                                font.pixelSize: 15
-                                font.bold: true
-                                font.family: "monospace"
-                            }
+
+                        Components.TeamBadge {
+                            code: dHome
+                            score: dHg
+                            sz: root.showLogos ? 48 : 18
+                            gameId: String(model.gameId)
+                            teamSide: 'home'
+                            showScore: false
+                            controller: root
+                            blinkingGames: root.glob.blinkingGames
+                            blinkOn: root.glob.blinkOn
                         }
                     }
                 }

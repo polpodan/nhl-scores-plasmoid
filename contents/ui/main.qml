@@ -91,6 +91,7 @@ PlasmoidItem {
     property color upcomingColor: Plasmoid.configuration.upcomingColor || "#2b6cb0"
     property color finalColor: Plasmoid.configuration.finalColor || "#6c757d"
     property string scoreLayout: Plasmoid.configuration.scoreLayout || 'stack'
+    property bool showLogos: Plasmoid.configuration.showLogos || false
     property bool showUpcomingTime: (Plasmoid.configuration.showUpcomingTime !== false)
     property string dateMode: Plasmoid.configuration.dateMode || 'local'
     property bool showToday:    Plasmoid.configuration.showToday
@@ -241,6 +242,7 @@ PlasmoidItem {
         property var    stats:    ({})
         property var    threeStars: []
         property var    penalties:  []
+        property var    teamComparison: []
         property string view:     'goals'
         property string sitCode:  '1551'
         property bool   isPlayoff: false
@@ -303,6 +305,7 @@ PlasmoidItem {
                                       goalsToDate: gobj.goalsToDate,
                                       assists: gobj.assists,
                                       ppg: gobj.ppg, shg: gobj.shg, en: gobj.en,
+                                      highlightId: gobj.highlightId || 0,
                                       isEmpty: false })
                         count++
                     }
@@ -621,10 +624,9 @@ PlasmoidItem {
     // (L'ancienne fonction teamColor a été remplacée par Logic.getTeamColor)
 
     // Retourne une version de la couleur d'équipe lisible sur le fond du thème.
-    // Sur thème foncé  : les couleurs trop sombres sont éclaircies.
-    // Sur thème clair  : les couleurs trop claires sont assombries.
-    function teamColorAdapted(code) {
-        var hex = Logic.getTeamColor(code, null)
+    // forText: si vrai, applique un contraste plus fort pour la lisibilité de la police.
+    function teamColorAdapted(code, opponentCode, isAway, forText) {
+        var hex = Logic.getTeamColorAdapted(code, opponentCode, isAway, null)
         if (!hex) return Kirigami.Theme.textColor
 
         // Luminance de la couleur d'équipe
@@ -644,11 +646,20 @@ PlasmoidItem {
         var bb = bg.b <= 0.03928 ? bg.b/12.92 : Math.pow((bg.b+0.055)/1.055,2.4)
         var Lbg = 0.2126*br + 0.7152*bgg + 0.0722*bb
 
-        // Ratio de contraste minimum acceptable : 2.5
+        // Ratio de contraste
         var contrast = (Math.max(L, Lbg) + 0.05) / (Math.min(L, Lbg) + 0.05)
-        if (contrast >= 2.5) return hex  // déjà assez contrasté, on garde
+        
+        // Pour le texte, on veut un contraste bien plus élevé (minimum 3.0)
+        var minContrast = forText ? 3.0 : 1.8
+        if (contrast >= minContrast) return hex 
 
-        // Thème foncé : éclaircir la couleur d'équipe
+        // Si c'est du texte noir sur fond noir -> on force une couleur claire
+        if (forText && Lbg < 0.25 && L < 0.2) return "#cccccc"
+
+        // Exception pour le fond des badges (non-texte) : on accepte le noir
+        if (!forText && Lbg < 0.25 && L < 0.05) return "#181818"
+
+        // Sinon, calcul d'éclaircissement/assombrissement standard...
         if (Lbg < 0.25) {
             // Mélange avec blanc jusqu'à obtenir assez de contraste
             var ri = parseInt(h.substring(0,2),16)
@@ -744,9 +755,10 @@ PlasmoidItem {
     function teamLogoUrl(abbrev) {
         if (!abbrev) return ''
         var bg = Kirigami.Theme.backgroundColor
+        // Calcul de la luminosité du fond
         var L  = 0.2126*bg.r + 0.7152*bg.g + 0.0722*bg.b
         var variant = L < 0.5 ? 'dark' : 'light'
-        return 'https://assets.nhle.com/logos/nhl/svg/' + abbrev + '_' + variant + '.svg'
+        return Qt.resolvedUrl("../logos/" + abbrev + "_" + variant + ".svg")
     }
     function resolveNHLAbbrev(teamCommonName) {
         return Logic.resolveNHLAbbrev(teamCommonName)
@@ -762,6 +774,10 @@ PlasmoidItem {
 
     function venueTimeStr(msUTC, homeTeam) {
         return Logic.venueTimeStr(msUTC, homeTeam)
+    }
+
+    function teamTextColor(teamCode, opponentCode, isAway) {
+        return Logic.getTeamTextColor(teamCode, opponentCode, isAway)
     }
 
     function fetchLeagueByDates(days, cb){
@@ -804,6 +820,11 @@ PlasmoidItem {
     function refresh() {
         glob.refreshGen++
         const myGen = glob.refreshGen
+
+        // Rafraîchir les détails du match actif si le hub est ouvert
+        if (nav.detail && det.gameId !== 0) {
+            fetchDetail(det.gameId)
+        }
 
         let days = []
         let base = new Date()
@@ -903,7 +924,14 @@ PlasmoidItem {
                 if (data && data.clock) {
                     todayGames.setProperty(modelIndex, "liveRemain", data.clock.timeRemaining || "")
                     todayGames.setProperty(modelIndex, "inIntermission", data.clock.inIntermission ? true : false)
-                    // Pendant l'intermission, timeRemaining = temps avant la prochaine mise en jeu
+                    
+                    // Mise à jour de la vue détail si ouverte
+                    if (nav.detail && det.gameId === gameId) {
+                        det.remain = data.clock.timeRemaining || ""
+                        det.interm = data.clock.inIntermission ? true : false
+                        det.intermRemain = data.clock.inIntermission ? (data.clock.timeRemaining || "") : ""
+                    }
+
                     if (data.clock.inIntermission)
                         todayGames.setProperty(modelIndex, "intermissionRemain", data.clock.timeRemaining || "")
                     else
@@ -911,16 +939,16 @@ PlasmoidItem {
                     if (data.situationCode) {
                         todayGames.setProperty(modelIndex, "situationCode", data.situationCode)
                         // Mise à jour immédiate du popup si ce match est ouvert
-                        if (nav.detail && det.gameId === todayGames.get(modelIndex).gameId) {
+                        if (nav.detail && det.gameId === gameId) {
                             det.sitCode = data.situationCode
-                            det.intermRemain  = data.clock.inIntermission
-                                                       ? (data.clock.timeRemaining || '')
-                                                       : ''
                         }
                     }
                 }
                 if (data && data.displayPeriod) {
                     todayGames.setProperty(modelIndex, "period", data.displayPeriod)
+                    if (nav.detail && det.gameId === gameId) {
+                        det.period = data.displayPeriod
+                    }
                 }
             } catch(e) {
                 console.warn("fetchClock parse error for game", gameId, e)
@@ -1716,6 +1744,23 @@ PlasmoidItem {
                     fetchSituationFromLanding(todayGames.get(di).gameId)
             }
         }
+
+        // Mise à jour de la vue détail si ouverte
+        if (nav.detail && det.gameId !== 0) {
+            for (let dj = 0; dj < todayGames.count; dj++) {
+                let g = todayGames.get(dj)
+                if (g.gameId === det.gameId) {
+                    det.ag      = g.ag
+                    det.hg      = g.hg
+                    det.status  = g.statusRole
+                    det.pType   = g.periodType
+                    det.period  = g.period
+                    det.remain  = g.liveRemain
+                    det.interm  = g.inIntermission
+                    break
+                }
+            }
+        }
     }
 
     Connections {
@@ -2121,12 +2166,73 @@ PlasmoidItem {
     function fetchDetail(gid) {
         det.loading = true
         var done = 0
-        function tryDone() { done++; if (done >= 2) det.loading = false }
+        function tryDone() { done++; if (done >= 3) det.loading = false }
+
+        // right-rail → stats de comparaison (preview)
+        Logic.ApiService.getGameRightRail(gid, function(err, d) {
+            if (!err && d) {
+                // 1. Stats de saison
+                if (d.teamSeasonStats) {
+                    var ts = d.teamSeasonStats
+                    var tcList = []
+                    var a = ts.awayTeam || {}
+                    var h = ts.homeTeam || {}
+                    
+                    tcList.push({ label: "ppPctg", away: a.ppPctg || 0, home: h.ppPctg || 0 })
+                    tcList.push({ label: "pkPctg", away: a.pkPctg || 0, home: h.pkPctg || 0 })
+                    tcList.push({ label: "faceoffWinPctg", away: a.faceoffWinningPctg || 0, home: h.faceoffWinningPctg || 0 })
+                    tcList.push({ label: "goalsForPerGame", away: a.goalsForPerGamePlayed || 0, home: h.goalsForPerGamePlayed || 0 })
+                    tcList.push({ label: "goalsAgainstPerGame", away: a.goalsAgainstPerGamePlayed || 0, home: h.goalsAgainstPerGamePlayed || 0 })
+                    
+                    det.teamComparison = tcList
+                }
+
+                // 2. Série de saison (plus précis que notre calcul manuel)
+                if (d.seasonSeriesWins) {
+                    det.seriesAway = d.seasonSeriesWins.awayTeamWins || 0
+                    det.seriesHome = d.seasonSeriesWins.homeTeamWins || 0
+                    det.seriesTotal = true
+                }
+                
+                // 3. Matchs H2H
+                if (d.seasonSeries) {
+                    var h2h = []
+                    for (var i=0; i<d.seasonSeries.length; i++) {
+                        var g = d.seasonSeries[i]
+                        if (g.gameState === 'OFF') {
+                            h2h.push({
+                                date: g.gameDate,
+                                away: g.awayTeam.abbrev,
+                                home: g.homeTeam.abbrev,
+                                awayScore: g.awayTeam.score,
+                                homeScore: g.homeTeam.score,
+                                final: true
+                            })
+                        }
+                    }
+                    det.h2hGames = h2h
+                }
+            }
+            tryDone()
+        })
 
         // landing → buts
         Logic.ApiService.getGameLanding(gid, function(err, d) {
             if (!err) {
                 try {
+                    // Mise à jour du score et statut si disponible
+                    if (d.awayTeam && d.awayTeam.score !== undefined) det.ag = d.awayTeam.score
+                    if (d.homeTeam && d.homeTeam.score !== undefined) det.hg = d.homeTeam.score
+                    if (d.gameState) det.status = Logic.getStatusFromGame(d)
+                    if (d.periodDescriptor) {
+                        det.period = d.periodDescriptor.number || 0
+                        det.pType = d.periodDescriptor.periodType || ''
+                    }
+                    if (d.clock) {
+                        det.interm = d.clock.inIntermission || false
+                        det.remain = d.clock.timeRemaining || ""
+                    }
+
                     // ── Preview pour les matchs à venir ─────────────────
                     if (det.status === 'UPCOMING') {
                         var pv = {}
@@ -2210,16 +2316,40 @@ PlasmoidItem {
                         pv.homeGoalie = parseGoalie(glComp ? glComp.homeTeam : null)
 
                         det.venue       = pv.venue || ''
-                        det.seriesAway  = pv.seriesAway  || 0
-                        det.seriesHome  = pv.seriesHome  || 0
-                        det.seriesTotal = pv.seriesTotal || false
-                        det.h2hGames    = pv.h2hGames    || []
-                        det.awayRecord  = (pv.awayRecord ? (pv.awayRecord.wins||'–')+'-'+(pv.awayRecord.losses||'–')+'-'+(pv.awayRecord.ot||'–') : '')
-                        det.homeRecord  = (pv.homeRecord ? (pv.homeRecord.wins||'–')+'-'+(pv.homeRecord.losses||'–')+'-'+(pv.homeRecord.ot||'–') : '')
+                        // Ne pas écraser si déjà rempli par fetchH2H (évite le clignotement)
+                        if (det.seriesAway === 0 && det.seriesHome === 0) {
+                            det.seriesAway  = pv.seriesAway  || 0
+                            det.seriesHome  = pv.seriesHome  || 0
+                        }
+                        det.seriesTotal = pv.seriesTotal || det.seriesTotal || false
+                        if (pv.h2hGames && pv.h2hGames.length > 0) {
+                            det.h2hGames = pv.h2hGames
+                        }
+                        if (pv.awayRecord && pv.awayRecord.wins !== '–') {
+                            det.awayRecord  = (pv.awayRecord.wins||'–')+'-'+(pv.awayRecord.losses||'–')+'-'+(pv.awayRecord.ot||'–')
+                        }
+                        if (pv.homeRecord && pv.homeRecord.wins !== '–') {
+                            det.homeRecord  = (pv.homeRecord.wins||'–')+'-'+(pv.homeRecord.losses||'–')+'-'+(pv.homeRecord.ot||'–')
+                        }
                         det.awayLeaders = pv.awayLeaders || []
                         det.homeLeaders = pv.homeLeaders || []
                         det.awayGoalie  = pv.awayGoalie  || null
                         det.homeGoalie  = pv.homeGoalie  || null
+
+                        // ── Comparaison d'équipe (Saison) ──────────────────
+                        var tcRaw = (d.matchup && d.matchup.teamComparison) || []
+                        if (tcRaw.length > 0) {
+                            var tcList = []
+                            for (var tci = 0; tci < tcRaw.length; tci++) {
+                                var item = tcRaw[tci]
+                                var label = item.label || ""
+                                if (label === "ppPctg" || label === "pkPctg" || label === "faceoffWinPctg" || 
+                                    label === "goalsForPerGame" || label === "goalsAgainstPerGame") {
+                                    tcList.push({ label: label, away: item.awayValue, home: item.homeValue })
+                                }
+                            }
+                            det.teamComparison = tcList
+                        }
                     }
 
                     // ── Buts pour les matchs commencés / terminés ────────
@@ -2248,7 +2378,8 @@ PlasmoidItem {
                                 scorerId: gl.playerId || 0, scorer: scorer,
                                 goalsToDate: gl.goalsToDate !== undefined ? gl.goalsToDate : -1,
                                 assists: assists, ppg: gl.strength === 'pp', shg: gl.strength === 'sh',
-                                en: gl.goalModifier === 'empty-net' || gl.emptyNet === true
+                                en: gl.goalModifier === 'empty-net' || gl.emptyNet === true,
+                                highlightId: gl.highlightClip || 0
                             })
                         }
                     }

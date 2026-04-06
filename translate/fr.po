@@ -490,6 +490,36 @@ msgstr "Choisir la couleur FINAL"
 msgid "Reset to default"
 msgstr "Réinitialiser"
 
+msgid "Team display"
+msgstr "Affichage des équipes"
+
+msgid "Icon style:"
+msgstr "Style d'icône :"
+
+msgid "Pastilles"
+msgstr "Pastilles"
+
+msgid "Logos"
+msgstr "Logos"
+
+msgid "Season Comparison"
+msgstr "Comparaison de saison"
+
+msgid "Power Play %"
+msgstr "Avantage numérique %"
+
+msgid "Penalty Kill %"
+msgstr "Désavantage numérique %"
+
+msgid "GF/G"
+msgstr "BP/MJ"
+
+msgid "GA/G"
+msgstr "BC/MJ"
+
+msgid "Watch goal highlight"
+msgstr "Voir le fait saillant du but"
+
 msgid "Divisions"
 msgstr "Divisions"
 

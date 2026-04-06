@@ -192,12 +192,12 @@ Item {
                             font.bold: dayCell.isToday || dayCell.isSelected
                             color: (dayCell.isToday || dayCell.isSelected)
                                    ? "white"
-                                   : dayCell.isFuture ? Kirigami.Theme.disabledTextColor : Kirigami.Theme.textColor
-                            opacity: dayCell.isFuture ? 0.5 : 1.0
+                                   : (dayCell.isFuture && dayCell.gameCount === 0) ? Kirigami.Theme.disabledTextColor : Kirigami.Theme.textColor
+                            opacity: (dayCell.isFuture && dayCell.gameCount === 0) ? 0.5 : 1.0
                         }
 
                         Rectangle {
-                            visible: !!(!dayCell.isFuture && dayCell.gameCount > 0)
+                            visible: dayCell.gameCount > 0
                             anchors.bottom: parent.bottom; anchors.bottomMargin: 1
                             anchors.horizontalCenter: parent.horizontalCenter
                             width: Math.max(14, String(dayCell.gameCount).length * 7 + 6)

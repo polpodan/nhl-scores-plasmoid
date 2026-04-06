@@ -29,22 +29,39 @@ Row {
     property string homeTeam: ""
     
     property Component statusComponent: null
+    property var controller: null
+
+    readonly property bool showLogos: (typeof controller !== 'undefined' && controller) ? controller.showLogos : false
 
     // Visiteur
-    Rectangle {
-        radius: 3
-        color: Logic.getTeamColor(awayCode, Kirigami.Theme.positiveBackgroundColor)
-        border.color: 'white'; border.width: 1
-        height: aText.implicitHeight + Math.max(3, sz * 0.12)
-        width:  aText.implicitWidth  + Math.max(4, sz * 0.22)
-        opacity: {
-            var b = blinkingGames[String(gameId)]
-            return (b && (b === 'away' || b === 'both') && !blinkOn) ? 0.0 : 1.0
+    Item {
+        width: aBadge.width; height: aBadge.height; anchors.verticalCenter: parent.verticalCenter
+        Rectangle {
+            id: aBadge
+            visible: !teamRowRoot.showLogos
+            radius: 3
+            color: Logic.getTeamColor(awayCode, Kirigami.Theme.positiveBackgroundColor)
+            border.color: 'white'; border.width: 1
+            height: aText.implicitHeight + Math.max(3, sz * 0.12)
+            width:  aText.implicitWidth  + Math.max(4, sz * 0.22)
+            opacity: {
+                var b = blinkingGames[String(gameId)]
+                return (b && (b === 'away' || b === 'both') && !blinkOn) ? 0.0 : 1.0
+            }
+            Text {
+                id: aText; anchors.centerIn: parent; text: awayCode
+                color: Logic.getTeamTextColor(awayCode)
+                font.pixelSize: Math.max(8, sz * 0.72); font.bold: true; font.family: "monospace"
+            }
         }
-        Text {
-            id: aText; anchors.centerIn: parent; text: awayCode
-            color: Logic.getTeamTextColor(awayCode)
-            font.pixelSize: Math.max(8, sz * 0.72); font.bold: true; font.family: "monospace"
+        Image {
+            visible: teamRowRoot.showLogos
+            anchors.fill: parent
+            source: teamRowRoot.showLogos ? (typeof controller !== 'undefined' && controller ? controller.teamLogoUrl(awayCode) : "https://assets.nhle.com/logos/nhl/svg/" + awayCode + "_light.svg") : ""
+            sourceSize.width: width * 2
+            sourceSize.height: height * 2
+            fillMode: Image.PreserveAspectFit; smooth: true
+            opacity: aBadge.opacity
         }
     }
 
@@ -100,20 +117,32 @@ Row {
     }
 
     // Local
-    Rectangle {
-        radius: 3
-        color: Logic.getTeamColor(homeCode, Kirigami.Theme.positiveBackgroundColor)
-        border.color: 'white'; border.width: 1
-        height: hText.implicitHeight + Math.max(3, sz * 0.12)
-        width:  hText.implicitWidth  + Math.max(4, sz * 0.22)
-        opacity: {
-            var b = blinkingGames[String(gameId)]
-            return (b && (b === 'home' || b === 'both') && !blinkOn) ? 0.0 : 1.0
+    Item {
+        width: hBadge.width; height: hBadge.height; anchors.verticalCenter: parent.verticalCenter
+        Rectangle {
+            id: hBadge
+            visible: !teamRowRoot.showLogos
+            radius: 3
+            color: Logic.getTeamColor(homeCode, Kirigami.Theme.positiveBackgroundColor)
+            border.color: 'white'; border.width: 1
+            height: hText.implicitHeight + Math.max(3, sz * 0.12)
+            width:  hText.implicitWidth  + Math.max(4, sz * 0.22)
+            opacity: {
+                var b = blinkingGames[String(gameId)]
+                return (b && (b === 'home' || b === 'both') && !blinkOn) ? 0.0 : 1.0
+            }
+            Text {
+                id: hText; anchors.centerIn: parent; text: homeCode
+                color: Logic.getTeamTextColor(homeCode)
+                font.pixelSize: Math.max(8, sz * 0.72); font.bold: true; font.family: "monospace"
+            }
         }
-        Text {
-            id: hText; anchors.centerIn: parent; text: homeCode
-            color: Logic.getTeamTextColor(homeCode)
-            font.pixelSize: Math.max(8, sz * 0.72); font.bold: true; font.family: "monospace"
+        Image {
+            visible: teamRowRoot.showLogos
+            anchors.fill: parent
+            source: teamRowRoot.showLogos ? (typeof controller !== 'undefined' && controller ? controller.teamLogoUrl(homeCode) : "https://assets.nhle.com/logos/nhl/svg/" + homeCode + "_light.svg") : ""
+            fillMode: Image.PreserveAspectFit; smooth: true
+            opacity: hBadge.opacity
         }
     }
 }

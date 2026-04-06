@@ -30,6 +30,8 @@ Item {
   property int    cfg_pastDays
   property int    cfg_pollInterval
   property int    cfg_blinkDuration
+  property bool   cfg_showLogos
+  property bool   cfg_showLogosDefault
   // cfg_ Display (injectées par Plasma dans tous les fichiers de config)
   property bool   cfg_ultraCompact
   property bool   cfg_ultraCompactDefault

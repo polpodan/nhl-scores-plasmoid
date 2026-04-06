@@ -141,7 +141,7 @@ ScrollView {
                         Label {
                             text: controller ? controller.det.awayRecord : ""
                             font.pixelSize: 14; font.bold: true
-                            color: controller ? controller.teamColorAdapted(controller.det.away) : "gray"
+                            color: controller ? controller.teamColorAdapted(controller.det.away, controller.det.home, true, true) : "gray"
                             Layout.alignment: Qt.AlignHCenter
                         }
                         Label {
@@ -271,7 +271,7 @@ ScrollView {
                         Label {
                             text: controller ? controller.det.homeRecord : ""
                             font.pixelSize: 14; font.bold: true
-                            color: controller ? controller.teamColorAdapted(controller.det.home) : "gray"
+                            color: controller ? controller.teamColorAdapted(controller.det.home, controller.det.away, false, true) : "gray"
                             Layout.alignment: Qt.AlignHCenter
                         }
                         Label {
@@ -309,6 +309,198 @@ ScrollView {
                 }
             }
 
+            // ── Preview match à venir ─────────────────────────────────────────
+            ColumnLayout {
+                visible: controller && !controller.det.loading && controller.det.status === 'UPCOMING'
+                Layout.fillWidth: true
+                Layout.topMargin: 15
+                spacing: 15
+
+                // 1. Comparison de saison
+                ColumnLayout {
+                    visible: !!controller.det.teamComparison && controller.det.teamComparison.length > 0
+                    Layout.fillWidth: true
+                    spacing: 6
+                    Rectangle {
+                        Layout.fillWidth: true; implicitHeight: 24; color: Qt.rgba(1,1,1,0.04); radius: 4
+                        Label { anchors.centerIn: parent; text: i18n("Season Comparison"); font.pixelSize: 11; font.bold: true; opacity: 0.6 }
+                    }
+                    Repeater {
+                        model: controller ? controller.det.teamComparison : []
+                        delegate: ColumnLayout {
+                            Layout.fillWidth: true; spacing: 2
+                            Label {
+                                text: {
+                                    if (modelData.label === "ppPctg") return i18n("Power Play %")
+                                    if (modelData.label === "pkPctg") return i18n("Penalty Kill %")
+                                    if (modelData.label === "faceoffWinPctg") return i18n("Faceoffs %")
+                                    if (modelData.label === "goalsForPerGame") return i18n("GF/G")
+                                    if (modelData.label === "goalsAgainstPerGame") return i18n("GA/G")
+                                    return modelData.label
+                                }
+                                font.pixelSize: 10; opacity: 0.7; Layout.alignment: Qt.AlignHCenter
+                            }
+                            RowLayout {
+                                Layout.fillWidth: true; spacing: 8
+                                Label {
+                                    text: {
+                                        var val = modelData.away
+                                        if (modelData.label.indexOf('Pct') !== -1) return (val <= 1.0 ? (val * 100).toFixed(1) : Number(val).toFixed(1)) + "%"
+                                        return Number(val).toFixed(2)
+                                    }
+                                    font.bold: true; font.pixelSize: 12; color: controller.teamColorAdapted(controller.det.away, controller.det.home, true, true)
+                                    Layout.preferredWidth: 50; horizontalAlignment: Text.AlignRight
+                                }
+                                Rectangle {
+                                    Layout.fillWidth: true; height: 6; radius: 3; color: Qt.rgba(1,1,1,0.1)
+                                    Row {
+                                        anchors.fill: parent
+                                        Rectangle { height: parent.height; radius: 3; color: controller.teamColorAdapted(controller.det.away, controller.det.home, true, true)
+                                                    width: (parseFloat(modelData.away) + parseFloat(modelData.home)) > 0 ? (parent.width * (parseFloat(modelData.away) / (parseFloat(modelData.away) + parseFloat(modelData.home)))) : parent.width/2 }
+                                        Rectangle { height: parent.height; radius: 3; color: controller.teamColorAdapted(controller.det.home, controller.det.away, false, true)
+                                                    width: (parseFloat(modelData.away) + parseFloat(modelData.home)) > 0 ? (parent.width * (parseFloat(modelData.home) / (parseFloat(modelData.away) + parseFloat(modelData.home)))) : parent.width/2 }
+                                    }
+                                }
+                                Label {
+                                    text: {
+                                        var val = modelData.home
+                                        if (modelData.label.indexOf('Pct') !== -1) return (val <= 1.0 ? (val * 100).toFixed(1) : Number(val).toFixed(1)) + "%"
+                                        return Number(val).toFixed(2)
+                                    }
+                                    font.bold: true; font.pixelSize: 12; color: controller.teamColorAdapted(controller.det.home, controller.det.away, false, true)
+                                    Layout.preferredWidth: 50; horizontalAlignment: Text.AlignLeft
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // 2. Série saison (H2H)
+                ColumnLayout {
+                    visible: (controller.det.isPlayoff && (controller.det.seriesAway > 0 || controller.det.seriesHome > 0)) || (controller.det.h2hGames && controller.det.h2hGames.length > 0)
+                    Layout.fillWidth: true
+                    spacing: 6
+                    Rectangle {
+                        Layout.fillWidth: true; implicitHeight: 24; color: Qt.rgba(1,1,1,0.04); radius: 4
+                        Label { anchors.centerIn: parent; text: i18n("Season series"); font.pixelSize: 11; font.bold: true; opacity: 0.6 }
+                    }
+                    // Info Playoff
+                    ColumnLayout {
+                        visible: controller.det.isPlayoff && (controller.det.seriesAway > 0 || controller.det.seriesHome > 0)
+                        Layout.alignment: Qt.AlignHCenter; spacing: 4
+                        Label { Layout.alignment: Qt.AlignHCenter; text: controller.det.seriesRound; font.pixelSize: 12; font.bold: true; opacity: 0.8 }
+                        RowLayout {
+                            Layout.alignment: Qt.AlignHCenter; spacing: 8
+                            Label { text: controller.det.seriesAway > controller.det.seriesHome ? controller.det.away + " mène" : controller.det.seriesHome > controller.det.seriesAway ? controller.det.home + " mène" : "Égalité"; font.pixelSize: 13 }
+                            Label { text: controller.det.seriesAway + " – " + controller.det.seriesHome; font.pixelSize: 22; font.bold: true }
+                            Button { text: "🏆"; flat: true; onClicked: controller.openPlayoffBracket() }
+                        }
+                    }
+                    // Matchs H2H
+                    Repeater {
+                        model: controller.det.h2hGames || []
+                        delegate: RowLayout {
+                            Layout.fillWidth: true; spacing: 8
+                            Label { text: modelData.date ? Qt.formatDate(new Date(modelData.date), "d MMM") : ''; font.pixelSize: 11; opacity: 0.6; Layout.preferredWidth: 40 }
+                            Item { Layout.fillWidth: true }
+                            Item {
+                                width: 34; height: 18; Layout.alignment: Qt.AlignVCenter
+                                Rectangle {
+                                    visible: !controller.showLogos
+                                    anchors.fill: parent; radius: 3; color: Logic.getTeamColor(modelData.away)
+                                    Label { anchors.centerIn: parent; text: modelData.away; color: Logic.getTeamTextColor(modelData.away); font.bold: true; font.pixelSize: 10 }
+                                }
+                                Image {
+                                    visible: controller.showLogos
+                                    anchors.fill: parent
+                                    source: controller.showLogos ? controller.teamLogoUrl(modelData.away) : ""
+                                    sourceSize.width: width * 2
+                                    sourceSize.height: height * 2
+                                    fillMode: Image.PreserveAspectFit; smooth: true
+                                }
+                            }
+                            Label { text: modelData.final ? modelData.awayScore + " – " + modelData.homeScore : "@"; font.bold: modelData.final; Layout.preferredWidth: 40; horizontalAlignment: Text.AlignHCenter }
+                            Item {
+                                width: 34; height: 18; Layout.alignment: Qt.AlignVCenter
+                                Rectangle {
+                                    visible: !controller.showLogos
+                                    anchors.fill: parent; radius: 3; color: Logic.getTeamColor(modelData.home)
+                                    Label { anchors.centerIn: parent; text: modelData.home; color: Logic.getTeamTextColor(modelData.home); font.bold: true; font.pixelSize: 10 }
+                                }
+                                Image {
+                                    visible: controller.showLogos
+                                    anchors.fill: parent
+                                    source: controller.showLogos ? controller.teamLogoUrl(modelData.home) : ""
+                                    sourceSize.width: width * 2
+                                    sourceSize.height: height * 2
+                                    fillMode: Image.PreserveAspectFit; smooth: true
+                                }
+                            }
+                            Item { Layout.fillWidth: true }
+                        }
+                    }
+                }
+
+                // 3. Meneurs de points
+                ColumnLayout {
+                    visible: (controller.det.awayLeaders || []).length > 0
+                    Layout.fillWidth: true
+                    spacing: 6
+                    Rectangle {
+                        Layout.fillWidth: true; implicitHeight: 24; color: Qt.rgba(1,1,1,0.04); radius: 4
+                        Label { anchors.centerIn: parent; text: i18n("Points leaders (last 5 games)"); font.pixelSize: 11; font.bold: true; opacity: 0.6 }
+                    }
+                    RowLayout {
+                        Layout.fillWidth: true; spacing: 10
+                        ColumnLayout {
+                            Layout.fillWidth: true; spacing: 2
+                            Repeater {
+                                model: controller.det.awayLeaders || []
+                                delegate: Label {
+                                    text: modelData.name + " (" + modelData.value + ")"
+                                    font.pixelSize: 12; color: controller.teamColorAdapted(controller.det.away, controller.det.home, true, true); elide: Text.ElideRight; Layout.fillWidth: true
+                                }
+                            }
+                        }
+                        Rectangle { width: 1; Layout.fillHeight: true; color: Kirigami.Theme.textColor; opacity: 0.1 }
+                        ColumnLayout {
+                            Layout.fillWidth: true; spacing: 2
+                            Repeater {
+                                model: controller.det.homeLeaders || []
+                                delegate: Label {
+                                    text: modelData.name + " (" + modelData.value + ")"
+                                    font.pixelSize: 12; color: controller.teamColorAdapted(controller.det.home, controller.det.away, false, true); elide: Text.ElideRight; Layout.fillWidth: true; horizontalAlignment: Text.AlignRight
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // 4. Gardiens probables
+                ColumnLayout {
+                    visible: controller.det.awayGoalie !== null || controller.det.homeGoalie !== null
+                    Layout.fillWidth: true
+                    spacing: 6
+                    Rectangle {
+                        Layout.fillWidth: true; implicitHeight: 24; color: Qt.rgba(1,1,1,0.04); radius: 4
+                        Label { anchors.centerIn: parent; text: i18n("Probable goalies"); font.pixelSize: 11; font.bold: true; opacity: 0.6 }
+                    }
+                    RowLayout {
+                        Layout.alignment: Qt.AlignHCenter; spacing: 40
+                        ColumnLayout {
+                            spacing: 0; Layout.alignment: Qt.AlignHCenter
+                            Label { text: controller.det.awayGoalie ? controller.det.awayGoalie.name : '–'; font.bold: true; color: controller.teamColorAdapted(controller.det.away, controller.det.home, true, true); Layout.alignment: Qt.AlignHCenter }
+                            Label { text: controller.det.awayGoalie ? controller.det.awayGoalie.record : ''; font.pixelSize: 10; opacity: 0.7; Layout.alignment: Qt.AlignHCenter }
+                        }
+                        ColumnLayout {
+                            spacing: 0; Layout.alignment: Qt.AlignHCenter
+                            Label { text: controller.det.homeGoalie ? controller.det.homeGoalie.name : '–'; font.bold: true; color: controller.teamColorAdapted(controller.det.home, controller.det.away, false, true); Layout.alignment: Qt.AlignHCenter }
+                            Label { text: controller.det.homeGoalie ? controller.det.homeGoalie.record : ''; font.pixelSize: 10; opacity: 0.7; Layout.alignment: Qt.AlignHCenter }
+                        }
+                    }
+                }
+            }
+
             // Date du match (Matchs terminés ou en direct)
             Label {
                 visible: controller && controller.det.start > 0 && controller.det.status !== 'UPCOMING'
@@ -331,11 +523,13 @@ ScrollView {
                 id: ppBanner
                 Layout.alignment: Qt.AlignHCenter
                 property var sit: controller ? controller.parseSituation(controller.det.sitCode, controller.det.away, controller.det.home) : null
-                visible: sit !== null
+                visible: !!sit && (sit.isSpecial || sit.emptyNet)
                 width:  ppBannerContent.implicitWidth + 20
                 height: ppBannerContent.implicitHeight + 10
                 radius: 6
-                color: (sit && sit.ppTeam) ? Logic.getTeamColor(sit.ppTeam) : Kirigami.Theme.highlightColor
+                color: (sit && sit.ppTeam) ? Logic.getTeamColor(sit.ppTeam) : (sit && (sit.emptyNet || sit.isSpecial) ? "#444" : Kirigami.Theme.highlightColor)
+                border.color: "white"
+                border.width: (sit && sit.isSpecial) ? 1 : 0
                 Column {
                     id: ppBannerContent
                     anchors.centerIn: parent
@@ -374,242 +568,6 @@ ScrollView {
                 }
             }
 
-            // ── Preview match à venir (Séries / H2H) ─────────────────────────
-            ColumnLayout {
-                visible: controller && !controller.det.loading && controller.det.status === 'UPCOMING'
-                Layout.fillWidth: true
-                Layout.topMargin: 20 // Espace avec le bloc info au-dessus
-                spacing: 10
-
-                Rectangle {
-                    Layout.fillWidth: true
-                    height: 1
-                    radius: 1
-                    gradient: Gradient {
-                        orientation: Gradient.Horizontal
-                        GradientStop {
-                            position: 0.0
-                            color: controller ? Logic.getTeamColor(controller.det.away) : "gray"
-                        }
-                        GradientStop {
-                            position: 1.0
-                            color: controller ? Logic.getTeamColor(controller.det.home) : "gray"
-                        }
-                    }
-                    opacity: 0.6
-                }
-
-                ColumnLayout {
-                    visible: controller && controller.det.isPlayoff && (controller.det.seriesAway > 0 || controller.det.seriesHome > 0)
-                    Layout.alignment: Qt.AlignHCenter
-                    spacing: 4
-                    Label {
-                        Layout.alignment: Qt.AlignHCenter
-                        text: controller && controller.det.seriesRound !== '' ? controller.det.seriesRound : ""
-                        font.pixelSize: 12
-                        font.bold: true
-                        opacity: 0.8
-                    }
-                    RowLayout {
-                        Layout.alignment: Qt.AlignHCenter
-                        spacing: 8
-                        Label {
-                            text: controller ? (controller.det.seriesAway > controller.det.seriesHome ? controller.det.away + " mène" : controller.det.seriesHome > controller.det.seriesAway ? controller.det.home + " mène" : "Égalité") : ""
-                            font.pixelSize: 13
-                        }
-                        Label {
-                            text: controller ? controller.det.seriesAway + " – " + controller.det.seriesHome : ""
-                            font.pixelSize: 22
-                            font.bold: true
-                        }
-                        Button {
-                            text: "🏆"
-                            flat: true
-                            onClicked: controller.openPlayoffBracket()
-                            ToolTip.text: i18n("Playoffs")
-                            ToolTip.visible: hovered
-                        }
-                    }
-                }
-
-                ColumnLayout {
-                    visible: controller && controller.det.h2hGames && controller.det.h2hGames.length > 0
-                    Layout.fillWidth: true
-                    spacing: 3
-                    Rectangle {
-                        Layout.fillWidth: true
-                        implicitHeight: 24
-                        color: Qt.rgba(1,1,1,0.04)
-                        radius: 4
-                        Label {
-                            anchors.centerIn: parent
-                            text: i18n("Season series")
-                            font.pixelSize: 11
-                            font.bold: true
-                            opacity: 0.6
-                        }
-                    }
-                    Repeater {
-                        model: controller ? controller.det.h2hGames : []
-                        delegate: RowLayout {
-                            Layout.fillWidth: true
-                            spacing: 8
-                            Label {
-                                text: modelData.start ? Qt.formatDate(new Date(modelData.start), "d MMM") : ''
-                                font.pixelSize: 11
-                                opacity: 0.6
-                                Layout.preferredWidth: 40
-                            }
-                            Item {
-                                Layout.fillWidth: true
-                            }
-                            Rectangle {
-                                radius: 3
-                                color: Logic.getTeamColor(modelData.away)
-                                width: 34
-                                height: 18
-                                Label {
-                                    anchors.centerIn: parent
-                                    text: modelData.away
-                                    color: Logic.getTeamTextColor(modelData.away)
-                                    font.bold: true
-                                    font.pixelSize: 10
-                                }
-                            }
-                            Label {
-                                text: modelData.final ? modelData.awayScore + " – " + modelData.homeScore : "@"
-                                font.bold: modelData.final
-                                Layout.preferredWidth: 40
-                                horizontalAlignment: Text.AlignHCenter
-                            }
-                            Rectangle {
-                                radius: 3
-                                color: Logic.getTeamColor(modelData.home)
-                                width: 34
-                                height: 18
-                                Label {
-                                    anchors.centerIn: parent
-                                    text: modelData.home
-                                    color: Logic.getTeamTextColor(modelData.home)
-                                    font.bold: true
-                                    font.pixelSize: 10
-                                }
-                            }
-                            Item {
-                                Layout.fillWidth: true
-                            }
-                        }
-                    }
-                }
-            }
-
-            Label {
-                Layout.alignment: Qt.AlignHCenter
-                visible: controller && (controller.det.awayLeaders || []).length > 0
-                text: i18n("Points leaders (last 5 games)")
-                font.pixelSize: 11
-                font.bold: true
-                opacity: 0.6
-            }
-            RowLayout {
-                Layout.fillWidth: true
-                spacing: 10
-                visible: controller && (controller.det.awayLeaders || []).length > 0
-                ColumnLayout {
-                    Layout.fillWidth: true
-                    spacing: 2
-                    Repeater {
-                        model: controller ? controller.det.awayLeaders : []
-                        delegate: Label {
-                            text: {
-                                var val = modelData.value !== undefined ? modelData.value : '–'
-                                var unit = ""
-                                if (modelData.cat === 'points') unit = i18n("Points")
-                                else if (modelData.cat === 'goals') unit = i18n("Goals")
-                                else if (modelData.cat === 'assists') unit = i18n("Assists")
-                                return modelData.name + " (" + val + " " + unit.toLowerCase() + ")"
-                            }
-                            font.pixelSize: 12
-                            color: controller.teamColorAdapted(controller.det.away)
-                            elide: Text.ElideRight
-                            Layout.fillWidth: true
-                        }
-                    }
-                }
-                Rectangle {
-                    width: 1
-                    Layout.fillHeight: true
-                    color: Kirigami.Theme.textColor
-                    opacity: 0.1
-                }
-                ColumnLayout {
-                    Layout.fillWidth: true
-                    spacing: 2
-                    Repeater {
-                        model: controller ? controller.det.homeLeaders : []
-                        delegate: Label {
-                            text: {
-                                var val = modelData.value !== undefined ? modelData.value : '–'
-                                var unit = ""
-                                if (modelData.cat === 'points') unit = i18n("Points")
-                                else if (modelData.cat === 'goals') unit = i18n("Goals")
-                                else if (modelData.cat === 'assists') unit = i18n("Assists")
-                                return modelData.name + " (" + val + " " + unit.toLowerCase() + ")"
-                            }
-                            font.pixelSize: 12
-                            color: controller.teamColorAdapted(controller.det.home)
-                            elide: Text.ElideRight
-                            Layout.fillWidth: true
-                            horizontalAlignment: Text.AlignRight
-                        }
-                    }
-                }
-            }
-
-            Label {
-                visible: controller && (controller.det.awayGoalie !== null || controller.det.homeGoalie !== null)
-                Layout.alignment: Qt.AlignHCenter
-                text: i18n("Probable goalies")
-                font.pixelSize: 11
-                font.bold: true
-                opacity: 0.6
-            }
-            RowLayout {
-                Layout.alignment: Qt.AlignHCenter
-                spacing: 20
-                visible: controller && (controller.det.awayGoalie !== null || controller.det.homeGoalie !== null)
-                ColumnLayout {
-                    spacing: 0
-                    Label {
-                        text: controller && controller.det.awayGoalie ? controller.det.awayGoalie.name : '–'
-                        font.bold: true
-                        color: controller.teamColorAdapted(controller.det.away)
-                        Layout.alignment: Qt.AlignHCenter
-                    }
-                    Label {
-                        text: controller && controller.det.awayGoalie ? controller.det.awayGoalie.record : ''
-                        font.pixelSize: 10
-                        opacity: 0.7
-                        Layout.alignment: Qt.AlignHCenter
-                    }
-                }
-                ColumnLayout {
-                    spacing: 0
-                    Label {
-                        text: controller && controller.det.homeGoalie ? controller.det.homeGoalie.name : '–'
-                        font.bold: true
-                        color: controller.teamColorAdapted(controller.det.home)
-                        Layout.alignment: Qt.AlignHCenter
-                    }
-                    Label {
-                        text: controller && controller.det.homeGoalie ? controller.det.homeGoalie.record : ''
-                        font.pixelSize: 10
-                        opacity: 0.7
-                        Layout.alignment: Qt.AlignHCenter
-                    }
-                }
-            }
-
             // ── Tirs au but ───────────────────────────────────────────────────
             RowLayout {
                 visible: controller && !controller.det.loading && controller.det.status !== 'UPCOMING' && controller.det.stats['sog'] !== undefined
@@ -619,7 +577,7 @@ ScrollView {
                     text: (controller && controller.det.stats['sog']) ? String(controller.det.stats['sog'].away) : ''
                     font.pixelSize: 25
                     font.bold: true
-                    color: controller ? controller.teamColorAdapted(controller.det.away) : "gray"
+                    color: controller ? controller.teamColorAdapted(controller.det.away, controller.det.home, true, true) : "gray"
                     Layout.preferredWidth: 70
                     horizontalAlignment: Text.AlignHCenter
                 }
@@ -634,7 +592,7 @@ ScrollView {
                     text: (controller && controller.det.stats['sog']) ? String(controller.det.stats['sog'].home) : ''
                     font.pixelSize: 25
                     font.bold: true
-                    color: controller ? controller.teamColorAdapted(controller.det.home) : "gray"
+                    color: controller ? controller.teamColorAdapted(controller.det.home, controller.det.away, false, true) : "gray"
                     Layout.preferredWidth: 70
                     horizontalAlignment: Text.AlignHCenter
                 }
@@ -703,7 +661,7 @@ ScrollView {
                                 text: modelData.away
                                 font.pixelSize: 16
                                 font.bold: true
-                                color: controller.teamColorAdapted(controller.det.away)
+                                color: controller.teamColorAdapted(controller.det.away, controller.det.home, true, true)
                                 Layout.preferredWidth: 65
                                 horizontalAlignment: Text.AlignLeft
                             }
@@ -719,7 +677,7 @@ ScrollView {
                                 text: modelData.home
                                 font.pixelSize: 16
                                 font.bold: true
-                                color: controller.teamColorAdapted(controller.det.home)
+                                color: controller.teamColorAdapted(controller.det.home, controller.det.away, false, true)
                                 Layout.preferredWidth: 65
                                 horizontalAlignment: Text.AlignRight
                             }
@@ -928,6 +886,17 @@ ScrollView {
                                     font.pixelSize: 11
                                     font.italic: true
                                     opacity: 0.5
+                                }
+                            }
+                            Item { Layout.fillWidth: true }
+                            Button {
+                                visible: !!modelData.highlightId && modelData.highlightId !== 0
+                                icon.name: "media-playback-start"
+                                flat: true
+                                ToolTip.text: i18n("Watch goal highlight")
+                                ToolTip.visible: hovered
+                                onClicked: {
+                                    Qt.openUrlExternally("https://players.brightcove.net/6415718365001/EXtG1xJ7H_default/index.html?videoId=" + modelData.highlightId)
                                 }
                             }
                         }

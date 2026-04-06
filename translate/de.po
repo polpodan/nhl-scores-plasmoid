@@ -1,7 +1,7 @@
 # German translations for nhl-scores-plasmoid
 msgid ""
 msgstr ""
-"Project-Id-Version: nhl-scores-plasmoid 5.0\n"
+"Project-Id-Version: nhl-scores-plasmoid 5.1\n"
 "Language: de\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -228,3 +228,36 @@ msgstr "Konferenz-Finale"
 
 msgid "Stanley Cup Final"
 msgstr "Stanley Cup Finale"
+
+msgid "Team display"
+msgstr "Teamanzeige"
+
+msgid "Icon style:"
+msgstr "Symbolstil:"
+
+msgid "Pastilles"
+msgstr "Abzeichen"
+
+msgid "Logos"
+msgstr "Logos"
+
+msgid "Season Comparison"
+msgstr "Saisonvergleich"
+
+msgid "Power Play %"
+msgstr "Überzahl %"
+
+msgid "Penalty Kill %"
+msgstr "Unterzahl %"
+
+msgid "Faceoffs %"
+msgstr "Bullies %"
+
+msgid "GF/G"
+msgstr "T/S"
+
+msgid "GA/G"
+msgstr "GT/S"
+
+msgid "Watch goal highlight"
+msgstr "Tor-Highlight ansehen"

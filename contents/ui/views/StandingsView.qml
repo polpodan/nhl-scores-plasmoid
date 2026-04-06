@@ -237,10 +237,23 @@ Item {
                         RowLayout {
                             id: leagueRow; anchors { left: parent.left; right: parent.right; verticalCenter: parent.verticalCenter; leftMargin: 4; rightMargin: 4 }
                             visible: rType === "leagueTeam"; spacing: 0
-                            Rectangle {
-                                width: lgLbl.implicitWidth + 6; height: lgLbl.implicitHeight + 3; radius: 3
-                                color: Logic.getTeamColor(rAbbrev)
-                                Label { id: lgLbl; anchors.centerIn: parent; text: rAbbrev; color: Logic.getTeamTextColor(rAbbrev); font.pixelSize: s.fonts.tiny + 1; font.bold: true; font.family: "monospace" }
+                            Item {
+                                width: lgBadge.width; height: lgBadge.height; Layout.alignment: Qt.AlignVCenter
+                                Rectangle {
+                                    id: lgBadge
+                                    visible: !controller.showLogos
+                                    width: lgLbl.implicitWidth + 6; height: lgLbl.implicitHeight + 3; radius: 3
+                                    color: Logic.getTeamColor(rAbbrev)
+                                    Label { id: lgLbl; anchors.centerIn: parent; text: rAbbrev; color: Logic.getTeamTextColor(rAbbrev); font.pixelSize: s.fonts.tiny + 1; font.bold: true; font.family: "monospace" }
+                                }
+                                Image {
+                                    visible: controller.showLogos
+                                    anchors.fill: parent
+                                    source: controller.showLogos ? controller.teamLogoUrl(rAbbrev) : ""
+                                    sourceSize.width: width * 2
+                                    sourceSize.height: height * 2
+                                    fillMode: Image.PreserveAspectFit; smooth: true
+                                }
                             }
                             Label { text: rCity; font.pixelSize: s.fonts.small + 1; Layout.leftMargin: 4; elide: Text.ElideRight; Layout.preferredWidth: 70 }
                             Item { Layout.fillWidth: true }
@@ -262,9 +275,22 @@ Item {
                         RowLayout {
                             id: teamRow; anchors { left: parent.left; right: parent.right; verticalCenter: parent.verticalCenter; leftMargin: 6; rightMargin: 6 }
                             visible: rType === "team"; spacing: 0
-                            Rectangle {
-                                width: abbrLbl.implicitWidth + 8; height: abbrLbl.implicitHeight + 4; radius: 4; color: Logic.getTeamColor(rAbbrev)
-                                Label { id: abbrLbl; anchors.centerIn: parent; text: rAbbrev !== "" ? rAbbrev : "?"; color: Logic.getTeamTextColor(rAbbrev); font.pixelSize: s.fonts.small + 1; font.bold: true; font.family: "monospace" }
+                            Item {
+                                width: abbrBadge.width; height: abbrBadge.height; Layout.alignment: Qt.AlignVCenter
+                                Rectangle {
+                                    id: abbrBadge
+                                    visible: !controller.showLogos
+                                    width: abbrLbl.implicitWidth + 8; height: abbrLbl.implicitHeight + 4; radius: 4; color: Logic.getTeamColor(rAbbrev)
+                                    Label { id: abbrLbl; anchors.centerIn: parent; text: rAbbrev !== "" ? rAbbrev : "?"; color: Logic.getTeamTextColor(rAbbrev); font.pixelSize: s.fonts.small + 1; font.bold: true; font.family: "monospace" }
+                                }
+                                Image {
+                                    visible: controller.showLogos
+                                    anchors.fill: parent
+                                    source: controller.showLogos ? controller.teamLogoUrl(rAbbrev) : ""
+                                    sourceSize.width: width * 2
+                                    sourceSize.height: height * 2
+                                    fillMode: Image.PreserveAspectFit; smooth: true
+                                }
                             }
                             Label { Layout.leftMargin: 6; text: rCity; font.pixelSize: s.fonts.main; Layout.fillWidth: true; elide: Text.ElideRight }
                             Label { text: rGp; font.pixelSize: s.fonts.main; Layout.preferredWidth: 28; horizontalAlignment: Text.AlignHCenter }

@@ -78,8 +78,8 @@ Item {
 
                     Image {
                         source: controller ? controller.teamLogoUrl(controller.hub.code) : ""
-                        width: 200
-                        height: 200
+                        width: 150
+                        height: 150
                         fillMode: Image.PreserveAspectFit
                         smooth: true
                         anchors.horizontalCenter: parent.horizontalCenter
@@ -282,36 +282,94 @@ Item {
                             id: dayCell
                             Layout.fillWidth: true
                             implicitHeight: 65
-                            color: "transparent"
-                            border.color: Qt.rgba(Kirigami.Theme.textColor.r, Kirigami.Theme.textColor.g, Kirigami.Theme.textColor.b, 0.15)
-                            border.width: 1
                             readonly property int day: index + 1
                             readonly property string iso: controller.cal.year + "-" + Logic.pad2(controller.cal.month + 1) + "-" + Logic.pad2(day)
                             readonly property var game: (controller && controller.sch.gamesMap) ? controller.sch.gamesMap[iso] : null
-                            Label { anchors.top: parent.top; anchors.left: parent.left; anchors.margins: 3; text: String(day); font.pixelSize: 13; opacity: game ? 1.0 : 0.4; color: Kirigami.Theme.textColor }
+                            readonly property bool isHome: game ? (game.home === controller.sch.team) : false
+
+                            // Fond adoptant le thème
+                            color: Kirigami.Theme.backgroundColor
+
+                            // Indicateur de couleur solide sur le côté (respecte la légende)
+                            Rectangle {
+                                anchors.left: parent.left
+                                anchors.top: parent.top
+                                anchors.bottom: parent.bottom
+                                width: 4
+                                visible: !!game
+                                color: isHome ? "#1a5fb4" : "#c01c28"
+                            }
+
+                            // Teinte légère pour la cellule
+                            Rectangle {
+                                anchors.fill: parent
+                                visible: !!game
+                                color: isHome ? "#1a5fb4" : "#c01c28"
+                                opacity: 0.1
+                            }
+
+                            border.color: Qt.rgba(Kirigami.Theme.textColor.r, Kirigami.Theme.textColor.g, Kirigami.Theme.textColor.b, 0.1)
+                            border.width: 1
+
+                            Label { 
+                                anchors.top: parent.top; anchors.left: parent.left; anchors.leftMargin: 8; anchors.topMargin: 3
+                                text: String(day)
+                                font.pixelSize: 11
+                                font.bold: !!game
+                                opacity: game ? 1.0 : 0.3
+                                color: Kirigami.Theme.textColor
+                            }
                             ColumnLayout {
                                 anchors.centerIn: parent
-                                spacing: 2
+                                spacing: 1
                                 visible: !!game
-                                Rectangle {
-                                    radius: 2
-                                    width: 36
-                                    height: 18
-                                    property string opp: game ? (game.home === controller.sch.team ? game.away : game.home) : ""
-                                    color: Logic.getTeamColor(opp)
-                                    Label { anchors.centerIn: parent; text: parent.opp; color: Logic.getTeamTextColor(parent.opp); font.bold: true; font.pixelSize: 11; font.family: "monospace" }
+
+                                Image {
+                                    Layout.preferredWidth: 42
+                                    Layout.preferredHeight: 42
+                                    Layout.alignment: Qt.AlignHCenter
+                                    source: {
+                                        if (!game) return ""
+                                        var opp = isHome ? game.away : game.home
+                                        return controller.teamLogoUrl(opp)
+                                    }
+                                    fillMode: Image.PreserveAspectFit
+                                    smooth: true
                                 }
+
                                 Label {
                                     Layout.alignment: Qt.AlignHCenter
-                                    text: game ? (game.isFinal ? (game.result + " " + (game.home === controller.sch.team ? (game.hg + "-" + game.ag) : (game.ag + "-" + game.hg))) : Qt.formatTime(new Date(game.startMs), "hh:mm")) : ""
-                                    font.pixelSize: 11
+                                    text: game ? (game.isFinal ? (game.result + " " + (isHome ? (game.hg + "-" + game.ag) : (game.ag + "-" + game.hg))) : Qt.formatTime(new Date(game.startMs), "hh:mm")) : ""
+                                    font.pixelSize: 10
                                     font.bold: true
-                                    color: game && game.isFinal ? (game.result.indexOf('W')!==-1 ? "#44bb44":"#ff4444") : Kirigami.Theme.textColor
+                                    color: game && game.isFinal ? (game.result.indexOf('W')!==-1 ? "#44ff44" : "#ff4444") : Kirigami.Theme.textColor
+                                    style: Text.Outline
+                                    styleColor: Qt.rgba(0, 0, 0, 0.5)
                                 }
                             }
                             TapHandler { enabled: !!game; onTapped: controller.openDetail(game.gameId, game.away, game.home, game.ag, game.hg, game.isFinal?'FINAL':(game.isLive?'LIVE':'UPCOMING'), '', 0, '', game.startMs, false, '1551') }
                         }
                     }
+                }
+            }
+
+            // Légende
+            RowLayout {
+                Layout.fillWidth: true
+                Layout.margins: 10
+                Layout.alignment: Qt.AlignHCenter
+                spacing: 20
+                visible: teamHubRoot.showCalendar
+
+                Row {
+                    spacing: 5
+                    Rectangle { width: 12; height: 12; color: "#1a5fb4"; radius: 2; opacity: 0.5; anchors.verticalCenter: parent.verticalCenter }
+                    Label { text: i18n("Home"); font.pixelSize: 10; color: Kirigami.Theme.textColor }
+                }
+                Row {
+                    spacing: 5
+                    Rectangle { width: 12; height: 12; color: "#c01c28"; radius: 2; opacity: 0.5; anchors.verticalCenter: parent.verticalCenter }
+                    Label { text: i18n("Away"); font.pixelSize: 10; color: Kirigami.Theme.textColor }
                 }
             }
         }

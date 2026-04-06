@@ -1,7 +1,7 @@
 # Swedish translations for nhl-scores-plasmoid
 msgid ""
 msgstr ""
-"Project-Id-Version: nhl-scores-plasmoid 5.0\n"
+"Project-Id-Version: nhl-scores-plasmoid 5.1\n"
 "Language: sv\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -228,3 +228,36 @@ msgstr "Conference Finals"
 
 msgid "Stanley Cup Final"
 msgstr "Stanley Cup-final"
+
+msgid "Team display"
+msgstr "Lagvisning"
+
+msgid "Icon style:"
+msgstr "Ikonstil:"
+
+msgid "Pastilles"
+msgstr "Brickor"
+
+msgid "Logos"
+msgstr "Logotyper"
+
+msgid "Season Comparison"
+msgstr "Säsongjämförelse"
+
+msgid "Power Play %"
+msgstr "Powerplay %"
+
+msgid "Penalty Kill %"
+msgstr "Boxplay %"
+
+msgid "Faceoffs %"
+msgstr "Tekningar %"
+
+msgid "GF/G"
+msgstr "GM/M"
+
+msgid "GA/G"
+msgstr "IM/M"
+
+msgid "Watch goal highlight"
+msgstr "Se måljubel"

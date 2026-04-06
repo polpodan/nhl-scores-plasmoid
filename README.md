@@ -4,7 +4,7 @@
 
 A real-time NHL scores applet for KDE Plasma 6. Displays live scores, schedules, standings, player stats, team hubs, league leaders, and playoff information directly in your panel or desktop.
 
-![Version](https://img.shields.io/badge/version-5.1-blue)
+![Version](https://img.shields.io/badge/version-5.2-blue)
 ![Plasma](https://img.shields.io/badge/Plasma-6-informational)
 ![License](https://img.shields.io/badge/license-GPL--3.0--or--later-green)
 
@@ -13,122 +13,55 @@ A real-time NHL scores applet for KDE Plasma 6. Displays live scores, schedules,
 ## Features
 
 - **Live scores** — real-time score updates with period, clock, and intermission countdown
-- **Power play indicator** — PP / 5v3 / 4v4 / 3v3 badge with team color, empty net 🥅 detection, and **active penalty clock**
+- **Custom Team Display** — choose between classic **colored badges (Pastilles)** or **official team logos** throughout the applet
+- **Local Logo Storage** — all 33 team logos are stored locally for instant loading and offline support
+- **Smart Color Adaptation** — away teams automatically switch to their secondary color when playing an opponent with similar colors (e.g., NJD vs MTL)
+- **High-Definition Graphics** — optimized SVG rendering (`sourceSize`) for crisp logos on all screen resolutions (HiDPI)
+- **Goal highlights** — 🎬 Watch goal videos directly from the hub via official NHL Brightcove player
+- **Advanced Pre-game Stats** — comprehensive seasonal comparisons: PP%, PK%, Faceoff%, GF/G, and GA/G
+- **Power play indicator** — PP / 5v3 / 4v3 badge with team color and **active penalty clock**
 - **Penalty box** — active penalties with player name, number and time remaining
-- **Game detail popup** — logos, scores, shots on goal, goals by period with scorers and assists, team stats, probable goalies, points leaders, series score in playoff mode
-- **Team hub** — click any team logo or badge to open a full team page: record, standings position, head coach, last 5 results, next game, with links to schedule and stats
-- **Team schedule & stats** — full season schedule and player/goalie statistics per team
-- **Wild Card standings** — clickable standings with playoff cutoff separator; click any team to open their hub
-- **League leaders** — top 10 per category: Points, Goals, Assists, PIM, Wins, Shutouts, GAA, SV%; colored team badges and rank highlights
-- **Full day view** — click a date separator to see all games for that day (not just followed teams), with live scores, periods and final results
-- **Playoff mode** — automatic detection; series score, round label, game number, and full bracket view via 🏆 button
-- **Goal notification** — **Team-specific goal songs** + visual banner in the favorite team's colors on every goal; support for **multiple favorite teams**
-- **Player search** — 🔍 Search button in the game popup searches any NHL player (active or retired) by name; results link to the full player profile (powered by NHL Stats API fallback)
-- **Full-day calendar** — click 📅 in the day view to open a monthly calendar with month/year navigation; click any date to view its games
-- **Clickable scorers & assistants** — in completed games, scorer and assist names are clickable links to the player profile
-- **Match date in game popup** — date and time shown below logos for completed and live games
-- **Penalties view** — toggle between Goals / Penalties / ⭐ Stars in the game detail popup; penalties grouped by period with clickable player names and 28 translated infraction descriptions
-- **Three stars** — accessible directly from the Goals/Penalties/Stars toggle; player names are clickable
-- **Game count badges on calendar** — each day shows a badge with the number of games scheduled
-- **Configurable refresh interval** — choose 10, 20, 30, 45 or 60 seconds in General settings
-- **Goal sound volume** — slider in General settings to control the notification sound level
-- **Three display modes** (panel only):
-  - *Score below* — uniform cards with team badges, score and status
-  - *Score next to name* — compact inline row layout
-  - *Ultra-compact* — colored dots with team initial and score only
-- **Date group separators** — upcoming games grouped by date with clickable `|DD/MM|` markers
-- **Team color gradients** — subtle background gradients using each team's official colors
-- **Colored popup separators** — horizontal dividers use a team color gradient
-- **Desktop widget** — enriched card view with clickable date separators, Standings and Leaders buttons
-- **Vertical panel** — stacked tile layout adapts automatically
-- **French translation** — full `fr.po` with 204 entries
-
----
-
-## Requirements
-
-- KDE Plasma 6
-- Qt 6 / QML
-- Internet connection (NHL public API)
+- **Team hub** — click any team logo to open a full team page: record, standings, head coach, last 5 results, next game, and season calendar
+- **Team schedule & stats** — full season schedule and statistics per team
+- **Wild Card standings** — clickable standings with playoff cutoff separator
+- **League leaders** — top 10 per category: Points, Goals, Assists, PIM, Wins, Shutouts, GAA, SV%
+- **Goal notification** — **Team-specific goal songs** + visual banner in the favorite team's colors
+- **Player search** — 🔍 Search any NHL player (active or retired) by name
+- **Multi-language support** — available in 8 languages: EN, FR, RU, FI, SV, DE, CS, SK
+- **Vertical panel** — stacked tile layout adapts automatically to narrow panels
 
 ---
 
 ## Installation
-
-### From .plasmoid file
-
-```bash
-kpackagetool6 -t Plasma/Applet -i org.dany.nhlscores-5.1.plasmoid
-```
 
 ### From source
 
 ```bash
 git clone https://github.com/polpodan/nhl-scores-plasmoid.git
 cd nhl-scores-plasmoid
+# Download team logos
+./download_logos.sh
+# Install
 kpackagetool6 -t Plasma/Applet -i .
 ```
 
 ### Update an existing installation
 
 ```bash
-kpackagetool6 -t Plasma/Applet -u org.dany.nhlscores-5.1.plasmoid
-```
-
----
-
-## Sound Notifications
-
-The plasmoid includes **official team-specific goal songs** (`contents/sounds/{team}.mp3`) that play via Qt Multimedia. If a team song is missing, it falls back to a generic siren. You can select **multiple teams** in **General → Notifications** to receive goal alerts for all your favorites.
-
----
-
-## Translations
-
-The applet uses **KI18n** via `i18n()` calls in QML. English is the source language. French is provided via gettext (`.po` → `.mo`).
-
-### Build the French catalog
-
-```bash
-cd translate
-./build.sh
+kpackagetool6 -t Plasma/Applet -u .
 ```
 
 ---
 
 ## Configuration
 
-### General tab
-| Setting | Description |
-|---|---|
-| Favorite teams | Filter to show only selected teams |
-| Max games to display | Maximum number of game cards shown (1–20) |
-| Days ahead | How many days of upcoming games to fetch (0–14) |
-| Show yesterday's games | Include completed games from yesterday |
-| Show games from two days ago | Include completed games from two days ago |
-| Goal blink duration | Duration of score blink animation on goal (0 = disabled) |
-| Sound notifications | Select multiple teams for goal sounds and banners |
-
 ### Display tab
 | Setting | Description |
 |---|---|
-| Score layout | Score below / Score next to name / Ultra-compact (panel only) |
+| Icon style | Switch between Pastilles (badges) and official Logos |
+| Score layout | Score below / Score next to name / Ultra-compact |
 | Date mode | Local timezone or venue (arena) timezone |
-| Status badge colors | Custom colors for LIVE / UPCOMING / FINAL badges |
-| Show OT/SO suffix | Display OT or SO suffix in the status badge |
-| Show upcoming game time | Show start time under the badge for upcoming games |
-
----
-
-## Icon
-
-Place the applet icon in the system icon theme for better integration:
-
-```bash
-mkdir -p ~/.local/share/icons/hicolor/scalable/apps/
-cp ~/.local/share/plasma/plasmoids/org.dany.nhlscores/contents/icons/org.dany.nhlscores.svg \
-   ~/.local/share/icons/hicolor/scalable/apps/
-```
+| Status badge colors | Custom colors for LIVE / UPCOMING / FINAL states |
 
 ---
 
@@ -138,16 +71,11 @@ All data is fetched from the official NHL public API (`api-web.nhle.com`):
 
 | Endpoint | Used for |
 |---|---|
-| `/v1/score/{date}` | All games for a specific date (day view) |
 | `/v1/scoreboard/{date}` | Scores, game status, clock |
-| `/v1/gamecenter/{id}/landing` | Goals, stats, ice surface (PP/penalties) |
-| `/v1/gamecenter/{id}/play-by-play` | Live clock, intermission time, situation code |
-| `/v1/standings/now` | Wild Card standings, team records |
-| `/v1/club-schedule-season/{team}/now` | Team schedule |
-| `/v1/club-stats/{team}/now` | Team player statistics |
-| `/v1/skater-stats-leaders/current` | League skater leaders |
-| `/v1/goalie-stats-leaders/current` | League goalie leaders |
-| `/v1/playoff-bracket/now` | Playoff bracket |
+| `/v1/gamecenter/{id}/landing` | Goals, Probable goalies, Player comparison |
+| `/v1/gamecenter/{id}/right-rail` | Season stats comparison, Season series results, Coaches |
+| `/v1/gamecenter/{id}/play-by-play` | Live clock, Situation code (PP/EN) |
+| `/v1/standings/now` | Standings, Team records |
 
 ---
 
@@ -169,90 +97,49 @@ Un applet de scores NHL en temps réel pour KDE Plasma 6. Affiche les scores en 
 ## Fonctionnalités
 
 - **Scores en direct** — mises à jour en temps réel avec période, chronomètre et compte à rebours d'entracte
-- **Indicateur d'avantage numérique** — pastille PP / 5v3 / 4v4 / 3v3 avec couleur d'équipe, détection du filet désert 🥅 et **chrono de punition actif**
-- **Boîte de punition** — punitions actives avec nom du joueur, numéro et temps restant
-- **Popup de détail de match** — logos, scores, tirs au but, buts par période avec buteurs et passeurs, statistiques d'équipe, gardiens probables, meneurs de points, score de série en mode éliminatoires
-- **Hub d'équipe** — cliquez sur n'importe quel logo ou pastille pour ouvrir une page complète : fiche, position au classement, entraîneur, 5 derniers résultats, prochain match, liens vers le calendrier et les stats
-- **Calendrier et stats d'équipe** — calendrier complet de la saison et statistiques des joueurs/gardiens par équipe
-- **Classement Wild Card** — classement cliquable avec séparateur de qualification aux séries; cliquer sur une équipe ouvre son hub
-- **Meneurs de la ligue** — top 10 par catégorie : Points, Buts, Passes, PUN, Victoires, Blanchissages, MOY, %ARR; pastilles d'équipe colorées et rang mis en évidence
-- **Vue journée complète** — cliquer sur un séparateur de date affiche tous les matchs de cette journée (pas seulement les équipes suivies), avec scores en direct, périodes et résultats finaux
-- **Mode séries éliminatoires** — détection automatique; score de série, ronde, numéro de match et bracket complet via le bouton 🏆
-- **Notification de but** — **Chansons de but officielles** par équipe + bannière visuelle; support pour **plusieurs équipes favorites**
-- **Recherche de joueurs** — bouton 🔍 dans le popup de match pour chercher n'importe quel joueur NHL (actif ou retraité); utilise l'API Stats en repli
-- **Calendrier journalier** — navigation mois par mois avec menu déroulant pour l'année ; pastilles indiquant le nombre de matchs par jour
-- **Buteurs et passeurs cliquables** — noms en surbrillance menant à la fiche du joueur
-- **Date dans le popup de match** — date et heure affichées sous les logos
-- **Vue pénalités** — toggle Buts / Pénalités / ⭐ Étoiles ; pénalités groupées par période, noms cliquables, 28 infractions traduites
-- **3 étoiles** — accessibles depuis le toggle ; noms cliquables
-- **Intervalle de rafraîchissement configurable** — 10, 20, 30, 45 ou 60 secondes
-- **Volume du son de but** — slider dans les paramètres
-- **Trois modes d'affichage** (panneau seulement) :
-  - *Score en dessous* — cartes uniformes avec pastilles d'équipe, score et statut
-  - *Score à côté du nom* — disposition en rangée compacte
-  - *Ultra-compact* — points colorés avec initiale et score seulement
-- **Dégradés aux couleurs d'équipe** — arrière-plans subtils utilisant les couleurs officielles de chaque équipe
-- **Séparateurs colorés dans les popups** — les séparateurs horizontaux utilisent un dégradé aux couleurs des équipes
-- **Widget bureau** — vue enrichie en cartes avec séparateurs de dates cliquables, boutons Classement et Meneurs
-- **Panneau vertical** — disposition en tuiles empilées adaptée automatiquement
-- **Support multilingue** — disponible en 8 langues (EN, FR, RU, FI, SV, DE, CS, SK) incluant les divisions et rondes de séries localisées
-- **Traduction française** — `fr.po` complet avec 204 entrées
-
----
-
-## Prérequis
-
-- KDE Plasma 6
-- Qt 6 / QML
-- Connexion Internet (API publique NHL)
+- **Personnalisation d'équipe** — choisissez entre les **pastilles colorées** classiques ou les **logos officiels** des équipes partout dans l'applet
+- **Stockage local des logos** — les 33 logos d'équipes sont stockés localement pour un chargement instantané et une économie de bande passante
+- **Adaptation intelligente des couleurs** — les équipes visiteuses basculent automatiquement sur leur couleur secondaire en cas de conflit (ex: NJD vs MTL)
+- **Graphismes Haute Définition** — rendu SVG optimisé (`sourceSize`) pour des logos nets sur toutes les résolutions (HiDPI)
+- **Faits saillants (vidéo)** — 🎬 Visionnez les buts directement depuis le hub via le lecteur officiel Brightcove de la NHL
+- **Stats d'avant-match avancées** — comparaisons saisonnières complètes : % AN, % IN, % Mises au jeu, BP/MJ et BC/MJ
+- **Indicateur d'avantage numérique** — pastille PP / 5v3 / 4v3 avec couleur d'équipe et **chrono de punition actif**
+- **Hub d'équipe** — cliquez sur n'importe quel logo pour ouvrir une page complète : fiche, classement, entraîneur, 5 derniers résultats et calendrier complet
+- **Calendrier et stats d'équipe** — calendrier complet de la saison et statistiques par équipe
+- **Classement Wild Card** — classement cliquable avec séparateurs de qualification aux séries
+- **Meneurs de la ligue** — top 10 par catégorie : Points, Buts, Passes, PUN, Victoires, Blanchissages, MOY, %ARR
+- **Notification de but** — **Chansons de but officielles** par équipe + bannière visuelle aux couleurs de l'équipe
+- **Recherche de joueurs** — bouton 🔍 pour chercher n'importe quel joueur NHL (actif ou retraité)
+- **Support multilingue** — disponible en 8 langues : EN, FR, RU, FI, SV, DE, CS, SK
+- **Panneau vertical** — disposition adaptée automatiquement aux panneaux étroits
 
 ---
 
 ## Installation
-
-### Depuis un fichier .plasmoid
-
-```bash
-kpackagetool6 -t Plasma/Applet -i org.dany.nhlscores-5.1.plasmoid
-```
 
 ### Depuis les sources
 
 ```bash
 git clone https://github.com/polpodan/nhl-scores-plasmoid.git
 cd nhl-scores-plasmoid
+# Télécharger les logos d'équipe
+chmod +x download_logos.sh
+./download_logos.sh
+# Installer
 kpackagetool6 -t Plasma/Applet -i .
 ```
 
 ---
 
-## Notifications sonores
-
-Le plasmoid inclut les **chansons de but officielles** par équipe (`contents/sounds/{team}.mp3`). Si une chanson est manquante, une sirène générique est jouée. Vous pouvez sélectionner **plusieurs équipes** dans **Général → Notifications** pour recevoir les alertes.
-
----
-
 ## Configuration
-
-### Onglet Général
-| Paramètre | Description |
-|---|---|
-| Équipes favorites | Filtrer pour afficher uniquement les équipes sélectionnées |
-| Nombre max de parties | Nombre maximum de cartes de matchs affichées (1–20) |
-| Jours à venir | Nombre de jours de parties à venir à récupérer (0–14) |
-| Afficher les parties d'hier | Inclure les parties terminées d'hier |
-| Afficher les parties d'avant-hier | Inclure les parties terminées d'avant-hier |
-| Durée du clignotement de but | Durée de l'animation lors d'un but (0 = désactivé) |
-| Notifications sonores | Sélectionner plusieurs équipes pour les sons et bannières |
 
 ### Onglet Affichage
 | Paramètre | Description |
 |---|---|
-| Disposition du score | Score en dessous / Score à côté / Ultra-compact (panneau seulement) |
+| Style d'icône | Basculer entre les Pastilles et les Logos officiels |
+| Disposition du score | Score en dessous / Score à côté / Ultra-compact |
 | Mode de date | Fuseau horaire local ou fuseau de l'aréna |
-| Couleurs des pastilles | Couleurs personnalisées pour les pastilles EN DIRECT / À VENIR / FINAL |
-| Afficher suffixe Prol./TB | Afficher Prol. ou TB dans la pastille de statut |
-| Afficher l'heure des parties à venir | Montrer l'heure de début sous la pastille |
+| Couleurs des pastilles | Couleurs personnalisées pour les pastilles de statut |
 
 ---
 

@@ -41,6 +41,8 @@ Item {
   property bool   cfg_ultraCompactDefault
   property bool   cfg_showOvertimeSuffix
   property bool   cfg_showOvertimeSuffixDefault
+  property bool   cfg_showLogos
+  property bool   cfg_showLogosDefault
   property bool   cfg_showUpcomingTime
   property bool   cfg_showUpcomingTimeDefault
   property bool   cfg_showToday
@@ -57,6 +59,8 @@ Item {
   property int    cfg_blinkDurationDefault
   property int    cfg_leadersLimit
   property int    cfg_leadersLimitDefault
+  property int    cfg_franchiseLeadersLimit
+  property int    cfg_franchiseLeadersLimitDefault
   property int    cfg_spacingBetweenGames
   property int    cfg_spacingBetweenGamesDefault
 
@@ -216,6 +220,27 @@ Item {
       text: i18n("Show upcoming game time under badge")
       checked: page.cfg_showUpcomingTime
       onToggled: page.cfg_showUpcomingTime = checked
+    }
+
+    // ── Section : Affichage des équipes ──────────────────────────────
+    Kirigami.Separator {
+      Kirigami.FormData.isSection: true
+      Kirigami.FormData.label: i18n("Team display")
+    }
+
+    RowLayout {
+      Kirigami.FormData.label: i18n("Icon style:")
+      spacing: 20
+      QQC2.RadioButton {
+        text: i18n("Pastilles")
+        checked: !page.cfg_showLogos
+        onToggled: if (checked) page.cfg_showLogos = false
+      }
+      QQC2.RadioButton {
+        text: i18n("Logos")
+        checked: page.cfg_showLogos
+        onToggled: if (checked) page.cfg_showLogos = true
+      }
     }
 
     // ── Section : Mise en page ───────────────────────────────────────

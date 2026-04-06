@@ -2,13 +2,39 @@
 .pragma library
 
 const teamColors = {
-    'ANA':'#F47A38','UTA':'#6E2B62','BOS':'#FFB81C','BUF':'#003087','CAR':'#CC0000',
-    'CBJ':'#002654','CGY':'#C8102E','CHI':'#CF0A2C','COL':'#6F263D','DAL':'#006847',
-    'DET':'#CE1126','EDM':'#FF4C00','FLA':'#C8102E','LAK':'#111111','MIN':'#154734',
-    'MTL':'#AF1E2D','NJD':'#CE1126','NSH':'#FFB81C','NYI':'#00539B','NYR':'#0038A8',
-    'OTT':'#C52032','PHI':'#F74902','PIT':'#FFB81C','SEA':'#99D9D9','SJS':'#006D75',
-    'STL':'#002F87','TBL':'#002868','TOR':'#00205B','VAN':'#00205B','VGK':'#B4975A',
-    'WPG':'#041E42','WSH':'#C8102E'
+    'ANA': { p: '#F47A38', s: '#B9975B' },
+    'UTA': { p: '#6E2B62', s: '#000000' },
+    'BOS': { p: '#FFB81C', s: '#000000' },
+    'BUF': { p: '#003087', s: '#FFB81C' },
+    'CAR': { p: '#CC0000', s: '#000000' },
+    'CBJ': { p: '#002654', s: '#CE1126' },
+    'CGY': { p: '#C8102E', s: '#F1BE48' },
+    'CHI': { p: '#CF0A2C', s: '#FFD100' },
+    'COL': { p: '#6F263D', s: '#236192' },
+    'DAL': { p: '#006847', s: '#8F8F8C' },
+    'DET': { p: '#CE1126', s: '#FFFFFF' },
+    'EDM': { p: '#FF4C00', s: '#041E42' },
+    'FLA': { p: '#C8102E', s: '#041E42' },
+    'LAK': { p: '#111111', s: '#A2AAAD' },
+    'MIN': { p: '#154734', s: '#A6192E' },
+    'MTL': { p: '#AF1E2D', s: '#192168' },
+    'NJD': { p: '#CE1126', s: '#111111' },
+    'NSH': { p: '#FFB81C', s: '#041E42' },
+    'NYI': { p: '#00539B', s: '#F47D30' },
+    'NYR': { p: '#0038A8', s: '#CE1126' },
+    'OTT': { p: '#C52032', s: '#C69214' },
+    'PHI': { p: '#F74902', s: '#000000' },
+    'PIT': { p: '#FFB81C', s: '#000000' },
+    'SEA': { p: '#99D9D9', s: '#001628' },
+    'SJS': { p: '#006D75', s: '#EA7208' },
+    'STL': { p: '#002F87', s: '#FCB514' },
+    'TBL': { p: '#002868', s: '#FFFFFF' },
+    'TOR': { p: '#00205B', s: '#FFFFFF' },
+    'VAN': { p: '#00205B', s: '#00843D' },
+    'VGK': { p: '#B4975A', s: '#333F42' },
+    'WPG': { p: '#041E42', s: '#AC162C' },
+    'WSH': { p: '#C8102E', s: '#041E42' },
+    'ARI': { p: '#8C2633', s: '#E2D6B5' }
 };
 
 function pad2(n) { return (n < 10 ? "0" : "") + n; }
@@ -20,8 +46,8 @@ function teamLogoUrl(code) {
 }
 
 function getTeamColor(code, fallback) {
-    var c = teamColors[String(code || '').toUpperCase()];
-    if (c) return c;
+    var entry = teamColors[String(code || '').toUpperCase()];
+    if (entry) return entry.p;
     return (fallback !== undefined && fallback !== null) ? fallback : "#888888";
 }
 
@@ -144,18 +170,50 @@ function getLivePeriodText(periodType, period, labels) {
     return "";
 }
 
-function getTeamTextColor(code) {
-    var hex = teamColors[String(code||'').toUpperCase()];
-    if (!hex) return 'white';
-    hex = hex.replace('#', '');
-    var r = parseInt(hex.substring(0,2), 16) / 255;
-    var g = parseInt(hex.substring(2,4), 16) / 255;
-    var b = parseInt(hex.substring(4,6), 16) / 255;
-    r = r <= 0.03928 ? r / 12.92 : Math.pow((r + 0.055) / 1.055, 2.4);
-    g = g <= 0.03928 ? g / 12.92 : Math.pow((g + 0.055) / 1.055, 2.4);
-    b = b <= 0.03928 ? b / 12.92 : Math.pow((b + 0.055) / 1.055, 2.4);
-    var L = 0.2126 * r + 0.7152 * g + 0.0722 * b;
-    return L > 0.35 ? '#111111' : 'white';
+// Calcule la distance entre deux couleurs (simple approximation Euclidienne en RGB)
+function colorDistance(c1, c2) {
+    function hexToRgb(hex) {
+        var result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+        return result ? { r: parseInt(result[1], 16), g: parseInt(result[2], 16), b: parseInt(result[3], 16) } : {r:0,g:0,b:0};
+    }
+    var rgb1 = hexToRgb(c1);
+    var rgb2 = hexToRgb(c2);
+    if (!rgb1 || !rgb2) return 1000;
+    return Math.sqrt(Math.pow(rgb1.r - rgb2.r, 2) + Math.pow(rgb1.g - rgb2.g, 2) + Math.pow(rgb1.b - rgb2.b, 2));
+}
+
+function getTeamColorAdapted(teamCode, opponentCode, isAway, fallback) {
+    var t = String(teamCode || '').toUpperCase();
+    var entryT = teamColors[t];
+    if (!entryT) return (fallback !== undefined) ? fallback : "#888888";
+
+    // Si on n'est pas le visiteur ou s'il n'y a pas d'adversaire -> couleur primaire
+    if (!isAway || !opponentCode || opponentCode === '') return entryT.p;
+
+    var o = String(opponentCode || '').toUpperCase();
+    var entryO = teamColors[o];
+    if (!entryO || t === o) return entryT.p;
+
+    // Seul le visiteur vérifie la proximité et peut basculer sur sa secondaire
+    if (colorDistance(entryT.p, entryO.p) < 100) {
+        return entryT.s;
+    }
+    return entryT.p;
+}
+
+function getTeamTextColor(code, adaptedOpponentCode, isAway) {
+    var color = (adaptedOpponentCode !== undefined && adaptedOpponentCode !== '') 
+                ? getTeamColorAdapted(code, adaptedOpponentCode, isAway) 
+                : getTeamColor(code);
+    
+    function hexToRgb(hex) {
+        var result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+        return result ? { r: parseInt(result[1], 16), g: parseInt(result[2], 16), b: parseInt(result[3], 16) } : null;
+    }
+    var rgb = hexToRgb(color);
+    if (!rgb) return "white";
+    var brightness = (rgb.r * 299 + rgb.g * 587 + rgb.b * 114) / 1000;
+    return brightness > 128 ? "#111111" : "white";
 }
 
 function resolveNHLAbbrev(teamCommonName) {
@@ -269,6 +327,9 @@ const ApiService = {
     },
     getGameLanding: function(gameId, cb) {
         httpGet(this.BASE_URL + "/gamecenter/" + gameId + "/landing", cb);
+    },
+    getGameRightRail: function(gameId, cb) {
+        httpGet(this.BASE_URL + "/gamecenter/" + gameId + "/right-rail", cb);
     },
     getGameBoxscore: function(gameId, cb) {
         httpGet(this.BASE_URL + "/gamecenter/" + gameId + "/boxscore", cb);

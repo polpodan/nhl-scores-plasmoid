@@ -135,14 +135,27 @@ Item {
                                 font.pixelSize: s.fonts.small
                                 opacity: 0.4; Layout.preferredWidth: 20 
                             }
-                            Rectangle {
-                                radius: 2
-                                color: Logic.getTeamColor(modelData.team || '')
-                                width: 38; height: 18
-                                Label { 
-                                    anchors.centerIn: parent; text: modelData.team || ''
-                                    color: Logic.getTeamTextColor(modelData.team || '')
-                                    font.pixelSize: s.fonts.tiny + 1; font.bold: true; font.family: "monospace" 
+                            Item {
+                                width: ldrBadge.width; height: ldrBadge.height; Layout.alignment: Qt.AlignVCenter
+                                Rectangle {
+                                    id: ldrBadge
+                                    visible: !controller.showLogos
+                                    radius: 2
+                                    color: Logic.getTeamColor(modelData.team || '')
+                                    width: 38; height: 18
+                                    Label { 
+                                        anchors.centerIn: parent; text: modelData.team || ''
+                                        color: Logic.getTeamTextColor(modelData.team || '')
+                                        font.pixelSize: s.fonts.tiny + 1; font.bold: true; font.family: "monospace" 
+                                    }
+                                }
+                                Image {
+                                    visible: controller.showLogos
+                                    anchors.fill: parent
+                                    source: controller.showLogos ? controller.teamLogoUrl(modelData.team) : ""
+                                    sourceSize.width: width * 2
+                                    sourceSize.height: height * 2
+                                    fillMode: Image.PreserveAspectFit; smooth: true
                                 }
                             }
                             Label { 
