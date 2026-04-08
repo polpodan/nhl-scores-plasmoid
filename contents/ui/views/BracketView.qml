@@ -3,6 +3,7 @@ import QtQuick.Layouts 1.15
 import QtQuick.Controls 2.15
 import org.kde.kirigami 2.20 as Kirigami
 import "../logic.js" as Logic
+import "../components" as Components
 
 Item {
     id: bracketRoot
@@ -15,7 +16,7 @@ Item {
         anchors.fill: parent
         spacing: 0
 
-        // Barre de navigation
+        // ── Barre de navigation ─────────────────────────────────────
         RowLayout {
             Layout.fillWidth: true
             Layout.leftMargin: 8; Layout.topMargin: 4; Layout.bottomMargin: 2
@@ -25,129 +26,184 @@ Item {
                 onClicked: {
                     if (controller) {
                         controller.nav.bracket = false
-                        if (controller.nav.detail) {
-                            // Déjà ouvert en arrière-plan ou via DetailView
-                        }
                     }
                 }
             }
             Item { Layout.fillWidth: true }
             Label {
-                text: "🏆 " + i18n("Playoffs")
-                font.bold: true; font.pixelSize: 16
+                text: "🏆 STANLEY CUP PLAYOFFS 2026"
+                font.bold: true; font.pixelSize: 14
                 rightPadding: 12
             }
         }
 
-        // Chargement / erreur
+        // ── Chargement ──────────────────────────────────────────────
         Label {
             Layout.alignment: Qt.AlignHCenter; Layout.topMargin: 20
             visible: !!(controller && controller.brk.loading)
             text: i18n("Loading…"); opacity: 0.6; font.italic: true
         }
-        Label {
-            Layout.alignment: Qt.AlignHCenter; Layout.topMargin: 20
-            visible: !!(controller && !controller.brk.loading && controller.brk.error !== '')
-            text: controller ? controller.brk.error : ""
-            color: Kirigami.Theme.negativeTextColor
-        }
 
-        // Bracket
+        // ── Arbre du Tournoi (Vertical) ──────────────────────────────
         ScrollView {
             id: bracketScroll
             Layout.fillWidth: true; Layout.fillHeight: true
             contentWidth: availableWidth
-            ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
-            visible: !!(controller && !controller.brk.loading && controller.brk.error === '' && controller.brk.data !== null)
+            clip: true
+            visible: !!(controller && !controller.brk.loading && controller.brk.data !== null)
 
-            ColumnLayout {
-                width: Math.min(360, bracketScroll.availableWidth)
-                anchors.horizontalCenter: parent.horizontalCenter
-                spacing: 8
+            // Fonction pour récupérer un match spécifique
+            function getSeries(roundIndex, seriesIndex) {
+                if (!controller || !controller.brk.data || !controller.brk.data.rounds) return null;
+                var round = controller.brk.data.rounds[roundIndex];
+                if (!round || !round.series) return null;
+                return round.series[seriesIndex] || null;
+            }
 
-                Repeater {
-                    model: (controller && controller.brk.data) ? (controller.brk.data.rounds || []) : []
-                    delegate: ColumnLayout {
-                        Layout.fillWidth: true
-                        spacing: 4
+            // Composant Carte de Match
+            Component {
+                id: matchupCard
+                Rectangle {
+                    readonly property var sData: parent.seriesData
+                    
+                    width: 160; height: 74; radius: 6
+                    color: Qt.rgba(0, 0, 0, 0.4)
+                    border.color: Kirigami.Theme.textColor; border.width: 1
+                    opacity: sData ? 1.0 : 0.2
 
-                        // En-tête de ronde
-                        Label {
-                            Layout.leftMargin: 12; Layout.topMargin: 4
-                            text: controller ? controller.playoffRoundLabel(modelData.roundNumber || 0) : ""
-                            font.bold: true; font.pixelSize: 14
-                            color: Kirigami.Theme.disabledTextColor
-                        }
-
-                        // Séries de la ronde
-                        Repeater {
-                            model: modelData.series || []
-                            delegate: ItemDelegate {
-                                Layout.fillWidth: true
-                                Layout.leftMargin: 8; Layout.rightMargin: 8
-                                contentItem: RowLayout {
-                                    spacing: 8
-
-                                    // Équipe visiteur
-                                    Rectangle {
-                                        radius: 3
-                                        color: Logic.getTeamColor(modelData.topSeedTeam ? modelData.topSeedTeam.abbrev : '')
-                                        width: awBracketLbl.implicitWidth + 10
-                                        height: awBracketLbl.implicitHeight + 6
-                                        Label {
-                                            id: awBracketLbl
-                                            anchors.centerIn: parent
-                                            text: modelData.topSeedTeam ? modelData.topSeedTeam.abbrev : '?'
-                                            color: Logic.getTeamTextColor(modelData.topSeedTeam ? modelData.topSeedTeam.abbrev : '')
-                                            font.bold: true; font.pixelSize: 13
-                                            font.family: "monospace"
-                                        }
-                                    }
-
-                                    // Score de série
-                                    Label {
-                                        text: (modelData.topSeedWins || 0) + " – " + (modelData.bottomSeedWins || 0)
-                                        font.bold: true; font.pixelSize: 16
-                                        color: Kirigami.Theme.textColor
-                                    }
-
-                                    // Équipe locale
-                                    Rectangle {
-                                        radius: 3
-                                        color: Logic.getTeamColor(modelData.bottomSeedTeam ? modelData.bottomSeedTeam.abbrev : '')
-                                        width: hmBracketLbl.implicitWidth + 10
-                                        height: hmBracketLbl.implicitHeight + 6
-                                        Label {
-                                            id: hmBracketLbl
-                                            anchors.centerIn: parent
-                                            text: modelData.bottomSeedTeam ? modelData.bottomSeedTeam.abbrev : '?'
-                                            color: Logic.getTeamTextColor(modelData.bottomSeedTeam ? modelData.bottomSeedTeam.abbrev : '')
-                                            font.bold: true; font.pixelSize: 13
-                                            font.family: "monospace"
-                                        }
-                                    }
-
-                                    Item { Layout.fillWidth: true }
-
-                                    // Statut de la série
-                                    Label {
-                                        text: modelData.seriesAbbrev || ''
-                                        font.pixelSize: 12
-                                        opacity: 0.7
-                                        color: Kirigami.Theme.disabledTextColor
-                                    }
-                                }
+                    ColumnLayout {
+                        anchors.fill: parent; anchors.margins: 6; spacing: 2
+                        
+                        // Équipe du Haut
+                        RowLayout {
+                            Layout.fillWidth: true; spacing: 8
+                            Components.TeamBadge {
+                                code: (sData && sData.topSeedTeam) ? (sData.topSeedTeam.abbrev || "") : ""
+                                opponentCode: (sData && sData.bottomSeedTeam) ? (sData.bottomSeedTeam.abbrev || "") : ""
+                                teamSide: 'away'
+                                sz: 14
+                                showScore: false
+                                controller: bracketRoot.controller
+                                visible: code !== ""
+                            }
+                            Label { 
+                                text: (sData && sData.topSeedTeam && sData.topSeedTeam.seed) ? sData.topSeedTeam.seed : (sData ? "" : "TBD")
+                                font.pixelSize: 10; font.bold: true; opacity: 0.7; color: Kirigami.Theme.textColor 
+                            }
+                            Item { Layout.fillWidth: true }
+                            Label { 
+                                text: sData && sData.topSeedWins !== undefined ? sData.topSeedWins : "0"
+                                font.bold: true; font.pixelSize: 16; color: Kirigami.Theme.textColor 
                             }
                         }
+                        
+                        Rectangle { Layout.fillWidth: true; height: 1; color: Kirigami.Theme.textColor; opacity: 0.1 }
 
-                        // Séparateur entre rondes
-                        Rectangle {
-                            Layout.fillWidth: true; height: 1
-                            color: Kirigami.Theme.textColor; opacity: 0.1
+                        // Équipe du Bas
+                        RowLayout {
+                            Layout.fillWidth: true; spacing: 8
+                            Components.TeamBadge {
+                                code: (sData && sData.bottomSeedTeam) ? (sData.bottomSeedTeam.abbrev || "") : ""
+                                opponentCode: (sData && sData.topSeedTeam) ? (sData.topSeedTeam.abbrev || "") : ""
+                                teamSide: 'home'
+                                sz: 14
+                                showScore: false
+                                controller: bracketRoot.controller
+                                visible: code !== ""
+                            }
+                            Label { 
+                                text: (sData && sData.bottomSeedTeam && sData.bottomSeedTeam.seed) ? sData.bottomSeedTeam.seed : (sData ? "" : "TBD")
+                                font.pixelSize: 10; font.bold: true; opacity: 0.7; color: Kirigami.Theme.textColor 
+                            }
+                            Item { Layout.fillWidth: true }
+                            Label { 
+                                text: sData && sData.bottomSeedWins !== undefined ? sData.bottomSeedWins : "0"
+                                font.bold: true; font.pixelSize: 16; color: Kirigami.Theme.textColor 
+                            }
                         }
                     }
                 }
-                Item { implicitHeight: 8 }
+            }
+
+            ColumnLayout {
+                id: treeLayout
+                width: parent.width
+                spacing: 20
+                Layout.margins: 10
+
+                // ── CONFÉRENCE OUEST ──
+                Label { text: "WESTERN CONFERENCE"; font.bold: true; font.pixelSize: 12; Layout.alignment: Qt.AlignHCenter; opacity: 0.6 }
+                
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: 15
+                    Layout.alignment: Qt.AlignHCenter
+
+                    // R1 Ouest
+                    ColumnLayout {
+                        spacing: 10
+                        Loader { sourceComponent: matchupCard; property var seriesData: bracketScroll.getSeries(0, 0) }
+                        Loader { sourceComponent: matchupCard; property var seriesData: bracketScroll.getSeries(0, 1) }
+                        Loader { sourceComponent: matchupCard; property var seriesData: bracketScroll.getSeries(0, 2) }
+                        Loader { sourceComponent: matchupCard; property var seriesData: bracketScroll.getSeries(0, 3) }
+                    }
+
+                    // R2 Ouest
+                    ColumnLayout {
+                        spacing: 40
+                        Loader { sourceComponent: matchupCard; property var seriesData: bracketScroll.getSeries(1, 0) }
+                        Loader { sourceComponent: matchupCard; property var seriesData: bracketScroll.getSeries(1, 1) }
+                    }
+
+                    // CF Ouest
+                    ColumnLayout {
+                        Loader { sourceComponent: matchupCard; property var seriesData: bracketScroll.getSeries(2, 0) }
+                    }
+                }
+
+                Rectangle { Layout.fillWidth: true; height: 1; color: Kirigami.Theme.textColor; opacity: 0.1; Layout.margins: 10 }
+
+                // ── FINALE COUPE STANLEY (CENTRE) ──
+                ColumnLayout {
+                    Layout.alignment: Qt.AlignHCenter
+                    spacing: 10
+                    Label { text: "STANLEY CUP FINALS"; font.bold: true; font.pixelSize: 16; Layout.alignment: Qt.AlignHCenter; color: Kirigami.Theme.highlightColor }
+                    Loader { sourceComponent: matchupCard; property var seriesData: bracketScroll.getSeries(3, 0); Layout.preferredWidth: 200 }
+                }
+
+                Rectangle { Layout.fillWidth: true; height: 1; color: Kirigami.Theme.textColor; opacity: 0.1; Layout.margins: 10 }
+
+                // ── CONFÉRENCE EST ──
+                Label { text: "EASTERN CONFERENCE"; font.bold: true; font.pixelSize: 12; Layout.alignment: Qt.AlignHCenter; opacity: 0.6 }
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: 15
+                    Layout.alignment: Qt.AlignHCenter
+
+                    // CF Est
+                    ColumnLayout {
+                        Loader { sourceComponent: matchupCard; property var seriesData: bracketScroll.getSeries(2, 1) }
+                    }
+
+                    // R2 Est
+                    ColumnLayout {
+                        spacing: 40
+                        Loader { sourceComponent: matchupCard; property var seriesData: bracketScroll.getSeries(1, 2) }
+                        Loader { sourceComponent: matchupCard; property var seriesData: bracketScroll.getSeries(1, 3) }
+                    }
+
+                    // R1 Est
+                    ColumnLayout {
+                        spacing: 10
+                        Loader { sourceComponent: matchupCard; property var seriesData: bracketScroll.getSeries(0, 4) }
+                        Loader { sourceComponent: matchupCard; property var seriesData: bracketScroll.getSeries(0, 5) }
+                        Loader { sourceComponent: matchupCard; property var seriesData: bracketScroll.getSeries(0, 6) }
+                        Loader { sourceComponent: matchupCard; property var seriesData: bracketScroll.getSeries(0, 7) }
+                    }
+                }
+                
+                Item { height: 20 }
             }
         }
     }

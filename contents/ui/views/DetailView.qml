@@ -62,6 +62,17 @@ ScrollView {
                 Layout.fillWidth: true
             }
             Button {
+                text: i18n("Séries 2026")
+                icon.name: "trophy-gold"
+                flat: true
+                onClicked: {
+                    controller.openSimulationBracket()
+                }
+            }
+            Item {
+                Layout.fillWidth: true
+            }
+            Button {
                 text: i18n("Search")
                 icon.name: "search"
                 flat: true
@@ -518,7 +529,6 @@ ScrollView {
                 topMargin: 10
             }
 
-            // ── Avantage numérique ───────────────────────────────────
             Rectangle {
                 id: ppBanner
                 Layout.alignment: Qt.AlignHCenter
@@ -527,7 +537,14 @@ ScrollView {
                 width:  ppBannerContent.implicitWidth + 20
                 height: ppBannerContent.implicitHeight + 10
                 radius: 6
-                color: (sit && sit.ppTeam) ? Logic.getTeamColor(sit.ppTeam) : (sit && (sit.emptyNet || sit.isSpecial) ? "#444" : Kirigami.Theme.highlightColor)
+                color: {
+                    if (sit && sit.ppTeam && controller) {
+                        var isAw = (sit.ppTeam === controller.det.away);
+                        var op = isAw ? controller.det.home : controller.det.away;
+                        return controller.teamColorAdapted(sit.ppTeam, op, isAw, false);
+                    }
+                    return (sit && (sit.emptyNet || sit.isSpecial) ? "#444" : Kirigami.Theme.highlightColor);
+                }
                 border.color: "white"
                 border.width: (sit && sit.isSpecial) ? 1 : 0
                 Column {
@@ -823,31 +840,26 @@ ScrollView {
                         RowLayout {
                             visible: !modelData.isPeriodHeader && !modelData.isEmpty
                             spacing: 8
-                            Rectangle {
-                                width: 32
-                                height: 18
-                                radius: 3
-                                color: Logic.getTeamColor(modelData.team || "")
-                                Label {
-                                    anchors.centerIn: parent
-                                    text: modelData.team || ""
-                                    color: Logic.getTeamTextColor(modelData.team || "")
-                                    font.bold: true
-                                    font.pixelSize: 10
-                                }
-                            }
                             Label {
                                 text: modelData.time || ""
                                 Layout.preferredWidth: 40
                                 font.pixelSize: 11
                                 opacity: 0.7
                             }
+                            Components.TeamBadge {
+                                code: modelData.team || ""
+                                opponentCode: (code === controller.det.away) ? controller.det.home : controller.det.away
+                                teamSide: (code === controller.det.away) ? 'away' : 'home'
+                                sz: 12
+                                showScore: false
+                                controller: root
+                            }
                             ColumnLayout {
                                 spacing: 0
                                 Label {
                                     text: (modelData.goalsToDate > 0 ? (modelData.scorer || "") + " (" + modelData.goalsToDate + ")" : (modelData.scorer || "")) + (modelData.ppg ? " PP" : "") + (modelData.shg ? " SH" : "") + (modelData.en ? " EN" : "")
                                     font.bold: true
-                                    color: controller.teamColorAdapted(modelData.team || "")
+                                    color: controller.teamColorAdapted(modelData.team || "", (modelData.team === controller.det.away ? controller.det.home : controller.det.away), modelData.team === controller.det.away, true)
                                     HoverHandler { cursorShape: Qt.PointingHandCursor }
                                     TapHandler {
                                         onTapped: {
@@ -869,7 +881,7 @@ ScrollView {
                                         delegate: Label {
                                             text: (modelData.name || "") + (modelData.assistsToDate > 0 ? " (" + modelData.assistsToDate + ")" : "") + (index < (modelData.parentModelCount - 1) ? "," : "")
                                             font.pixelSize: 11
-                                            color: controller.teamColorAdapted(modelData.team || "")
+                                            color: controller.teamColorAdapted(modelData.team || "", (modelData.team === controller.det.away ? controller.det.home : controller.det.away), modelData.team === controller.det.away, true)
                                             opacity: 0.9
                                             HoverHandler { cursorShape: Qt.PointingHandCursor }
                                             TapHandler {
@@ -945,18 +957,13 @@ ScrollView {
                         RowLayout {
                             visible: !modelData.isPeriodHeader
                             spacing: 8
-                            Rectangle {
-                                width: 32
-                                height: 18
-                                radius: 3
-                                color: Logic.getTeamColor(modelData.team || "")
-                                Label {
-                                    anchors.centerIn: parent
-                                    text: modelData.team || ""
-                                    color: Logic.getTeamTextColor(modelData.team || "")
-                                    font.bold: true
-                                    font.pixelSize: 10
-                                }
+                            Components.TeamBadge {
+                                code: modelData.team || ""
+                                opponentCode: (code === controller.det.away) ? controller.det.home : controller.det.away
+                                teamSide: (code === controller.det.away) ? 'away' : 'home'
+                                sz: 12
+                                showScore: false
+                                controller: root
                             }
                             Label {
                                 text: modelData.time || ""
@@ -969,7 +976,7 @@ ScrollView {
                                 Label {
                                     text: (modelData.player || "") + (modelData.number > 0 ? " #" + modelData.number : "")
                                     font.bold: true
-                                    color: controller.teamColorAdapted(modelData.team || "")
+                                    color: controller.teamColorAdapted(modelData.team || "", (modelData.team === controller.det.away ? controller.det.home : controller.det.away), modelData.team === controller.det.away, true)
                                     HoverHandler { cursorShape: Qt.PointingHandCursor }
                                     TapHandler {
                                         onTapped: {
@@ -1000,24 +1007,19 @@ ScrollView {
                             text: (modelData.star === 1 ? "🥇" : (modelData.star === 2 ? "🥈" : "🥉"))
                             font.pixelSize: 20
                         }
-                        Rectangle {
-                            width: 32
-                            height: 18
-                            radius: 3
-                            color: Logic.getTeamColor(modelData.team || "")
-                            Label {
-                                anchors.centerIn: parent
-                                text: modelData.team || ""
-                                color: Logic.getTeamTextColor(modelData.team || "")
-                                font.bold: true
-                                font.pixelSize: 10
-                            }
+                        Components.TeamBadge {
+                            code: modelData.team || ""
+                            opponentCode: (code === controller.det.away) ? controller.det.home : controller.det.away
+                            teamSide: (code === controller.det.away) ? 'away' : 'home'
+                            sz: 12
+                            showScore: false
+                            controller: root
                         }
                         Label {
                             text: modelData.name || ""
                             font.bold: true
                             Layout.fillWidth: true
-                            color: controller.teamColorAdapted(modelData.team || "")
+                            color: controller.teamColorAdapted(modelData.team || "", (modelData.team === controller.det.away ? controller.det.home : controller.det.away), modelData.team === controller.det.away, true)
                             HoverHandler { cursorShape: Qt.PointingHandCursor }
                             TapHandler {
                                 onTapped: {

@@ -1,25 +1,22 @@
 # Changelog
 
-## [5.2.0] - 2026-04-05
+## [5.3.0] - 2026-04-08
 
 ### Added
-- **Team Logo Customization:** New option in Display settings to choose between classic colored badges (Pastilles) and team logos throughout the applet.
-- **Local Logo Storage:** Team logos are now bundled locally within the plasmoid for instant loading and offline support.
-- **Smart Color Adaptation:** Implemented a conflict detection system for teams with similar colors (e.g., NJD vs MTL). The away team automatically switches to its secondary color for better visual distinction.
-- **SVG Rendering Optimization:** Added `sourceSize` support for all team logos, ensuring pixel-perfect sharpness on HiDPI and small scales.
-- **Contrast-Aware Themes:** Automatically switches between `_light` and `_dark` logo variants based on Plasma theme brightness.
-- **Readability Engine:** Dynamically adjusts text colors (scores, names) based on both team colors and theme background to ensure 100% legibility on any theme.
-- **Advanced Pre-Game Hub:** Integrated the NHL `right-rail` API to display comprehensive seasonal comparisons: PP%, PK%, Faceoff%, GF/G, and GA/G.
-- **Goal Video Highlights:** Watch goal highlights directly via the official NHL Brightcove player using the new play button next to each goal.
-- **Unified Preview Layout:** Completely redesigned the pre-game hub layout for better logical flow and visual consistency.
-- **Improved Panel Alignment:** Forced vertical centering and fixed heights for status badges to ensure a perfectly aligned panel layout.
+- **Official NHL Standings Indicators:** Added support for official clinch indicators (**x**, **y**, **z**) and elimination markers (**E**) across all standings modes (League, Wild Card, and Divisions).
+- **Standings Legend:** Centered legend at the bottom of the standings view explaining all qualification and elimination markers.
+- **Smart Morning View (Logic Fix):** Refined logic to show yesterday's games until 12:00 PM today even with "Past days" set to 0, while respecting user selection for any value ≥ 1.
+- **Enhanced Player Playoff Stats:** Career playoff history is now fully calculated and displayed in a dedicated tab.
+- **Unified Vertical Alignment:** Forced perfect horizontal baseline for all panel elements (logos, scores, status) in both Inline and Stacked modes.
+- **Ultra-compact Color Adaptation:** Smart color conflict detection now extends to the ultra-compact representation.
 
 ### Fixed
-- **Flickering Issues:** Fixed a bug where season series info would disappear after a few seconds in the match hub.
-- **Responsive Sizing:** Decoupled logo sizes from font scales to maintain a compact panel width when using logos.
-- **Filtered Situations:** The panel now only displays high-impact situations (PP, 5v3, 4v3), while the full hub maintains complete information (EN, 3v3, 4v4).
-- **Desktop Widget Fixes:** Added click interactivity to date separators on the desktop representation.
-- **Localization:** Updated all 8 supported languages with new strings for 5.2 features.
+- **Horizontal Scrolling:** Eliminated the need for horizontal scrolling in the Playoff Bracket by implementing a vertical tree layout.
+- **Color Conflicts:** Fixed Florida (FLA) vs Montreal (MTL) and New Jersey (NJD) vs Montreal (MTL) color clashing in special situations (Powerplay).
+- **Navigation Errors:** Fixed "leagueRow is not defined" and other reference errors in the standings view.
+- **Dashing Issues:** Removed redundant separator dashes in upcoming games for the Inline layout.
+
+## [5.2.0] - 2026-04-05
 
 ## [5.1.0] - 2026-04-03
 

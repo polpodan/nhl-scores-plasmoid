@@ -1,7 +1,7 @@
 # Finnish translations for nhl-scores-plasmoid
 msgid ""
 msgstr ""
-"Project-Id-Version: nhl-scores-plasmoid 5.1\n"
+"Project-Id-Version: nhl-scores-plasmoid 5.3\n"
 "Language: fi\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -34,11 +34,20 @@ msgstr "‹ Sarjataulukko"
 msgid "‹ Team"
 msgstr "‹ Joukkue"
 
+msgid "‹ Search"
+msgstr "‹ Haku"
+
+msgid "‹ Stats"
+msgstr "‹ Tilastot"
+
+msgid "‹ History"
+msgstr "‹ Historia"
+
 msgid "Final"
 msgstr "Lopputulos"
 
 msgid "Upcoming"
-msgstr "Tuleva"
+msgstr "Tulevat"
 
 msgid "LIVE"
 msgstr "LIVE"
@@ -67,6 +76,9 @@ msgstr "3."
 msgid "SO"
 msgstr "VL"
 
+msgid "OT"
+msgstr "JA"
+
 msgid "1st period"
 msgstr "1. erä"
 
@@ -83,7 +95,7 @@ msgid "Standings"
 msgstr "Sarjataulukko"
 
 msgid "Leaders"
-msgstr "Tilastokärjet"
+msgstr "Pörssikärjet"
 
 msgid "Season series"
 msgstr "Kauden kohtaamiset"
@@ -92,7 +104,7 @@ msgid "Probable goalies"
 msgstr "Oletetut maalivahdit"
 
 msgid "Points leaders (last 5 games)"
-msgstr "Pistepörssi (viimeiset 5 ottelua)"
+msgstr "Pistekärjet (viimeiset 5)"
 
 msgid "Shots on Goal"
 msgstr "Laukaukset"
@@ -106,8 +118,11 @@ msgstr "Maalit"
 msgid "Assists"
 msgstr "Syötöt"
 
+msgid "Points"
+msgstr "Pisteet"
+
 msgid "PTS"
-msgstr "Pist"
+msgstr "P"
 
 msgid "W"
 msgstr "V"
@@ -116,7 +131,7 @@ msgid "L"
 msgstr "H"
 
 msgid "PIM"
-msgstr "R"
+msgstr "RM"
 
 msgid "PJ"
 msgstr "O"
@@ -131,7 +146,7 @@ msgid "Goalies"
 msgstr "Maalivahdit"
 
 msgid "Wild Card"
-msgstr "Villi kortti"
+msgstr "Wild Card"
 
 msgid "Eastern Conference"
 msgstr "Itäinen konferenssi"
@@ -141,9 +156,6 @@ msgstr "Läntinen konferenssi"
 
 msgid "Playoffs"
 msgstr "Pudotuspelit"
-
-msgid "Points"
-msgstr "Pisteet"
 
 msgid "Wins"
 msgstr "Voitot"
@@ -206,22 +218,22 @@ msgid "Today"
 msgstr "Tänään"
 
 msgid "Atlantic"
-msgstr "Atlantti"
+msgstr "Atlantin"
 
 msgid "Metropolitan"
-msgstr "Metropolialue"
+msgstr "Metropolitan"
 
 msgid "Central"
-msgstr "Keskinen"
+msgstr "Keskisessä"
 
 msgid "Pacific"
-msgstr "Tyynenmeri"
+msgstr "Tyynenmeren"
 
 msgid "First Round"
-msgstr "Ensimmäinen kierros"
+msgstr "1. kierros"
 
 msgid "Second Round"
-msgstr "Toinen kierros"
+msgstr "2. kierros"
 
 msgid "Conference Finals"
 msgstr "Konferenssifinaalit"
@@ -242,7 +254,7 @@ msgid "Logos"
 msgstr "Logot"
 
 msgid "Season Comparison"
-msgstr "Kauden vertailu"
+msgstr "Kausivertailu"
 
 msgid "Power Play %"
 msgstr "Ylivoima %"
@@ -260,4 +272,52 @@ msgid "GA/G"
 msgstr "PM/O"
 
 msgid "Watch goal highlight"
-msgstr "Katso maalin kooste"
+msgstr "Katso maalin kohokohdat"
+
+msgid "Divisions"
+msgstr "Divisioonat"
+
+msgid "League"
+msgstr "Liiga"
+
+msgid "Clinched Playoff Spot"
+msgstr "Varmistanut pudotuspelipaikan"
+
+msgid "Clinched Division"
+msgstr "Divisioonan voittaja"
+
+msgid "Clinched Conference"
+msgstr "Konferenssin voittaja"
+
+msgid "Eliminated from Playoffs"
+msgstr "Karsiutunut pudotuspeleistä"
+
+msgid "Season"
+msgstr "Kausi"
+
+msgid "Season history"
+msgstr "Kausihistoria"
+
+msgid "Playoff history"
+msgstr "Pudotuspelihistoria"
+
+msgid "Season stats"
+msgstr "Kausitilastot"
+
+msgid "Playoff stats"
+msgstr "Pudotuspelitilastot"
+
+msgid "WESTERN CONFERENCE"
+msgstr "LÄNTINEN KONFERENSSI"
+
+msgid "EASTERN CONFERENCE"
+msgstr "ITÄINEN KONFERENSSI"
+
+msgid "STANLEY CUP FINALS"
+msgstr "STANLEY CUP -FINAALIT"
+
+msgid "FINALS"
+msgstr "FINAALIT"
+
+msgid "Séries 2026"
+msgstr "Pudotuspelit 2026"

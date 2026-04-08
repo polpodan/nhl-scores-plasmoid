@@ -16,7 +16,13 @@ Item {
     readonly property var p: controller ? controller.ply.data : null
     readonly property bool isG: p ? (p.positionCode === 'G' || p.position === 'G') : false
     
-    readonly property var featured: (p && p.featuredStats && p.featuredStats.regularSeason) ? p.featuredStats.regularSeason.subSeason : null
+    property int activeTab: 0 // 0: Regular, 1: Playoffs
+
+    readonly property var featured: {
+        if (!p || !p.featuredStats) return null
+        if (activeTab === 0) return p.featuredStats.regularSeason ? p.featuredStats.regularSeason.subSeason : null
+        return p.featuredStats.playoffs ? p.featuredStats.playoffs.subSeason : null
+    }
 
     readonly property var regularSeasonTotals: {
         if (!p || !p.seasonTotals) return []
@@ -29,11 +35,25 @@ Item {
         return filtered
     }
 
+    readonly property var playoffTotals: {
+        if (!p || !p.seasonTotals) return []
+        var filtered = []
+        for (var i = 0; i < p.seasonTotals.length; i++) {
+            if (p.seasonTotals[i].gameTypeId === 3) {
+                filtered.push(p.seasonTotals[i])
+            }
+        }
+        return filtered
+    }
+
+    readonly property var currentTotals: activeTab === 0 ? regularSeasonTotals : playoffTotals
+
     readonly property var nhlTotal: {
         var t = { gp:0, g:0, a:0, pts:0, pm:0, pim:0, w:0, l:0, ga:0, sa:0, toi:0, weightedGaa:0, gaaMatchCount:0 }
         if (p && p.seasonTotals) {
+            var targetType = activeTab === 0 ? 2 : 3
             p.seasonTotals.forEach(function(s) {
-                if (s.gameTypeId === 2 && (s.leagueAbbrev === "NHL" || s.leagueName === "National Hockey League")) {
+                if (s.gameTypeId === targetType && (s.leagueAbbrev === "NHL" || s.leagueName === "National Hockey League")) {
                     t.gp += (s.gamesPlayed || 0)
                     t.g += (s.goals || 0)
                     t.a += (s.assists || 0)
@@ -88,27 +108,49 @@ Item {
         Item {
             Layout.fillWidth: true
             implicitHeight: 40
-            Button {
-                anchors.left: parent.left
-                anchors.leftMargin: 8
-                anchors.verticalCenter: parent.verticalCenter
-                text: {
-                    if (from === 'search') return i18n("‹ Search")
-                    if (from === 'teamstats') return i18n("‹ Stats")
-                    if (from === 'detail') return i18n("‹ Match")
-                    if (from === 'franchiseLeaders') return i18n("‹ History")
-                    return i18n("‹ Leaders")
+            RowLayout {
+                anchors.fill: parent
+                spacing: 0
+                Button {
+                    text: {
+                        if (from === 'search') return i18n("‹ Search")
+                        if (from === 'teamstats') return i18n("‹ Stats")
+                        if (from === 'detail') return i18n("‹ Match")
+                        if (from === 'franchiseLeaders') return i18n("‹ History")
+                        return i18n("‹ Leaders")
+                    }
+                    icon.name: "go-previous"
+                    flat: true
+                    onClicked: {
+                        if (controller) {
+                            controller.nav.player = false
+                            if (from === 'leaders') controller.openLeaders()
+                            else if (from === 'search') controller.openSearch()
+                            else if (from === 'teamstats') controller.openSchedule(controller.sch.team, true)
+                            else if (from === 'detail') controller.nav.detail = true
+                            else if (from === 'franchiseLeaders') controller.nav.franchiseLeaders = true
+                        }
+                    }
                 }
-                icon.name: "go-previous"
-                flat: true
-                onClicked: {
-                    if (controller) {
-                        controller.nav.player = false
-                        if (from === 'leaders') controller.openLeaders()
-                        else if (from === 'search') controller.openSearch()
-                        else if (from === 'teamstats') controller.openSchedule(controller.sch.team, true)
-                        else if (from === 'detail') controller.nav.detail = true
-                        else if (from === 'franchiseLeaders') controller.nav.franchiseLeaders = true
+                Item { Layout.fillWidth: true }
+                Row {
+                    Layout.alignment: Qt.AlignRight
+                    Layout.rightMargin: 12
+                    spacing: 4
+                    Button {
+                        text: i18n("Season")
+                        flat: true
+                        font.bold: activeTab === 0
+                        opacity: activeTab === 0 ? 1.0 : 0.5
+                        onClicked: activeTab = 0
+                    }
+                    Rectangle { width: 1; height: 16; color: Kirigami.Theme.textColor; opacity: 0.2; anchors.verticalCenter: parent.verticalCenter }
+                    Button {
+                        text: i18n("Playoffs")
+                        flat: true
+                        font.bold: activeTab === 1
+                        opacity: activeTab === 1 ? 1.0 : 0.5
+                        onClicked: activeTab = 1
                     }
                 }
             }
@@ -259,7 +301,7 @@ Item {
                     Label { 
                         width: parent.width
                         horizontalAlignment: Text.AlignHCenter
-                        text: i18n("Season stats")
+                        text: activeTab === 0 ? i18n("Season stats") : i18n("Playoff stats")
                         font.pixelSize: 11
                         font.bold: true
                         opacity: 0.5
@@ -321,7 +363,7 @@ Item {
                     Label {
                         width: parent.width
                         horizontalAlignment: Text.AlignHCenter
-                        text: i18n("Season history")
+                        text: activeTab === 0 ? i18n("Season history") : i18n("Playoff history")
                         font.pixelSize: 11
                         font.bold: true
                         opacity: 0.5
@@ -344,7 +386,7 @@ Item {
                             Label { text: "PIM"; font.pixelSize: 10; opacity: 0.6; width: 32; horizontalAlignment: Text.AlignHCenter; color: Kirigami.Theme.textColor; anchors.verticalCenter: parent.verticalCenter }
                         }
                         Repeater {
-                            model: playerRoot.regularSeasonTotals
+                            model: playerRoot.currentTotals
                             delegate: Rectangle {
                                 id: zebraRow
                                 width: 340
@@ -440,6 +482,7 @@ Item {
                     width: 320
                     spacing: 8
                     anchors.horizontalCenter: parent.horizontalCenter
+                    visible: activeTab === 0
                     Label {
                         width: parent.width
                         horizontalAlignment: Text.AlignHCenter

@@ -1,7 +1,7 @@
 # German translations for nhl-scores-plasmoid
 msgid ""
 msgstr ""
-"Project-Id-Version: nhl-scores-plasmoid 5.1\n"
+"Project-Id-Version: nhl-scores-plasmoid 5.3\n"
 "Language: de\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -33,6 +33,15 @@ msgstr "‹ Tabelle"
 
 msgid "‹ Team"
 msgstr "‹ Team"
+
+msgid "‹ Search"
+msgstr "‹ Suche"
+
+msgid "‹ Stats"
+msgstr "‹ Statistiken"
+
+msgid "‹ History"
+msgstr "‹ Geschichte"
 
 msgid "Final"
 msgstr "Endstand"
@@ -66,6 +75,9 @@ msgstr "3."
 
 msgid "SO"
 msgstr "PS"
+
+msgid "OT"
+msgstr "Verl."
 
 msgid "1st period"
 msgstr "1. Drittel"
@@ -106,6 +118,9 @@ msgstr "Tore"
 msgid "Assists"
 msgstr "Vorlagen"
 
+msgid "Points"
+msgstr "Punkte"
+
 msgid "PTS"
 msgstr "Pkt"
 
@@ -141,9 +156,6 @@ msgstr "Western Conference"
 
 msgid "Playoffs"
 msgstr "Playoffs"
-
-msgid "Points"
-msgstr "Punkte"
 
 msgid "Wins"
 msgstr "Siege"
@@ -261,3 +273,51 @@ msgstr "GT/S"
 
 msgid "Watch goal highlight"
 msgstr "Tor-Highlight ansehen"
+
+msgid "Divisions"
+msgstr "Divisionen"
+
+msgid "League"
+msgstr "Liga"
+
+msgid "Clinched Playoff Spot"
+msgstr "Playoff-Platz gesichert"
+
+msgid "Clinched Division"
+msgstr "Divisions-Titel gesichert"
+
+msgid "Clinched Conference"
+msgstr "Conference-Titel gesichert"
+
+msgid "Eliminated from Playoffs"
+msgstr "Aus den Playoffs ausgeschieden"
+
+msgid "Season"
+msgstr "Saison"
+
+msgid "Season history"
+msgstr "Saisongeschichte"
+
+msgid "Playoff history"
+msgstr "Playoffgeschichte"
+
+msgid "Season stats"
+msgstr "Saisonstatistik"
+
+msgid "Playoff stats"
+msgstr "Playoffstatistik"
+
+msgid "WESTERN CONFERENCE"
+msgstr "WESTERN CONFERENCE"
+
+msgid "EASTERN CONFERENCE"
+msgstr "EASTERN CONFERENCE"
+
+msgid "STANLEY CUP FINALS"
+msgstr "STANLEY CUP FINALE"
+
+msgid "FINALS"
+msgstr "FINALE"
+
+msgid "Séries 2026"
+msgstr "Playoffs 2026"

@@ -3,37 +3,26 @@
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: nhl-scores-plasmoid 3.3\n"
-"POT-Creation-Date: 2026-03-15\n"
-"PO-Revision-Date: 2026-03-15\n"
-"Last-Translator: Dany Martineau\n"
+"Project-Id-Version: nhl-scores-plasmoid 5.3\n"
 "Language: fr\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-# ── Général ──────────────────────────────────────────────────────────
-
 msgid "NHL Scores"
-msgstr "Scores NHL"
+msgstr "Scores LNH"
 
 msgid "No games"
-msgstr "Aucune partie"
+msgstr "Aucun match"
 
 msgid "No games today"
-msgstr "Aucune partie aujourd'hui"
+msgstr "Aucun match aujourd'hui"
 
 msgid "Refresh now"
-msgstr "Rafraîchir maintenant"
+msgstr "Rafraîchir"
 
 msgid "Loading…"
 msgstr "Chargement…"
-
-msgid "✕"
-msgstr "✕"
-
-msgid "NHL.com"
-msgstr "NHL.com"
 
 msgid "‹ Back"
 msgstr "‹ Retour"
@@ -47,19 +36,14 @@ msgstr "‹ Classement"
 msgid "‹ Team"
 msgstr "‹ Équipe"
 
-msgid "vs"
-msgstr "c."
+msgid "‹ Search"
+msgstr "‹ Recherche"
 
-msgid "@"
-msgstr "@"
+msgid "‹ Stats"
+msgstr "‹ Stats"
 
-msgid "A"
-msgstr "A"
-
-msgid "B"
-msgstr "B"
-
-# ── Statuts de match ─────────────────────────────────────────────────
+msgid "‹ History"
+msgstr "‹ Histoire"
 
 msgid "Final"
 msgstr "Final"
@@ -94,6 +78,9 @@ msgstr "3e"
 msgid "SO"
 msgstr "TB"
 
+msgid "OT"
+msgstr "Prol."
+
 msgid "1st period"
 msgstr "1re période"
 
@@ -103,19 +90,8 @@ msgstr "2e période"
 msgid "3rd period"
 msgstr "3e période"
 
-msgid "1st intermission"
-msgstr "1re entracte"
-
-msgid "2nd intermission"
-msgstr "2e entracte"
-
-msgid "3rd intermission"
-msgstr "3e entracte"
-
 msgid "Power Play"
 msgstr "Avantage numérique"
-
-# ── Popup match ──────────────────────────────────────────────────────
 
 msgid "Standings"
 msgstr "Classement"
@@ -124,10 +100,7 @@ msgid "Leaders"
 msgstr "Meneurs"
 
 msgid "Season series"
-msgstr "Série saison"
-
-msgid "Starts at"
-msgstr "Début à"
+msgstr "Série de saison"
 
 msgid "Probable goalies"
 msgstr "Gardiens probables"
@@ -135,17 +108,11 @@ msgstr "Gardiens probables"
 msgid "Points leaders (last 5 games)"
 msgstr "Meneurs de points (5 derniers matchs)"
 
-msgid "No goals recorded."
-msgstr "Aucun but enregistré."
-
 msgid "Shots on Goal"
 msgstr "Tirs au but"
 
 msgid "GOAL"
 msgstr "BUT"
-
-msgid "+/-"
-msgstr "+/-"
 
 msgid "Goals"
 msgstr "Buts"
@@ -153,11 +120,8 @@ msgstr "Buts"
 msgid "Assists"
 msgstr "Passes"
 
-msgid "Assists: "
-msgstr "Passes : "
-
-msgid "unassisted"
-msgstr "sans aide"
+msgid "Points"
+msgstr "Points"
 
 msgid "PTS"
 msgstr "PTS"
@@ -174,24 +138,6 @@ msgstr "PUN"
 msgid "PJ"
 msgstr "PJ"
 
-msgid "Shots"
-msgstr "Tirs"
-
-msgid "Hits"
-msgstr "Mises en échec"
-
-msgid "Blocks"
-msgstr "Tirs bloqués"
-
-msgid "Giveaways"
-msgstr "Revirements"
-
-msgid "Takeaways"
-msgstr "Récupérations"
-
-msgid "Faceoffs %"
-msgstr "Mises au jeu %"
-
 msgid "Player"
 msgstr "Joueur"
 
@@ -201,65 +147,17 @@ msgstr "Équipe"
 msgid "Goalies"
 msgstr "Gardiens"
 
-# ── Classement ───────────────────────────────────────────────────────
-
 msgid "Wild Card"
 msgstr "Wild Card"
 
-msgid "Atlantic"
-msgstr "Atlantique"
-
-msgid "Metropolitan"
-msgstr "Métropolitaine"
-
-msgid "Central"
-msgstr "Centrale"
-
-msgid "Pacific"
-msgstr "Pacifique"
-
 msgid "Eastern Conference"
-msgstr "Conférence Est"
+msgstr "Association de l'Est"
 
 msgid "Western Conference"
-msgstr "Conférence Ouest"
-
-msgid "Record"
-msgstr "Fiche"
-
-# ── Playoffs ─────────────────────────────────────────────────────────
-
-msgid "First Round"
-msgstr "Premier tour"
-
-msgid "Second Round"
-msgstr "Deuxième tour"
-
-msgid "Conference Finals"
-msgstr "Finales de conférence"
-
-msgid "Stanley Cup Final"
-msgstr "Finale de la Coupe Stanley"
+msgstr "Association de l'Ouest"
 
 msgid "Playoffs"
-msgstr "Séries éliminatoires"
-
-msgid "leads"
-msgstr "mène"
-
-msgid "Tied"
-msgstr "Égalité"
-
-msgid "Game"
-msgstr "Partie"
-
-msgid "of 7"
-msgstr "de 7"
-
-# ── Leaders ──────────────────────────────────────────────────────────
-
-msgid "Points"
-msgstr "Points"
+msgstr "Séries"
 
 msgid "Wins"
 msgstr "Victoires"
@@ -277,44 +175,13 @@ msgid "GAA"
 msgstr "MOY"
 
 msgid "SV%"
-msgstr "%SV"
-
-# ── Hub d'équipe ─────────────────────────────────────────────────────
-
-msgid "Standing"
-msgstr "Position"
-
-msgid "Head coach"
-msgstr "Entraîneur"
-
-msgid "Last games"
-msgstr "Derniers matchs"
-
-msgid "Last 5 games"
-msgstr "5 derniers matchs"
-
-msgid "Next:"
-msgstr "Prochain :"
-
-msgid "📅 Schedule"
-msgstr "📅 Calendrier"
-
-msgid "📊 Stats"
-msgstr "📊 Statistiques"
+msgstr "%ARR"
 
 msgid "Schedule"
 msgstr "Calendrier"
 
-msgid "Season Calendar"
-msgstr "Calendrier de la saison"
-
 msgid "Stats"
-msgstr "Statistiques"
-
-msgid "Stanley Cup"
-msgstr "Coupe Stanley"
-
-# ── Jours ────────────────────────────────────────────────────────────
+msgstr "Stats"
 
 msgid "Monday"
 msgstr "Lundi"
@@ -337,158 +204,44 @@ msgstr "Samedi"
 msgid "Sunday"
 msgstr "Dimanche"
 
-# ── Mois ─────────────────────────────────────────────────────────────
-
-msgid "January"
-msgstr "Janvier"
-
-msgid "February"
-msgstr "Février"
-
-msgid "March"
-msgstr "Mars"
-
-msgid "April"
-msgstr "Avril"
-
-msgid "May"
-msgstr "Mai"
-
-msgid "June"
-msgstr "Juin"
-
-msgid "July"
-msgstr "Juillet"
-
-msgid "August"
-msgstr "Août"
-
-msgid "September"
-msgstr "Septembre"
-
-msgid "October"
-msgstr "Octobre"
-
-msgid "November"
-msgstr "Novembre"
-
-msgid "December"
-msgstr "Décembre"
-
-# ── configGeneral.qml ────────────────────────────────────────────────
-
-msgid "Favorite teams"
-msgstr "Équipes favorites"
-
-msgid "Select / deselect all teams"
-msgstr "Sélectionner / désélectionner toutes les équipes"
-
-msgid "Max games to display:"
-msgstr "Nombre max de parties :"
-
-msgid "Leaders limit:"
-msgstr "Limite meneurs :"
-
-msgid "Franchise leaders limit:"
-msgstr "Limite meneurs historiques :"
-
-msgid "Spacing between games:"
-msgstr "Espacement entre les matchs :"
-
-msgid "Days ahead:"
-msgstr "Jours à venir :"
-
-msgid "Show yesterday's games"
-msgstr "Afficher les parties d'hier"
-
-msgid "Show games from two days ago"
-msgstr "Afficher les parties d'avant-hier"
-
-msgid "Notifications"
-msgstr "Notifications"
-
-msgid "Goal blink duration:"
-msgstr "Durée du clignotement de but :"
-
-msgid "sec. (0 = disabled)"
-msgstr "sec. (0 = désactivé)"
-
-msgid "Sound notification for team:"
-msgstr "Notification sonore pour l'équipe :"
-
-msgid "Disabled"
-msgstr "Désactivé"
-
-msgid "🚨 siren on goal"
-msgstr "🚨 sirène lors d'un but"
-
-# ── configDisplay.qml ────────────────────────────────────────────────
-
 msgid "Display"
 msgstr "Affichage"
 
 msgid "Layout"
-msgstr "Disposition"
+msgstr "Mise en page"
 
-msgid "Score layout:"
-msgstr "Disposition du score :"
+msgid "Search"
+msgstr "Recherche"
 
-msgid "Score below (column)"
-msgstr "Score en dessous (colonne)"
+msgid "Calendar"
+msgstr "Calendrier"
 
-msgid "Score next to name (row)"
-msgstr "Score à côté du nom (rangée)"
+msgid "Today"
+msgstr "Aujourd'hui"
 
-msgid "Ultra-compact (dots + score)"
-msgstr "Ultra-compact (points + score)"
+msgid "Atlantic"
+msgstr "Atlantique"
 
-msgid "Fixed (vertical panel)"
-msgstr "Fixe (panneau vertical)"
+msgid "Metropolitan"
+msgstr "Métropolitaine"
 
-msgid "N/A (desktop widget)"
-msgstr "N/D (widget bureau)"
+msgid "Central"
+msgstr "Centrale"
 
-msgid "Date mode:"
-msgstr "Mode de date :"
+msgid "Pacific"
+msgstr "Pacifique"
 
-msgid "Local timezone (computer)"
-msgstr "Fuseau local (ordinateur)"
+msgid "First Round"
+msgstr "Premier tour"
 
-msgid "Venue timezone (arena)"
-msgstr "Fuseau de l'aréna"
+msgid "Second Round"
+msgstr "Deuxième tour"
 
-msgid "Status badge colors"
-msgstr "Couleurs des pastilles de statut"
+msgid "Conference Finals"
+msgstr "Finales d'association"
 
-msgid "Badge options"
-msgstr "Options des pastilles"
-
-msgid "Show OT/SO suffix in badge"
-msgstr "Afficher le suffixe Prol./TB dans la pastille"
-
-msgid "Show upcoming game time under badge"
-msgstr "Afficher l'heure des parties à venir"
-
-msgid "LIVE:"
-msgstr "EN DIRECT :"
-
-msgid "Upcoming:"
-msgstr "À venir :"
-
-msgid "Final:"
-msgstr "Final :"
-
-msgid "Choose LIVE color"
-msgstr "Choisir la couleur EN DIRECT"
-
-msgid "Choose Upcoming color"
-msgstr "Choisir la couleur À VENIR"
-
-msgid "Choose Final color"
-msgstr "Choisir la couleur FINAL"
-
-msgid "Reset to default"
-msgstr "Réinitialiser"
+msgid "Stanley Cup Final"
+msgstr "Finale de la Coupe Stanley"
 
 msgid "Team display"
 msgstr "Affichage des équipes"
@@ -511,6 +264,9 @@ msgstr "Avantage numérique %"
 msgid "Penalty Kill %"
 msgstr "Désavantage numérique %"
 
+msgid "Faceoffs %"
+msgstr "Mises au jeu %"
+
 msgid "GF/G"
 msgstr "BP/MJ"
 
@@ -526,239 +282,44 @@ msgstr "Divisions"
 msgid "League"
 msgstr "Ligue"
 
-msgid "just now"
-msgstr "à l'instant"
+msgid "Clinched Playoff Spot"
+msgstr "Place en séries assurée"
 
-msgid "1 min ago"
-msgstr "il y a 1 min"
+msgid "Clinched Division"
+msgstr "Titre de division assuré"
 
-msgid "min ago"
-msgstr "min"
+msgid "Clinched Conference"
+msgstr "Titre d'association assuré"
 
-msgid "arena"
-msgstr "aréna"
-
-msgid "local"
-msgstr "local"
-
-msgid "Height:"
-msgstr "Taille :"
-
-msgid "Weight:"
-msgstr "Poids :"
-
-msgid "Born:"
-msgstr "Né le :"
-
-msgid "Birthplace:"
-msgstr "Lieu de naissance :"
-
-msgid "years"
-msgstr "ans"
-
-msgid "Franchise Leaders"
-msgstr "Meneurs historiques"
-
-msgid "History"
-msgstr "Historique"
-
-msgid "Active player"
-msgstr "Joueur actif"
-
-msgid "NHL Total"
-msgstr "Total NHL"
-
-msgid "Career Stats"
-msgstr "Stats de carrière"
+msgid "Eliminated from Playoffs"
+msgstr "Éliminé des séries"
 
 msgid "Season"
 msgstr "Saison"
 
 msgid "Season history"
-msgstr "Historique"
+msgstr "Historique de saison"
+
+msgid "Playoff history"
+msgstr "Historique de séries"
 
 msgid "Season stats"
-msgstr "Stats de la saison"
+msgstr "Stats de saison"
 
-msgid "‹ Leaders"
-msgstr "‹ Meneurs"
+msgid "Playoff stats"
+msgstr "Stats de séries"
 
-msgid "‹ Stats"
-msgstr "‹ Statistiques"
+msgid "WESTERN CONFERENCE"
+msgstr "CONFERENCE OUEST"
 
-msgid "Show today's games"
-msgstr "Afficher les parties d'aujourd'hui"
+msgid "EASTERN CONFERENCE"
+msgstr "CONFERENCE EST"
 
-msgid "Previous days:"
-msgstr "Jours précédents :"
+msgid "STANLEY CUP FINALS"
+msgstr "FINALE DE LA COUPE STANLEY"
 
-msgid "(0 = disabled)"
-msgstr "(0 = désactivé)"
+msgid "FINALS"
+msgstr "FINALE"
 
-msgid "Search"
-msgstr "Recherche"
-
-msgid "Player name…"
-msgstr "Nom du joueur…"
-
-msgid "Searching players…"
-msgstr "Recherche de joueurs…"
-
-msgid "No results"
-msgstr "Aucun résultat"
-
-msgid "Retired"
-msgstr "Retraité"
-
-msgid "‹ Search"
-msgstr "‹ Recherche"
-
-msgid "Calendar"
-msgstr "Calendrier"
-
-msgid "Today"
-msgstr "Aujourd'hui"
-
-msgid "Su"
-msgstr "Di"
-
-msgid "Mo"
-msgstr "Lu"
-
-msgid "Tu"
-msgstr "Ma"
-
-msgid "We"
-msgstr "Me"
-
-msgid "Th"
-msgstr "Je"
-
-msgid "Fr"
-msgstr "Ve"
-
-msgid "Sa"
-msgstr "Sa"
-
-msgid "🔍"
-msgstr "🔍"
-
-msgid "Goal sound volume:"
-msgstr "Volume du son de but :"
-
-msgid "Three Stars"
-msgstr "3 étoiles"
-
-msgid "Refresh interval:"
-msgstr "Intervalle de rafraîchissement :"
-
-msgid " sec"
-msgstr " sec"
-
-msgid "Penalties"
-msgstr "Pénalités"
-
-msgid "min"
-msgstr "min"
-
-msgid "Slashing"
-msgstr "Bâton élevé frappé"
-
-msgid "Hooking"
-msgstr "Accrocher"
-
-msgid "Roughing"
-msgstr "Rudesse"
-
-msgid "High sticking"
-msgstr "Bâton élevé"
-
-msgid "Tripping"
-msgstr "Faire trébucher"
-
-msgid "Interference"
-msgstr "Obstruction"
-
-msgid "Holding"
-msgstr "Retenir"
-
-msgid "Holding the stick"
-msgstr "Retenir le bâton"
-
-msgid "Elbowing"
-msgstr "Coup de coude"
-
-msgid "Charging"
-msgstr "Charge"
-
-msgid "Boarding"
-msgstr "Mise en échec dans la bande"
-
-msgid "Cross-checking"
-msgstr "Double-échec"
-
-msgid "Delay of game"
-msgstr "Retard de jeu"
-
-msgid "Unsportsmanlike conduct"
-msgstr "Conduite antisportive"
-
-msgid "Too many men"
-msgstr "Trop de joueurs"
-
-msgid "Goalie interference"
-msgstr "Obstruction au gardien"
-
-msgid "Misconduct"
-msgstr "Inconduite"
-
-msgid "Game misconduct"
-msgstr "Inconduite de match"
-
-msgid "Fighting"
-msgstr "Bataille"
-
-msgid "Instigating"
-msgstr "Instigateur"
-
-msgid "Diving"
-msgstr "Simulation"
-
-msgid "Embellishment"
-msgstr "Embellissement"
-
-msgid "Kneeing"
-msgstr "Coup de genou"
-
-msgid "Spearing"
-msgstr "Coup de pointe"
-
-msgid "Butt-ending"
-msgstr "Coup du bout du bâton"
-
-msgid "Checking from behind"
-msgstr "Mise en échec par derrière"
-
-msgid "Head contact"
-msgstr "Contact à la tête"
-
-msgid "Match penalty"
-msgstr "Pénalité de match"
-
-msgid "Stars"
-msgstr "Étoiles"
-
-msgid "All"
-msgstr "Tous"
-
-msgid "Fwd"
-msgstr "Avants"
-
-msgid "Def"
-msgstr "Défenseurs"
-
-msgid "Rookies"
-msgstr "Recrues"
-
-msgid "Goal"
-msgstr "Gard."
+msgid "Séries 2026"
+msgstr "Séries 2026"

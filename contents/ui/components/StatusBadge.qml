@@ -18,19 +18,25 @@ Rectangle {
     property string penaltyTime: ""
     property string awayTeam: ""
     property string homeTeam: ""
+    property int    sz: 14
 
     readonly property var sit: Logic.parseSituation(situationCode, awayTeam, homeTeam)
     
     // Filtrage pour l'applet : on ne considère comme PP que les vraies supériorités numériques
     readonly property bool isStandardPP: {
         if (!sit || !sit.isSpecial) return false;
-        // On exclut les égalités (4v4, 3v3) et les filets déserts (le nombre de patineurs doit être différent)
-        // Les paires valides sont (5,4), (4,5), (5,3), (3,5), (4,3), (3,4)
         return (sit.awaySkaters !== sit.homeSkaters) && !sit.emptyNet;
     }
 
+    readonly property color ppColor: {
+        if (!isStandardPP || !sit.ppTeam || !controller) return bgColor;
+        var isAway = (sit.ppTeam === awayTeam);
+        var opp = isAway ? homeTeam : awayTeam;
+        return controller.teamColorAdapted(sit.ppTeam, opp, isAway, false);
+    }
+
     radius: (controller && controller.styles) ? controller.styles.badge.radius : 4
-    color: (isStandardPP && sit.ppTeam) ? Logic.getTeamColor(sit.ppTeam) : bgColor
+    color: isStandardPP ? ppColor : bgColor
     opacity: 0.95
     border.color: isStandardPP ? "white" : "transparent"
     border.width: isStandardPP ? 1.5 : 0
@@ -69,5 +75,5 @@ Rectangle {
     */
 
     width:  Math.max(t1.contentWidth, t2.contentWidth) + 10
-    height: (controller && controller.styles) ? controller.styles.teamBadge.height : 28 // Hauteur fixe identique aux TeamBadges
+    height: Math.max(badgeRoot.sz * 1.8, 30) // Hauteur confortable pour 2 lignes de texte
 }

@@ -40,7 +40,9 @@ Row {
             id: aBadge
             visible: !teamRowRoot.showLogos
             radius: 3
-            color: Logic.getTeamColor(awayCode, Kirigami.Theme.positiveBackgroundColor)
+            color: (typeof controller !== 'undefined' && controller) 
+                   ? controller.teamColorAdapted(awayCode, homeCode, true, false)
+                   : Logic.getTeamColor(awayCode, Kirigami.Theme.positiveBackgroundColor)
             border.color: 'white'; border.width: 1
             height: aText.implicitHeight + Math.max(3, sz * 0.12)
             width:  aText.implicitWidth  + Math.max(4, sz * 0.22)
@@ -50,7 +52,9 @@ Row {
             }
             Text {
                 id: aText; anchors.centerIn: parent; text: awayCode
-                color: Logic.getTeamTextColor(awayCode)
+                color: (typeof controller !== 'undefined' && controller)
+                       ? controller.teamTextColor(awayCode, homeCode, true)
+                       : Logic.getTeamTextColor(awayCode)
                 font.pixelSize: Math.max(8, sz * 0.72); font.bold: true; font.family: "monospace"
             }
         }
@@ -66,6 +70,7 @@ Row {
     }
 
     Label {
+        anchors.verticalCenter: parent.verticalCenter
         text: String(agScore)
         font.pixelSize: Math.max(10, sz * 0.95); font.bold: true; color: Kirigami.Theme.textColor
         visible: gameStatus !== 'UPCOMING'
@@ -78,11 +83,15 @@ Row {
     // Badge de statut au milieu
     Loader {
         id: statusLoader
+        anchors.verticalCenter: parent.verticalCenter
         sourceComponent: statusComponent
         visible: statusComponent !== null
         
         onLoaded: {
             if (item) {
+                // S'assurer que le badge lui-même connaît l'échelle de taille
+                if ("sz" in item) item.sz = teamRowRoot.sz
+                
                 // Initialisation et création de liens (bindings)
                 item.line1 = Qt.binding(function() { return teamRowRoot.line1 })
                 item.line2 = Qt.binding(function() { return teamRowRoot.line2 })
@@ -99,14 +108,16 @@ Row {
         }
     }
 
-    // Tiret de secours
+    // Tiret de secours (uniquement si le badge de statut est absent et que le match n'est pas à venir)
     Label {
+        anchors.verticalCenter: parent.verticalCenter
         text: "–"
         font.pixelSize: Math.max(10, sz * 0.95); color: Kirigami.Theme.disabledTextColor
-        visible: statusComponent === null || gameStatus === 'UPCOMING'
+        visible: statusComponent === null && gameStatus !== 'UPCOMING'
     }
 
     Label {
+        anchors.verticalCenter: parent.verticalCenter
         text: String(hgScore)
         font.pixelSize: Math.max(10, sz * 0.95); font.bold: true; color: Kirigami.Theme.textColor
         visible: gameStatus !== 'UPCOMING'
@@ -123,7 +134,9 @@ Row {
             id: hBadge
             visible: !teamRowRoot.showLogos
             radius: 3
-            color: Logic.getTeamColor(homeCode, Kirigami.Theme.positiveBackgroundColor)
+            color: (typeof controller !== 'undefined' && controller)
+                   ? controller.teamColorAdapted(homeCode, awayCode, false, false)
+                   : Logic.getTeamColor(homeCode, Kirigami.Theme.positiveBackgroundColor)
             border.color: 'white'; border.width: 1
             height: hText.implicitHeight + Math.max(3, sz * 0.12)
             width:  hText.implicitWidth  + Math.max(4, sz * 0.22)
@@ -133,7 +146,9 @@ Row {
             }
             Text {
                 id: hText; anchors.centerIn: parent; text: homeCode
-                color: Logic.getTeamTextColor(homeCode)
+                color: (typeof controller !== 'undefined' && controller)
+                       ? controller.teamTextColor(homeCode, awayCode, false)
+                       : Logic.getTeamTextColor(homeCode)
                 font.pixelSize: Math.max(8, sz * 0.72); font.bold: true; font.family: "monospace"
             }
         }

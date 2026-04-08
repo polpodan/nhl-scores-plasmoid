@@ -828,10 +828,17 @@ PlasmoidItem {
 
         let days = []
         let base = new Date()
+        let currentHour = base.getHours()
         base.setHours(0, 0, 0, 0)
 
-        // jours précédents (pastDays = 1..4)
-        for (let pd = pastDays; pd >= 1; pd--) {
+        // jours précédents
+        let startPd = pastDays
+        // Si l'option est à 0, on "force" l'affichage d'hier (1 jour) seulement avant midi
+        if (pastDays === 0 && currentHour < 12) {
+            startPd = 1
+        }
+
+        for (let pd = startPd; pd >= 1; pd--) {
             days.push(new Date(base.getTime() - pd*24*3600*1000))
         }
 
@@ -1070,7 +1077,44 @@ PlasmoidItem {
         nav.search     = false
         nav.calendar   = false
         nav.franchiseLeaders = false
+        fetchDayView(dateISO)
+    }
 
+    function openSimulationBracket() {
+        nav.bracket = true
+        brk.loading = true
+        brk.error = ""
+        
+        // Fermer les autres vues pour éviter les conflits de visibilité
+        nav.standings = false
+        nav.leaders   = false
+        nav.search    = false
+        nav.teamHub   = false
+        nav.player    = false
+        nav.calendar  = false
+        nav.dayView   = false
+        nav.schedule  = false
+        nav.franchiseLeaders = false
+
+        // S'assurer que le classement est chargé
+        if (!std.data || std.data.length === 0) {
+            Logic.ApiService.getStandings(function(err, data) {
+                if (err) {
+                    brk.loading = false
+                    brk.error = i18n("Standings not available for simulation")
+                } else {
+                    std.data = data.standings
+                    brk.data = Logic.simulatePlayoffs(std.data)
+                    brk.loading = false
+                }
+            })
+        } else {
+            brk.data = Logic.simulatePlayoffs(std.data)
+            brk.loading = false
+        }
+    }
+
+    function fetchDayView(dateISO) {
         // Choisir l'endpoint selon la date
         var todayISO = root.dateISO(new Date())
         var isFuture = dateISO > todayISO
@@ -1829,6 +1873,11 @@ PlasmoidItem {
             line1: parent.line1 || ""
             line2: parent.line2 || ""
             bgColor: parent.bgColor || "gray"
+            controller: parent.controller
+            situationCode: parent.situationCode || "1551"
+            awayTeam: parent.awayTeam || ""
+            homeTeam: parent.homeTeam || ""
+            penaltyTime: parent.penaltyTime || ""
         }
     }
 

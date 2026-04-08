@@ -1,7 +1,7 @@
 # Swedish translations for nhl-scores-plasmoid
 msgid ""
 msgstr ""
-"Project-Id-Version: nhl-scores-plasmoid 5.1\n"
+"Project-Id-Version: nhl-scores-plasmoid 5.3\n"
 "Language: sv\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -33,6 +33,15 @@ msgstr "‹ Tabell"
 
 msgid "‹ Team"
 msgstr "‹ Lag"
+
+msgid "‹ Search"
+msgstr "‹ Sök"
+
+msgid "‹ Stats"
+msgstr "‹ Statistik"
+
+msgid "‹ History"
+msgstr "‹ Historia"
 
 msgid "Final"
 msgstr "Slutresultat"
@@ -66,6 +75,9 @@ msgstr "3:e"
 
 msgid "SO"
 msgstr "STR"
+
+msgid "OT"
+msgstr "OT"
 
 msgid "1st period"
 msgstr "Period 1"
@@ -106,6 +118,9 @@ msgstr "Mål"
 msgid "Assists"
 msgstr "Assist"
 
+msgid "Points"
+msgstr "Poäng"
+
 msgid "PTS"
 msgstr "P"
 
@@ -141,9 +156,6 @@ msgstr "Western Conference"
 
 msgid "Playoffs"
 msgstr "Slutspel"
-
-msgid "Points"
-msgstr "Poäng"
 
 msgid "Wins"
 msgstr "Vinster"
@@ -261,3 +273,51 @@ msgstr "IM/M"
 
 msgid "Watch goal highlight"
 msgstr "Se måljubel"
+
+msgid "Divisions"
+msgstr "Divisioner"
+
+msgid "League"
+msgstr "Liga"
+
+msgid "Clinched Playoff Spot"
+msgstr "Klar för slutspel"
+
+msgid "Clinched Division"
+msgstr "Divisionsvinnare"
+
+msgid "Clinched Conference"
+msgstr "Konferensvinnare"
+
+msgid "Eliminated from Playoffs"
+msgstr "Eliminerad från slutspel"
+
+msgid "Season"
+msgstr "Säsong"
+
+msgid "Season history"
+msgstr "Säsongshistoria"
+
+msgid "Playoff history"
+msgstr "Slutspelshistoria"
+
+msgid "Season stats"
+msgstr "Säsongsstatistik"
+
+msgid "Playoff stats"
+msgstr "Slutspelsstatistik"
+
+msgid "WESTERN CONFERENCE"
+msgstr "WESTERN CONFERENCE"
+
+msgid "EASTERN CONFERENCE"
+msgstr "EASTERN CONFERENCE"
+
+msgid "STANLEY CUP FINALS"
+msgstr "STANLEY CUP-FINAL"
+
+msgid "FINALS"
+msgstr "FINAL"
+
+msgid "Séries 2026"
+msgstr "Slutspel 2026"

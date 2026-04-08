@@ -427,6 +427,40 @@ const ApiService = {
 
 // --- Data Transformation Helpers (Optimization A) ---
 
+function compareTeams(a, b) {
+    // 1. Points
+    if (b.points !== a.points) return b.points - a.points;
+
+    // 2. Matchs joués (le moins de matchs = meilleur pourcentage)
+    if (a.gamesPlayed !== b.gamesPlayed) return a.gamesPlayed - b.gamesPlayed;
+
+    // 3. Victoires en temps réglementaire (VR / RW)
+    var arw = a.regulationWins || 0;
+    var brw = b.regulationWins || 0;
+    if (brw !== arw) return brw - arw;
+
+    // 4. Victoires hors tirs de barrage (VRP / ROW)
+    var arow = a.regulationPlusOtWins || 0;
+    var brow = b.regulationPlusOtWins || 0;
+    if (brow !== arow) return brow - arow;
+
+    // 5. Victoires totales (V / W)
+    if (b.wins !== a.wins) return b.wins - a.wins;
+
+    // 6. Différentiel de buts (DIFF)
+    // Note: L'API inclut déjà les buts de SO (1 pour victoire, 0 pour défaite) dans goalFor/Against
+    var adiff = (a.goalFor || 0) - (a.goalAgainst || 0);
+    var bdiff = (b.goalFor || 0) - (b.goalAgainst || 0);
+    if (bdiff !== adiff) return bdiff - adiff;
+
+    // 7. Buts marqués (BP / GF)
+    var agf = a.goalFor || 0;
+    var bgf = b.goalFor || 0;
+    if (bgf !== agf) return bgf - agf;
+
+    return 0;
+}
+
 function leagueSortVal(t, key) {
     switch(key) {
         case 'pts':    return t.points          || 0;
@@ -451,8 +485,7 @@ function parseLeagueStandings(data, sortKey, sortAsc) {
         var av = leagueSortVal(a, sortKey);
         var bv = leagueSortVal(b, sortKey);
         if (av === bv) {
-            if (b.points !== a.points) return b.points - a.points;
-            return b.wins - a.wins;
+            return compareTeams(a, b);
         }
         return sortAsc ? (av < bv ? -1 : 1) : (bv < av ? -1 : 1);
     });
@@ -465,6 +498,7 @@ function parseLeagueStandings(data, sortKey, sortAsc) {
             type:   "leagueTeam",
             abbrev: t.teamAbbrev  ? (t.teamAbbrev.default  || t.teamAbbrev)  : "?",
             city:   t.teamCommonName ? (t.teamCommonName.default || t.teamCommonName) : "",
+            clinch: t.clinchIndicator || "",
             gp: t.gamesPlayed || 0, w: t.wins || 0, l: t.losses || 0, ot: t.otLosses || 0, pts: t.points || 0,
             gf: t.goalFor || 0, ga: t.goalAgainst || 0, 
             sow: t.shootoutWins || 0, sol: t.shootoutLosses || 0,
@@ -487,20 +521,18 @@ function parseDivisionStandings(data, labels) {
     var result = [];
     for (var di = 0; di < divs.length; di++) {
         var div = divs[di];
-        var teams = data.filter(function(t) { return t.divisionName === div.api; });
-        teams.sort(function(a,b) {
-            if (b.points !== a.points) return b.points - a.points;
-            return b.wins - a.wins;
-        });
+        var divTeams = data.filter(function(t) { return t.divisionName === div.api; });
+        divTeams.sort(compareTeams);
         result.push({ type: "divHeader", label: div.label });
         result.push({ type: "colHeader" });
-        for (var k = 0; k < teams.length; k++) {
+        for (var k = 0; k < divTeams.length; k++) {
             if (k === 3) result.push({ type: "wcSeparator" });
-            var t = teams[k];
+            var t = divTeams[k];
             result.push({
                 type: "team",
                 abbrev: t.teamAbbrev ? (t.teamAbbrev.default || t.teamAbbrev) : "?",
                 city:   t.placeName  ? (t.placeName.default  || t.placeName)  : "",
+                clinch: t.clinchIndicator || "",
                 gp: t.gamesPlayed || 0, w: t.wins || 0, l: t.losses || 0, ot: t.otLosses || 0, pts: t.points || 0
             });
         }
@@ -526,7 +558,7 @@ function parseWildCardStandings(data, labels) {
         for (var di = 0; di < conf.divs.length; di++) {
             var div = conf.divs[di];
             var divTeams = confTeams.filter(function(t) { return t.divisionName === div.api; });
-            divTeams.sort(function(a,b){ return a.divisionSequence - b.divisionSequence; });
+            divTeams.sort(compareTeams);
             result.push({ type: "divHeader", label: div.label });
             for (var k = 0; k < Math.min(3, divTeams.length); k++) {
                 var dt = divTeams[k];
@@ -534,6 +566,7 @@ function parseWildCardStandings(data, labels) {
                     type: "team",
                     abbrev: dt.teamAbbrev ? (dt.teamAbbrev.default || dt.teamAbbrev) : "?",
                     city:   dt.placeName  ? (dt.placeName.default  || dt.placeName)  : "",
+                    clinch: dt.clinchIndicator || "",
                     gp: dt.gamesPlayed || 0, w: dt.wins || 0, l: dt.losses || 0, ot: dt.otLosses || 0, pts: dt.points || 0
                 });
             }
@@ -541,10 +574,7 @@ function parseWildCardStandings(data, labels) {
         var wc = confTeams.filter(function(t) { 
             return t.divisionSequence > 3 || (!t.divisionSequence && t.wildcardSequence);
         });
-        wc.sort(function(a,b){
-            if (b.points !== a.points) return b.points - a.points;
-            return b.wins - a.wins;
-        });
+        wc.sort(compareTeams);
         result.push({ type: "wcHeader", label: labels.wc || "Wild Card" });
         for (var wci = 0; wci < wc.length; wci++) {
             if (wci === 2) result.push({ type: "wcSeparator" });
@@ -553,11 +583,123 @@ function parseWildCardStandings(data, labels) {
                 type: "team",
                 abbrev: wt.teamAbbrev ? (wt.teamAbbrev.default || wt.teamAbbrev) : "?",
                 city:   wt.placeName  ? (wt.placeName.default  || wt.placeName)  : "",
+                clinch: wt.clinchIndicator || "",
                 gp: wt.gamesPlayed || 0, w: wt.wins || 0, l: wt.losses || 0, ot: wt.otLosses || 0, pts: wt.points || 0
             });
         }
     }
     return result;
+}
+
+function simulatePlayoffs(data) {
+    if (!data || data.length === 0) return null;
+
+    function getAbbr(t) { 
+        if (!t) return "";
+        return (t.teamAbbrev && t.teamAbbrev.default) ? t.teamAbbrev.default : (t.teamAbbrev || ""); 
+    }
+
+    var conferences = ["W", "E"]; 
+    var divisions = { "E": ["Atlantic", "Metropolitan"], "W": ["Central", "Pacific"] };
+    
+    var bracket = { rounds: [] };
+    var r1Series = [];
+
+    for (var ci = 0; ci < conferences.length; ci++) {
+        var conf = conferences[ci];
+        var confTeams = data.filter(function(t) { return t.conferenceAbbrev === conf; });
+        var divWinners = [];
+        var qualifiedTop3 = [];
+        
+        var confDivs = divisions[conf];
+        for (var di = 0; di < confDivs.length; di++) {
+            var divName = confDivs[di];
+            var divTeams = confTeams.filter(function(t) { return t.divisionName === divName; });
+            divTeams.sort(compareTeams);
+            
+            if (divTeams.length >= 3) {
+                var top3 = divTeams.slice(0, 3);
+                divWinners.push({team: top3[0], divName: divName});
+                qualifiedTop3.push({teams: top3, divName: divName}); 
+            }
+        }
+
+        var top3Ids = [];
+        for (var i = 0; i < qualifiedTop3.length; i++) {
+            var group = qualifiedTop3[i];
+            for (var j = 0; j < group.teams.length; j++) {
+                var teamObj = group.teams[j];
+                if (teamObj) top3Ids.push(getAbbr(teamObj));
+            }
+        }
+        
+        var wcTeams = confTeams.filter(function(t) { return top3Ids.indexOf(getAbbr(t)) === -1; });
+        wcTeams.sort(compareTeams);
+        
+        var wc1 = wcTeams.length > 0 ? wcTeams[0] : null;
+        var wc2 = wcTeams.length > 1 ? wcTeams[1] : null;
+
+        divWinners.sort(function(a, b) { return compareTeams(a.team, b.team); });
+        var bestDivWinner = divWinners[0];
+        var otherDivWinner = divWinners[1];
+
+        if (bestDivWinner && wc2) {
+            r1Series.push({
+                conference: conf,
+                topSeedTeam: { abbrev: getAbbr(bestDivWinner.team), seed: "D1" },
+                bottomSeedTeam: { abbrev: getAbbr(wc2), seed: "WC2" },
+                topSeedWins: 0, bottomSeedWins: 0, seriesAbbrev: "R1"
+            });
+        }
+        
+        if (bestDivWinner) {
+            var bestGroup = null;
+            for (var k=0; k<qualifiedTop3.length; k++) {
+                if (qualifiedTop3[k].divName === bestDivWinner.divName) { bestGroup = qualifiedTop3[k]; break; }
+            }
+            if (bestGroup && bestGroup.teams.length >= 3) {
+                r1Series.push({
+                    conference: conf,
+                    topSeedTeam: { abbrev: getAbbr(bestGroup.teams[1]), seed: "D2" },
+                    bottomSeedTeam: { abbrev: getAbbr(bestGroup.teams[2]), seed: "D3" },
+                    topSeedWins: 0, bottomSeedWins: 0, seriesAbbrev: "R1"
+                });
+            }
+        }
+
+        if (otherDivWinner && wc1) {
+            r1Series.push({
+                conference: conf,
+                topSeedTeam: { abbrev: getAbbr(otherDivWinner.team), seed: "D1" },
+                bottomSeedTeam: { abbrev: getAbbr(wc1), seed: "WC1" },
+                topSeedWins: 0, bottomSeedWins: 0, seriesAbbrev: "R1"
+            });
+        }
+
+        if (otherDivWinner) {
+            var otherGroup = null;
+            for (var m=0; m<qualifiedTop3.length; m++) {
+                if (qualifiedTop3[m].divName === otherDivWinner.divName) { otherGroup = qualifiedTop3[m]; break; }
+            }
+            if (otherGroup && otherGroup.teams.length >= 3) {
+                r1Series.push({
+                    conference: conf,
+                    topSeedTeam: { abbrev: getAbbr(otherGroup.teams[1]), seed: "D2" },
+                    bottomSeedTeam: { abbrev: getAbbr(otherGroup.teams[2]), seed: "D3" },
+                    topSeedWins: 0, bottomSeedWins: 0, seriesAbbrev: "R1"
+                });
+            }
+        }
+    }
+
+    bracket.rounds.push({ roundNumber: 1, series: r1Series });
+    
+    var r2Series = []; for(var n=0; n<4; n++) r2Series.push({ conference: n<2 ? "W" : "E", seriesAbbrev: "R2" });
+    bracket.rounds.push({ roundNumber: 2, series: r2Series });
+    bracket.rounds.push({ roundNumber: 3, series: [{ conference: "W" }, { conference: "E" }] });
+    bracket.rounds.push({ roundNumber: 4, series: [{ conference: "SC" }] });
+
+    return bracket;
 }
 
 function parseLeaders(players, category) {

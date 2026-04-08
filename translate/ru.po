@@ -1,7 +1,7 @@
 # Russian translations for nhl-scores-plasmoid
 msgid ""
 msgstr ""
-"Project-Id-Version: nhl-scores-plasmoid 5.1\n"
+"Project-Id-Version: nhl-scores-plasmoid 5.3\n"
 "Language: ru\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -33,6 +33,15 @@ msgstr "‹ Таблица"
 
 msgid "‹ Team"
 msgstr "‹ Команда"
+
+msgid "‹ Search"
+msgstr "‹ Поиск"
+
+msgid "‹ Stats"
+msgstr "‹ Статистика"
+
+msgid "‹ History"
+msgstr "‹ История"
 
 msgid "Final"
 msgstr "Завершен"
@@ -66,6 +75,9 @@ msgstr "3-й"
 
 msgid "SO"
 msgstr "Бул"
+
+msgid "OT"
+msgstr "ОТ"
 
 msgid "1st period"
 msgstr "1-й период"
@@ -106,6 +118,9 @@ msgstr "Голы"
 msgid "Assists"
 msgstr "Передачи"
 
+msgid "Points"
+msgstr "Очки"
+
 msgid "PTS"
 msgstr "Очки"
 
@@ -141,9 +156,6 @@ msgstr "Западная конференция"
 
 msgid "Playoffs"
 msgstr "Плей-офф"
-
-msgid "Points"
-msgstr "Очки"
 
 msgid "Wins"
 msgstr "Победы"
@@ -261,3 +273,51 @@ msgstr "ШП/И"
 
 msgid "Watch goal highlight"
 msgstr "Смотреть повтор гола"
+
+msgid "Divisions"
+msgstr "Дивизионы"
+
+msgid "League"
+msgstr "Лига"
+
+msgid "Clinched Playoff Spot"
+msgstr "Место в плей-офф гарантировано"
+
+msgid "Clinched Division"
+msgstr "Титул дивизиона гарантирован"
+
+msgid "Clinched Conference"
+msgstr "Титул конференции гарантирован"
+
+msgid "Eliminated from Playoffs"
+msgstr "Выбыл из плей-офф"
+
+msgid "Season"
+msgstr "Сезон"
+
+msgid "Season history"
+msgstr "История сезона"
+
+msgid "Playoff history"
+msgstr "История плей-офф"
+
+msgid "Season stats"
+msgstr "Статистика сезона"
+
+msgid "Playoff stats"
+msgstr "Статистика плей-офф"
+
+msgid "WESTERN CONFERENCE"
+msgstr "ЗАПАДНАЯ КОНФЕРЕНЦИЯ"
+
+msgid "EASTERN CONFERENCE"
+msgstr "ВОСТОЧНАЯ КОНФЕРЕНЦИЯ"
+
+msgid "STANLEY CUP FINALS"
+msgstr "ФИНАЛ КУБКА СТЭНЛИ"
+
+msgid "FINALS"
+msgstr "ФИНАЛ"
+
+msgid "Séries 2026"
+msgstr "Плей-офф 2026"

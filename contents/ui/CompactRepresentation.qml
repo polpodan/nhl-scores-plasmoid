@@ -87,7 +87,7 @@ Item {
 
                         Loader {
                             visible: !hDelegateWrapper.isDateSep && !controller.ultraCompact
-                            sourceComponent: (compactRoot.forceInline || controller.scoreLayout === 'stack') ? stackLayoutComp : inlineLayoutComp
+                            sourceComponent: (controller.scoreLayout === 'inline') ? inlineLayoutComp : stackLayoutComp
                         }
 
                         Row {
@@ -99,11 +99,16 @@ Item {
                                 width: controller.showLogos ? 22 : 16; height: width; anchors.verticalCenter: parent.verticalCenter
                                 Rectangle {
                                     visible: !controller.showLogos
-                                    anchors.fill: parent; radius: 8
-                                    color: Logic.getTeamColor(hDelegateWrapper.currentModel.away, Kirigami.Theme.positiveBackgroundColor)
+                                    anchors.fill: parent; radius: width/2
+                                    color: controller.teamColorAdapted(hDelegateWrapper.currentModel.away, hDelegateWrapper.currentModel.home, true, false)
                                     border.color: 'white'; border.width: 1
                                     opacity: controller.blinkOpacity(hDelegateWrapper.currentModel.gameId, 'away')
-                                    Text { anchors.centerIn: parent; text: hDelegateWrapper.currentModel.away.charAt(0); color: Logic.getTeamTextColor(hDelegateWrapper.currentModel.away); font.pixelSize: 9; font.bold: true }
+                                    Text { 
+                                        anchors.centerIn: parent
+                                        text: hDelegateWrapper.currentModel.away.charAt(0)
+                                        color: controller.teamTextColor(hDelegateWrapper.currentModel.away, hDelegateWrapper.currentModel.home, true)
+                                        font.pixelSize: 9; font.bold: true 
+                                    }
                                 }
                                 Image {
                                     visible: controller.showLogos
@@ -126,11 +131,16 @@ Item {
                                 width: controller.showLogos ? 22 : 16; height: width; anchors.verticalCenter: parent.verticalCenter
                                 Rectangle {
                                     visible: !controller.showLogos
-                                    anchors.fill: parent; radius: 8
-                                    color: Logic.getTeamColor(hDelegateWrapper.currentModel.home, Kirigami.Theme.positiveBackgroundColor)
+                                    anchors.fill: parent; radius: width/2
+                                    color: controller.teamColorAdapted(hDelegateWrapper.currentModel.home, hDelegateWrapper.currentModel.away, false, false)
                                     border.color: 'white'; border.width: 1
                                     opacity: controller.blinkOpacity(hDelegateWrapper.currentModel.gameId, 'home')
-                                    Text { anchors.centerIn: parent; text: hDelegateWrapper.currentModel.home.charAt(0); color: Logic.getTeamTextColor(hDelegateWrapper.currentModel.home); font.pixelSize: 9; font.bold: true }
+                                    Text { 
+                                        anchors.centerIn: parent
+                                        text: hDelegateWrapper.currentModel.home.charAt(0)
+                                        color: controller.teamTextColor(hDelegateWrapper.currentModel.home, hDelegateWrapper.currentModel.away, false)
+                                        font.pixelSize: 9; font.bold: true 
+                                    }
                                 }
                                 Image {
                                     visible: controller.showLogos
@@ -183,7 +193,7 @@ Item {
                                 iconH: controller.showLogos ? 22 : 0
                                 gameId: String(hDelegateWrapper.currentModel.gameId)
                                 teamSide: 'away'
-                                showScore: false // On cache le score du composant pour le mettre dessous
+                                showScore: false 
                                 controller: compactRoot.controller || null
                                 blinkingGames: (controller && controller.glob) ? controller.glob.blinkingGames : ({})
                                 blinkOn: (controller && controller.glob) ? controller.glob.blinkOn : false
@@ -203,6 +213,7 @@ Item {
                             anchors.verticalCenter: parent.verticalCenter
                             sourceComponent: controller.statusBadgeComponent
                             property string gameStatus: hDelegateWrapper.currentModel.statusRole; property string rawState: hDelegateWrapper.currentModel.rawState; property string periodType: hDelegateWrapper.currentModel.periodType; property int period: hDelegateWrapper.currentModel.period; property string liveRemain: hDelegateWrapper.currentModel.liveRemain; property var startMs: hDelegateWrapper.currentModel.start; property string awayTeam: hDelegateWrapper.currentModel.away; property string homeTeam: hDelegateWrapper.currentModel.home; property bool intermission: hDelegateWrapper.currentModel.inIntermission; property string intermissionRemain: hDelegateWrapper.currentModel.intermissionRemain || ""; property string situationCode: hDelegateWrapper.currentModel.situationCode || "1551"; property string penaltyTime: hDelegateWrapper.currentModel.penaltyTime || ""
+                            property int sz: hDelegateWrapper.csz
                         }
 
                         // Local
@@ -241,7 +252,7 @@ Item {
                         anchors.verticalCenter: parent.verticalCenter
                         property string awayCode: hDelegateWrapper.currentModel.away; property string homeCode: hDelegateWrapper.currentModel.home
                         property int agScore: hDelegateWrapper.currentModel.ag; property int hgScore: hDelegateWrapper.currentModel.hg
-                        property int sz: compactRoot.sz; property string gameId: String(hDelegateWrapper.currentModel.gameId || '')
+                        property int sz: compactRoot.baseSz; property string gameId: String(hDelegateWrapper.currentModel.gameId || '')
                         property string line1: controller.badgeLine1(hDelegateWrapper.currentModel.statusRole, hDelegateWrapper.currentModel.rawState, hDelegateWrapper.currentModel.periodType, hDelegateWrapper.currentModel.period, hDelegateWrapper.currentModel.liveRemain, hDelegateWrapper.currentModel.start, hDelegateWrapper.currentModel.home, hDelegateWrapper.currentModel.inIntermission)
                         property string line2: controller.badgeLine2(hDelegateWrapper.currentModel.statusRole, hDelegateWrapper.currentModel.start, hDelegateWrapper.currentModel.home, hDelegateWrapper.currentModel.periodType, hDelegateWrapper.currentModel.period, hDelegateWrapper.currentModel.liveRemain, hDelegateWrapper.currentModel.inIntermission, hDelegateWrapper.currentModel.intermissionRemain)
                         property color bgColor: controller.statusColor(hDelegateWrapper.currentModel.statusRole)
@@ -250,6 +261,7 @@ Item {
                         property string situationCode: hDelegateWrapper.currentModel.situationCode || "1551"
                         property string penaltyTime: hDelegateWrapper.currentModel.penaltyTime || ""
                         property string awayTeam: hDelegateWrapper.currentModel.away; property string homeTeam: hDelegateWrapper.currentModel.home
+                        property var controller: compactRoot.controller
                     }
                 }
             }

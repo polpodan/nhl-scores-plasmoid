@@ -1,7 +1,7 @@
 # Slovak translations for nhl-scores-plasmoid
 msgid ""
 msgstr ""
-"Project-Id-Version: nhl-scores-plasmoid 5.1\n"
+"Project-Id-Version: nhl-scores-plasmoid 5.3\n"
 "Language: sk\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -32,7 +32,16 @@ msgid "‹ Standings"
 msgstr "‹ Tabuľka"
 
 msgid "‹ Team"
-msgstr "‹ Tým"
+msgstr "‹ Tím"
+
+msgid "‹ Search"
+msgstr "‹ Hľadať"
+
+msgid "‹ Stats"
+msgstr "‹ Statistiky"
+
+msgid "‹ History"
+msgstr "‹ História"
 
 msgid "Final"
 msgstr "Koniec"
@@ -67,6 +76,9 @@ msgstr "3."
 msgid "SO"
 msgstr "SN"
 
+msgid "OT"
+msgstr "PP"
+
 msgid "1st period"
 msgstr "1. tretina"
 
@@ -95,7 +107,7 @@ msgid "Points leaders (last 5 games)"
 msgstr "Lídri bodovania (posledných 5 zápasov)"
 
 msgid "Shots on Goal"
-msgstr "Strely на bránku"
+msgstr "Strely na bránku"
 
 msgid "GOAL"
 msgstr "GÓL"
@@ -105,6 +117,9 @@ msgstr "Góly"
 
 msgid "Assists"
 msgstr "Asistencie"
+
+msgid "Points"
+msgstr "Body"
 
 msgid "PTS"
 msgstr "B"
@@ -130,11 +145,17 @@ msgstr "Tým"
 msgid "Goalies"
 msgstr "Brankári"
 
+msgid "Wild Card"
+msgstr "Wild Card"
+
+msgid "Eastern Conference"
+msgstr "Východná konferencia"
+
+msgid "Western Conference"
+msgstr "Západná konferencia"
+
 msgid "Playoffs"
 msgstr "Play-off"
-
-msgid "Points"
-msgstr "Body"
 
 msgid "Wins"
 msgstr "Výhry"
@@ -252,3 +273,51 @@ msgstr "OBDR/Z"
 
 msgid "Watch goal highlight"
 msgstr "Sledovať zostrih gólu"
+
+msgid "Divisions"
+msgstr "Divízie"
+
+msgid "League"
+msgstr "Liga"
+
+msgid "Clinched Playoff Spot"
+msgstr "Miesto v play-off zaistené"
+
+msgid "Clinched Division"
+msgstr "Divízny titul zaistený"
+
+msgid "Clinched Conference"
+msgstr "Konferenčný titul zaistený"
+
+msgid "Eliminated from Playoffs"
+msgstr "Vyradený z play-off"
+
+msgid "Season"
+msgstr "Sezóna"
+
+msgid "Season history"
+msgstr "História sezóny"
+
+msgid "Playoff history"
+msgstr "História play-off"
+
+msgid "Season stats"
+msgstr "Štatistiky sezóny"
+
+msgid "Playoff stats"
+msgstr "Štatistiky play-off"
+
+msgid "WESTERN CONFERENCE"
+msgstr "ZÁPADNÁ KONFERENCIA"
+
+msgid "EASTERN CONFERENCE"
+msgstr "VÝCHODNÁ KONFERENCIA"
+
+msgid "STANLEY CUP FINALS"
+msgstr "FINÁLE STANLEY CUPU"
+
+msgid "FINALS"
+msgstr "FINÁLE"
+
+msgid "Séries 2026"
+msgstr "Play-off 2026"

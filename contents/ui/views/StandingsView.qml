@@ -45,7 +45,7 @@ Item {
                 Item { Layout.fillWidth: true }
             }
 
-            // Ligne 2 : boutons toggle Wild Card | Divisions | Ligue
+            // Ligne 2 : boutons toggle Wild Card | Divisions | League
             RowLayout {
                 Layout.fillWidth: true
                 Layout.leftMargin: 8; Layout.rightMargin: 8; Layout.bottomMargin: 2
@@ -147,6 +147,7 @@ Item {
                         property int    rL10l:   model.l10l   || 0
                         property int    rL10ot:  model.l10ot  || 0
                         property string rStreak: model.streak || ""
+                        property string rClinch: model.clinch || ""
 
                         width: standingsListView.width
                         height: rType === "confHeader"   ? hdrLabel.implicitHeight + 8
@@ -186,7 +187,7 @@ Item {
                             anchors { left: parent.left; right: parent.right; verticalCenter: parent.verticalCenter; leftMargin: 6; rightMargin: 6 }
                             visible: rType === "colHeader"
                             spacing: 0
-                            Item { width: 38 }
+                            Item { width: 38 + 12 } // Décalage pour l'indicateur
                             Label { text: i18n("Team"); font.pixelSize: s.fonts.small + 1; font.bold: true; opacity: 0.6; Layout.preferredWidth: 44 }
                             Label { Layout.fillWidth: true }
                             Label { text: "GP"; font.pixelSize: s.fonts.small + 1; font.bold: true; opacity: 0.6; Layout.preferredWidth: 28; horizontalAlignment: Text.AlignHCenter }
@@ -201,8 +202,8 @@ Item {
                             spacing: 0
                             
                             // Alignement avec l'abréviation et la ville
-                            Item { width: 38 + 70 + 4 } // Rectangle (38) + City (70) + Margin (4)
-                            Item { Layout.fillWidth: true } // Ressort pour correspondre au teamRow
+                            Item { width: 38 + 12 + 70 + 4 } 
+                            Item { Layout.fillWidth: true } 
 
                             Repeater {
                                 model: [
@@ -237,6 +238,20 @@ Item {
                         RowLayout {
                             id: leagueRow; anchors { left: parent.left; right: parent.right; verticalCenter: parent.verticalCenter; leftMargin: 4; rightMargin: 4 }
                             visible: rType === "leagueTeam"; spacing: 0
+                            
+                            Label {
+                                text: {
+                                    var c = String(rClinch).toLowerCase()
+                                    if (c === "e") return "E"
+                                    return c.toUpperCase()
+                                }
+                                visible: text !== ""
+                                font.pixelSize: s.fonts.tiny; font.bold: true
+                                color: text === "E" ? "#ff4444" : Kirigami.Theme.positiveTextColor
+                                Layout.preferredWidth: 12
+                            }
+                            Item { visible: rClinch === ""; Layout.preferredWidth: 12 }
+
                             Item {
                                 width: lgBadge.width; height: lgBadge.height; Layout.alignment: Qt.AlignVCenter
                                 Rectangle {
@@ -250,8 +265,7 @@ Item {
                                     visible: controller.showLogos
                                     anchors.fill: parent
                                     source: controller.showLogos ? controller.teamLogoUrl(rAbbrev) : ""
-                                    sourceSize.width: width * 2
-                                    sourceSize.height: height * 2
+                                    sourceSize.width: 68; sourceSize.height: 36
                                     fillMode: Image.PreserveAspectFit; smooth: true
                                 }
                             }
@@ -275,8 +289,22 @@ Item {
                         RowLayout {
                             id: teamRow; anchors { left: parent.left; right: parent.right; verticalCenter: parent.verticalCenter; leftMargin: 6; rightMargin: 6 }
                             visible: rType === "team"; spacing: 0
+                            
+                            Label {
+                                text: {
+                                    var c = String(rClinch).toLowerCase()
+                                    if (c === "e") return "E"
+                                    return c.toUpperCase()
+                                }
+                                visible: text !== ""
+                                font.pixelSize: s.fonts.tiny; font.bold: true
+                                color: text === "E" ? "#ff4444" : Kirigami.Theme.positiveTextColor
+                                Layout.preferredWidth: 12
+                            }
+                            Item { visible: rClinch === ""; Layout.preferredWidth: 12 }
+
                             Item {
-                                width: abbrBadge.width; height: abbrBadge.height; Layout.alignment: Qt.AlignVCenter
+                                width: 34; height: 18; Layout.alignment: Qt.AlignVCenter
                                 Rectangle {
                                     id: abbrBadge
                                     visible: !controller.showLogos
@@ -287,8 +315,7 @@ Item {
                                     visible: controller.showLogos
                                     anchors.fill: parent
                                     source: controller.showLogos ? controller.teamLogoUrl(rAbbrev) : ""
-                                    sourceSize.width: width * 2
-                                    sourceSize.height: height * 2
+                                    sourceSize.width: 68; sourceSize.height: 36
                                     fillMode: Image.PreserveAspectFit; smooth: true
                                 }
                             }
@@ -305,5 +332,30 @@ Item {
                 }
             }
         }
+
+        // --- Légende FIXE et CENTRÉE au bas du Hub ---
+        Rectangle {
+            Layout.fillWidth: true
+            height: legendCol.implicitHeight + 16
+            color: "transparent"
+            visible: controller && !controller.std.loading && controller.std.error === ""
+            
+            ColumnLayout {
+                id: legendCol
+                anchors.centerIn: parent
+                spacing: 2
+                Label {
+                    text: "x - " + i18n("Place en séries assurée") + " | y - " + i18n("Titre de division assuré") + " | z - " + i18n("Titre d'association assuré")
+                    font.pixelSize: 10; font.italic: true; opacity: 0.7
+                    Layout.alignment: Qt.AlignHCenter
+                }
+                Label {
+                    text: "E - " + i18n("Éliminé des séries")
+                    font.pixelSize: 10; font.bold: true; font.italic: true; color: "#ff4444"; opacity: 0.8
+                    Layout.alignment: Qt.AlignHCenter
+                }
+            }
+        }
+        Item { height: 4 }
     }
 }
