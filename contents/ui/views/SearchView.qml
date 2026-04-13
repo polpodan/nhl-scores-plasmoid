@@ -133,12 +133,12 @@ Item {
                             Rectangle {
                                 visible: modelData.team !== ''
                                 radius: 4
-                                color: Logic.getTeamColor(modelData.team)
+                                color: Logic.getTeamColorAdapted(modelData.team, "", false, false, Kirigami.Theme.backgroundColor)
                                 width: 38; height: 22
                                 Label {
                                     anchors.centerIn: parent
                                     text: modelData.team
-                                    color: Logic.getTeamTextColor(modelData.team)
+                                    color: Logic.getContrastColor(parent.color)
                                     font.pixelSize: 11; font.bold: true; font.family: "monospace"
                                 }
                             }

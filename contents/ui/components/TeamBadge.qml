@@ -24,12 +24,10 @@ Row {
     readonly property int finalIconH: iconH > 0 ? iconH : sz
     
     readonly property color finalColor: (opponentCode !== '' && controller) 
-                                        ? controller.teamColorAdapted(code, opponentCode, teamSide === 'away') 
+                                        ? controller.teamColorAdapted(code, opponentCode, teamSide === 'away', false) 
                                         : Logic.getTeamColor(code)
     
-    readonly property color finalTextColor: (opponentCode !== '' && controller)
-                                            ? controller.teamTextColor(code, opponentCode, teamSide === 'away')
-                                            : Logic.getTeamTextColor(code)
+    readonly property color finalTextColor: Logic.getContrastColor(finalColor)
 
     Rectangle {
         id: teamRect
@@ -68,6 +66,13 @@ Row {
         fillMode: Image.PreserveAspectFit
         smooth: true
         opacity: teamRect.opacity
+
+        // Fallback si le fichier local est manquant
+        onStatusChanged: {
+            if (status === Image.Error && source.toString().indexOf("assets.nhle.com") === -1) {
+                source = "https://assets.nhle.com/logos/nhl/svg/" + code + "_light.svg"
+            }
+        }
     }
     Text {
         anchors.verticalCenter: parent.verticalCenter

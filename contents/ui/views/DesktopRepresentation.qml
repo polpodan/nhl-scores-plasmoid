@@ -11,8 +11,61 @@ Item {
     
     readonly property var root: controller
 
-    implicitWidth: 360
-    implicitHeight: Math.max(200, desktopList.contentHeight + desktopHeader.implicitHeight + 16)
+    // On utilise la propriété exposée par root pour éviter ReferenceError: Plasmoid
+    readonly property bool compactMode: (root && root.showCompactDesktop === true) && (root.favoriteTeams && root.favoriteTeams.length > 0)
+    property var compactTeamMatch: null
+
+    function findCompactMatch() {
+        if (!root || !root.todayGamesModel || root.todayGamesModel.count === 0) return null
+        
+        for (var i = 0; i < root.todayGamesModel.count; i++) {
+            var m = root.todayGamesModel.get(i)
+            if (m.statusRole === 'DATE_SEP') continue
+            if (root.favoriteTeams.indexOf(m.away) >= 0 || root.favoriteTeams.indexOf(m.home) >= 0) {
+                return {
+                    gameId: m.gameId, away: m.away, home: m.home,
+                    awayScore: m.ag, homeScore: m.hg, status: m.statusRole,
+                    pType: m.periodType, period: m.period, remain: m.liveRemain,
+                    start: m.start, interm: m.inIntermission, sitCode: m.situationCode
+                }
+            }
+        }
+        return null
+    }
+
+    function compactStatusText(m) {
+        if (!m || !root) return ""
+        if (m.status === 'UPCOMING') return root.localTimeStr(m.start)
+        if (m.status === 'FINAL' || m.status === 'OFF' || m.status === 'OFFICIAL') {
+            return i18n("Final") + (root.statusSuffix(m.status, m.pType) || "")
+        }
+        // LIVE
+        return root.liveClockText(m.pType, m.period, m.remain)
+    }
+
+    // Déclencher la recherche quand les favoris ou l'option changent
+    Connections {
+        target: root ? root : null
+        function onFavoriteTeamsChanged() { compactTeamMatch = findCompactMatch() }
+        function onShowCompactDesktopChanged() { compactTeamMatch = findCompactMatch() }
+    }
+
+    Timer {
+        interval: 3000; running: true; repeat: true; triggeredOnStart: true
+        onTriggered: {
+            var m = findCompactMatch()
+            if (!m) {
+                compactTeamMatch = null
+                return
+            }
+            if (!compactTeamMatch || m.gameId !== compactTeamMatch.gameId || m.awayScore !== compactTeamMatch.awayScore || m.homeScore !== compactTeamMatch.homeScore || m.status !== compactTeamMatch.status || m.remain !== compactTeamMatch.remain) {
+                compactTeamMatch = m
+            }
+        }
+    }
+
+    implicitWidth: compactMode ? 240 : 440
+    implicitHeight: compactMode ? 120 : 520
 
     readonly property int hubW: (controller && controller.styles) ? controller.styles.hubWidth : 320
     readonly property int cardW: (controller && controller.styles) ? controller.styles.cardWidth : 480
@@ -20,15 +73,16 @@ Item {
     // ── En-tête ─────────────────────────────────────────────────
     Item {
         id: desktopHeader
+        visible: !compactMode
         anchors.top: parent.top
         anchors.left: parent.left
         anchors.right: parent.right
-        height: headerRow.implicitHeight + 16
+        height: visible ? (headerRow.implicitHeight + 16) : 0
 
         RowLayout {
             id: headerRow
             anchors.centerIn: parent
-            width: Math.min(480, parent.width - 16)
+            width: Math.min(480, parent.width)
             spacing: 6
 
             Label {
@@ -42,59 +96,43 @@ Item {
                 visible: root && root.glob.lastUpdated instanceof Date
                 font.pixelSize: 10
                 opacity: 0.5
+                color: root && root.glob.isOffline ? Kirigami.Theme.negativeTextColor : Kirigami.Theme.textColor
                 text: {
-                    var p = root ? root.glob.pulse : 0 // Dépendance au pulse central
+                    var p = root ? root.glob.pulse : 0 
                     if (!root || !(root.glob.lastUpdated instanceof Date)) return ""
+                    var offStr = root.glob.isOffline ? ("[" + i18n("Offline") + "] ") : ""
                     var diff = Math.floor((new Date() - root.glob.lastUpdated) / 60000)
-                    if (diff < 1) return i18n("just now")
-                    if (diff === 1) return i18n("1 min ago")
-                    return diff + " " + i18n("min ago")
+                    if (diff < 1) return offStr + i18n("just now")
+                    if (diff === 1) return offStr + i18n("1 min ago")
+                    return offStr + diff + " " + i18n("min ago")
                 }
             }
-            Item {
-                Layout.fillWidth: true
-            }
+            Item { Layout.fillWidth: true }
             Button {
                 text: i18n("Standings")
                 icon.name: "view-list-symbolic"
-                flat: true
-                font.pixelSize: 10
-                onClicked: {
-                    if (root) {
-                        root.openStandings()
-                    }
-                }
+                flat: true; font.pixelSize: 10
+                onClicked: { if (root) root.openStandings() }
             }
             Button {
                 text: i18n("Leaders")
                 icon.name: "view-statistics"
-                flat: true
-                font.pixelSize: 10
-                onClicked: {
-                    if (root) {
-                        root.openLeaders()
-                    }
-                }
+                flat: true; font.pixelSize: 10
+                onClicked: { if (root) root.openLeaders() }
             }
             Button {
                 icon.name: "view-refresh"
-                flat: true
-                font.pixelSize: 10
-                ToolTip.text: i18n("Refresh now")
-                ToolTip.visible: hovered
-                onClicked: {
-                    if (root) root.refresh()
-                }
+                flat: true; font.pixelSize: 10
+                onClicked: { if (root) root.refresh() }
             }
         }
     }
 
     Rectangle {
         id: desktopSep
+        visible: !compactMode
         anchors.top: desktopHeader.bottom
-        anchors.left: parent.left
-        anchors.right: parent.right
-        anchors.topMargin: 2
+        width: parent.width
         height: 1
         color: Kirigami.Theme.textColor
         opacity: 0.1
@@ -103,6 +141,7 @@ Item {
     // ── Liste des cartes de matchs ──────────────────────────────
     ListView {
         id: desktopList
+        visible: !compactMode
         anchors.top: desktopSep.bottom
         anchors.left: parent.left
         anchors.right: parent.right
@@ -151,149 +190,109 @@ Item {
             property string dHome: model.home || ""
             property int dAg: model.ag || 0
             property int dHg: model.hg || 0
-            property string dStatus: model.statusRole || "UPCOMING"
-            property string dRaw: model.rawState || ""
-            property string dPType: model.periodType || ""
+            property string dStatus: model.statusRole || ""
+            property string dPType: model.pType || ""
             property int dPeriod: model.period || 0
-            property string dRemain: model.liveRemain || ""
+            property string dRemain: model.remain || ""
             property var dStart: model.start || 0
-            property bool dInterm: model.inIntermission || false
-            property string dSit: (typeof situationCode === "string" ? situationCode : "1551")
-            property string dPen: (typeof penaltyTime === "string" ? penaltyTime : "")
-            property string dIntRem: (typeof intermissionRemain === "string" ? intermissionRemain : "")
+            property bool dInterm: model.interm || false
+            property string dSit: model.sitCode || "1551"
 
-            property bool dBlinkA: {
-                if (!root) return false
-                var b = root.glob.blinkingGames[String(model.gameId)]
-                return !!(b && (b === 'away' || b === 'both'))
+            Rectangle {
+                anchors.fill: parent
+                visible: model.statusRole !== 'DATE_SEP'
+                color: Kirigami.Theme.backgroundColor
+                radius: 6
+                border.color: Kirigami.Theme.textColor
+                border.width: 1
+                opacity: 0.05
             }
-            property bool dBlinkH: {
-                if (!root) return false
-                var b = root.glob.blinkingGames[String(model.gameId)]
-                return !!(b && (b === 'home' || b === 'both'))
+
+            RowLayout {
+                anchors.fill: parent
+                visible: model.statusRole !== 'DATE_SEP'
+                anchors.margins: 10
+                spacing: 0
+
+                Item { Layout.fillWidth: true }
+
+                // Équipe Visiteur
+                Components.TeamBadge {
+                    code: dAway
+                    score: dAg
+                    sz: root.showLogos ? 48 : 18
+                    gameId: String(model.gameId)
+                    teamSide: 'away'
+                    showScore: false
+                    controller: root
+                    blinkingGames: root.glob.blinkingGames
+                    blinkOn: root.glob.blinkOn
+                    Layout.alignment: Qt.AlignVCenter
+                }
+
+                // Info Match
+                ColumnLayout {
+                    Layout.preferredWidth: 120
+                    Layout.alignment: Qt.AlignVCenter
+                    spacing: 2
+                    Label {
+                        Layout.alignment: Qt.AlignHCenter
+                        text: dAg + " – " + dHg
+                        font.pixelSize: 22
+                        font.bold: true
+                        color: Kirigami.Theme.textColor
+                    }
+                    Label {
+                        Layout.alignment: Qt.AlignHCenter
+                        text: compactStatusText({ status: dStatus, pType: model.periodType, period: model.period, remain: model.liveRemain, start: dStart })
+                        font.pixelSize: 10
+                        font.bold: true
+                        opacity: 0.7
+                        color: dStatus === 'LIVE' ? root.liveColor : Kirigami.Theme.textColor
+                    }
+                }
+
+                // Équipe Locale
+                Components.TeamBadge {
+                    code: dHome
+                    score: dHg
+                    sz: root.showLogos ? 48 : 18
+                    gameId: String(model.gameId)
+                    teamSide: 'home'
+                    showScore: false
+                    controller: root
+                    blinkingGames: root.glob.blinkingGames
+                    blinkOn: root.glob.blinkOn
+                    Layout.alignment: Qt.AlignVCenter
+                }
+
+                Item { Layout.fillWidth: true }
             }
 
             Rectangle {
-                id: card
-                visible: model.statusRole !== 'DATE_SEP'
-                width: Math.min(480, parent.width - 16)
-                height: 80
-                anchors.centerIn: parent
-                radius: 6
-                color: Qt.rgba(Kirigami.Theme.backgroundColor.r, Kirigami.Theme.backgroundColor.g, Kirigami.Theme.backgroundColor.b, 0.6)
-                border.color: Qt.rgba(Kirigami.Theme.textColor.r, Kirigami.Theme.textColor.g, Kirigami.Theme.textColor.b, 0.15)
+                visible: root && root.glob.blinkingGames[String(model.gameId)] !== undefined
+                anchors.top: parent.top
+                anchors.horizontalCenter: parent.horizontalCenter
+                width: 60
+                height: 16
+                color: Kirigami.Theme.positiveBackgroundColor
+                radius: 3
+                anchors.topMargin: -8
+                border.color: "white"
                 border.width: 1
-                opacity: dStatus === 'FINAL' ? 0.7 : 1.0
-
-                // Contenu resserré au centre
-                RowLayout {
-                    width: Math.min(card.width - 20, 320)
+                Text {
                     anchors.centerIn: parent
-                    spacing: 10
-
-                    // Équipe Visiteur + Score
-                    RowLayout {
-                        Layout.fillWidth: true
-                        spacing: 8
-                        
-                        Components.TeamBadge {
-                            code: dAway
-                            score: dAg
-                            sz: root.showLogos ? 48 : 18
-                            gameId: String(model.gameId)
-                            teamSide: 'away'
-                            showScore: false
-                            controller: root
-                            blinkingGames: root.glob.blinkingGames
-                            blinkOn: root.glob.blinkOn
-                        }
-
-                        Label {
-                            visible: dStatus !== 'UPCOMING'
-                            text: String(dAg)
-                            font.pixelSize: 26
-                            font.bold: true
-                            color: (dStatus === 'LIVE' && dAg > dHg) ? Kirigami.Theme.positiveTextColor : Kirigami.Theme.textColor
-                            opacity: (dBlinkA && root && !root.glob.blinkOn) ? 0.0 : 1.0
-                            Layout.alignment: Qt.AlignVCenter
-                        }
-                        Item { Layout.fillWidth: true }
-                    }
-
-                            Loader {
-                                Layout.alignment: Qt.AlignHCenter
-                                sourceComponent: root ? root.statusBadgeComponent : null
-                                property string gameStatus: dStatus
-                                property string rawState: dRaw
-                                property string periodType: dPType
-                                property int period: dPeriod
-                                property string liveRemain: dRemain
-                                property var startMs: dStart
-                                property string awayTeam: dAway
-                                property string homeTeam: dHome
-                                property bool intermission: dInterm
-                                property string intermissionRemain: dIntRem
-                                property string situationCode: dSit
-                                property string penaltyTime: dPen
-                                // On force des polices plus grandes pour le bureau via l'objet styles
-                                property int fontSize1: (root && root.styles) ? root.styles.badge.desktopFontSize : 12
-                                property int fontSize2: (root && root.styles) ? root.styles.badge.desktopSmallFontSize : 10
-                            }
-
-                    // Score + Équipe Locale
-                    RowLayout {
-                        Layout.fillWidth: true
-                        spacing: 8
-                        Item { Layout.fillWidth: true }
-                        Label {
-                            visible: dStatus !== 'UPCOMING'
-                            text: String(dHg)
-                            font.pixelSize: 26
-                            font.bold: true
-                            color: (dStatus === 'LIVE' && dHg > dAg) ? Kirigami.Theme.positiveTextColor : Kirigami.Theme.textColor
-                            opacity: (dBlinkH && root && !root.glob.blinkOn) ? 0.0 : 1.0
-                            Layout.alignment: Qt.AlignVCenter
-                        }
-
-                        Components.TeamBadge {
-                            code: dHome
-                            score: dHg
-                            sz: root.showLogos ? 48 : 18
-                            gameId: String(model.gameId)
-                            teamSide: 'home'
-                            showScore: false
-                            controller: root
-                            blinkingGames: root.glob.blinkingGames
-                            blinkOn: root.glob.blinkOn
-                        }
-                    }
+                    text: "🚨 BUT"
+                    font.pixelSize: 9
+                    font.bold: true
+                    color: Kirigami.Theme.positiveTextColor
                 }
+            }
 
-                Rectangle {
-                    visible: root && root.glob.blinkingGames[String(model.gameId)] !== undefined
-                    anchors.top: parent.top
-                    anchors.horizontalCenter: parent.horizontalCenter
-                    width: 60
-                    height: 16
-                    color: Kirigami.Theme.positiveBackgroundColor
-                    radius: 3
-                    anchors.topMargin: -8
-                    border.color: "white"
-                    border.width: 1
-                    Text {
-                        anchors.centerIn: parent
-                        text: "🚨 BUT"
-                        font.pixelSize: 9
-                        font.bold: true
-                        color: Kirigami.Theme.positiveTextColor
-                    }
-                }
-
-                TapHandler {
-                    onTapped: {
-                        if (root) {
-                            root.openDetail(model.gameId, dAway, dHome, dAg, dHg, dStatus, dPType, dPeriod, dRemain, dStart, dInterm, dSit)
-                        }
+            TapHandler {
+                onTapped: {
+                    if (root) {
+                        root.openDetail(model.gameId, dAway, dHome, dAg, dHg, dStatus, dPType, dPeriod, dRemain, dStart, dInterm, dSit)
                     }
                 }
             }
@@ -301,10 +300,92 @@ Item {
 
         Label {
             anchors.centerIn: parent
-            visible: desktopList.count === 0
+            visible: !compactMode && desktopList.count === 0
             text: i18n("No games today")
             opacity: 0.5
             font.italic: true
+        }
+    }
+
+    // ── Interface Mode Compact ──────────────────────────────────
+    Item {
+        id: compactView
+        visible: compactMode
+        anchors.fill: parent
+        clip: true
+
+        // Facteurs d'échelle plus conservateurs
+        readonly property real scaleFactor: Math.min(parent.width / 240, parent.height / 100)
+        
+        // On s'assure que le logo ne dépasse pas 75% de la hauteur de l'applet
+        readonly property int dynamicLogoSize: Math.min(parent.height * 0.75, Math.max(32, Math.min(128, 64 * scaleFactor)))
+        
+        // Le score suit l'échelle mais avec un plafond strict
+        readonly property int dynamicScoreSize: Math.min(parent.height * 0.4, Math.max(14, Math.min(48, 28 * scaleFactor)))
+        readonly property int dynamicStatusSize: Math.min(parent.height * 0.2, Math.max(8, Math.min(16, 10 * scaleFactor)))
+
+        Label {
+            anchors.centerIn: parent
+            visible: !compactTeamMatch
+            text: (root && root.favoriteTeams && root.favoriteTeams.length > 0) ? i18n("No games for your team") : i18n("No favorite team set")
+            opacity: 0.5; font.italic: true; font.pixelSize: 11
+            color: Kirigami.Theme.textColor
+        }
+
+        RowLayout {
+            anchors.centerIn: parent
+            visible: !!compactTeamMatch
+            spacing: Math.floor(10 * compactView.scaleFactor)
+            width: Math.min(parent.width - 16, 280 * compactView.scaleFactor)
+            height: parent.height
+
+            Components.TeamBadge {
+                code: compactTeamMatch ? compactTeamMatch.away : ""
+                sz: compactView.dynamicLogoSize
+                showScore: false; controller: root
+                Layout.alignment: Qt.AlignVCenter
+            }
+
+            ColumnLayout {
+                spacing: 0
+                Layout.fillWidth: true
+                Layout.alignment: Qt.AlignVCenter
+                Label {
+                    Layout.alignment: Qt.AlignHCenter
+                    text: compactTeamMatch ? (compactTeamMatch.awayScore + " – " + compactTeamMatch.homeScore) : ""
+                    font.pixelSize: compactView.dynamicScoreSize; font.bold: true
+                    color: Kirigami.Theme.textColor
+                    fontSizeMode: Text.Fit
+                    minimumPixelSize: 10
+                    horizontalAlignment: Text.AlignHCenter
+                    Layout.fillWidth: true
+                }
+                Label {
+                    Layout.alignment: Qt.AlignHCenter
+                    text: compactStatusText(compactTeamMatch)
+                    font.pixelSize: compactView.dynamicStatusSize; font.bold: true; opacity: 0.8
+                    color: (compactTeamMatch && compactTeamMatch.status === 'LIVE') ? root.liveColor : Kirigami.Theme.textColor
+                    fontSizeMode: Text.Fit
+                    minimumPixelSize: 8
+                    horizontalAlignment: Text.AlignHCenter
+                    Layout.fillWidth: true
+                }
+            }
+
+            Components.TeamBadge {
+                code: compactTeamMatch ? compactTeamMatch.home : ""
+                sz: compactView.dynamicLogoSize
+                showScore: false; controller: root
+                Layout.alignment: Qt.AlignVCenter
+            }
+        }
+
+        TapHandler {
+            enabled: !!compactTeamMatch
+            onTapped: {
+                var m = compactTeamMatch
+                root.openDetail(m.gameId, m.away, m.home, m.awayScore, m.homeScore, m.status, m.pType, m.period, m.remain, m.start, m.interm, m.sitCode)
+            }
         }
     }
 }

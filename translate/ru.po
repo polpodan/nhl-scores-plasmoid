@@ -2,322 +2,1070 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: nhl-scores-plasmoid 5.3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-04-12 08:49-0400\n"
 "Language: ru\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-msgid "NHL Scores"
-msgstr "Результаты НХЛ"
-
-msgid "No games"
-msgstr "Нет матчей"
-
-msgid "No games today"
-msgstr "Сегодня матчей нет"
-
-msgid "Refresh now"
-msgstr "Обновить сейчас"
-
+#: ../contents/ui/components/StateLayer.qml:11
+#: ../contents/ui/views/BracketView.qml:44
+#: ../contents/ui/CompactRepresentation.qml:41
 msgid "Loading…"
 msgstr "Загрузка…"
 
-msgid "‹ Back"
-msgstr "‹ Назад"
-
-msgid "‹ Match"
-msgstr "‹ Матч"
-
-msgid "‹ Standings"
-msgstr "‹ Таблица"
-
+#: ../contents/ui/views/FranchiseLeadersView.qml:26
+#: ../contents/ui/views/ScheduleView.qml:36
+#: ../contents/ui/views/StandingsView.qml:31
 msgid "‹ Team"
 msgstr "‹ Команда"
 
-msgid "‹ Search"
-msgstr "‹ Поиск"
+#: ../contents/ui/views/FranchiseLeadersView.qml:38
+#: ../contents/ui/views/TeamHubView.qml:207
+msgid "Franchise Leaders"
+msgstr ""
 
-msgid "‹ Stats"
-msgstr "‹ Статистика"
-
-msgid "‹ History"
-msgstr "‹ История"
-
-msgid "Final"
-msgstr "Завершен"
-
-msgid "Upcoming"
-msgstr "Предстоящий"
-
-msgid "LIVE"
-msgstr "LIVE"
-
-msgid "Overtime"
-msgstr "Овертайм"
-
-msgid "Shootout"
-msgstr "Буллиты"
-
-msgid "Intermission"
-msgstr "Перерыв"
-
-msgid "Period"
-msgstr "Период"
-
-msgid "1st"
-msgstr "1-й"
-
-msgid "2nd"
-msgstr "2-й"
-
-msgid "3rd"
-msgstr "3-й"
-
-msgid "SO"
-msgstr "Бул"
-
-msgid "OT"
-msgstr "ОТ"
-
-msgid "1st period"
-msgstr "1-й период"
-
-msgid "2nd period"
-msgstr "2-й период"
-
-msgid "3rd period"
-msgstr "3-й период"
-
-msgid "Power Play"
-msgstr "Большинство"
-
-msgid "Standings"
-msgstr "Таблица"
-
-msgid "Leaders"
-msgstr "Лидеры"
-
-msgid "Season series"
-msgstr "Серия в сезоне"
-
-msgid "Probable goalies"
-msgstr "Вероятные вратари"
-
-msgid "Points leaders (last 5 games)"
-msgstr "Лидеры по очкам (последние 5 игр)"
-
-msgid "Shots on Goal"
-msgstr "Броски в створ"
-
-msgid "GOAL"
-msgstr "ГОЛ"
-
-msgid "Goals"
-msgstr "Голы"
-
-msgid "Assists"
-msgstr "Передачи"
-
+#: ../contents/ui/views/FranchiseLeadersView.qml:80
+#: ../contents/ui/views/LeadersView.qml:182
 msgid "Points"
 msgstr "Очки"
 
-msgid "PTS"
-msgstr "Очки"
+#: ../contents/ui/views/FranchiseLeadersView.qml:97
+#: ../contents/ui/views/PlayerView.qml:328
+#: ../contents/ui/views/PlayerView.qml:382
+#: ../contents/ui/views/DetailView.qml:139
+#: ../contents/ui/views/LeadersView.qml:187
+msgid "Goals"
+msgstr "Голы"
 
-msgid "W"
-msgstr "В"
+#: ../contents/ui/views/FranchiseLeadersView.qml:114
+#: ../contents/ui/views/PlayerView.qml:329
+#: ../contents/ui/views/PlayerView.qml:383
+#: ../contents/ui/views/LeadersView.qml:192
+msgid "Assists"
+msgstr "Передачи"
 
-msgid "L"
-msgstr "П"
+#: ../contents/ui/views/FranchiseLeadersView.qml:128
+msgid "Active player"
+msgstr ""
 
-msgid "PIM"
-msgstr "ШТ"
+#: ../contents/ui/views/CalendarView.qml:55
+#: ../contents/ui/views/ScheduleView.qml:36
+#: ../contents/ui/views/StandingsView.qml:33
+#: ../contents/ui/views/TeamHubView.qml:28
+#: ../contents/ui/views/BracketView.qml:24
+msgid "‹ Back"
+msgstr "‹ Назад"
 
-msgid "PJ"
-msgstr "И"
+#: ../contents/ui/views/CalendarView.qml:72
+#: ../contents/ui/views/TeamHubView.qml:242 ../contents/ui/main.qml:777
+msgid "January"
+msgstr ""
 
-msgid "Player"
-msgstr "Игрок"
+#: ../contents/ui/views/CalendarView.qml:72
+#: ../contents/ui/views/TeamHubView.qml:242 ../contents/ui/main.qml:777
+msgid "February"
+msgstr ""
 
-msgid "Team"
-msgstr "Команда"
-
-msgid "Goalies"
-msgstr "Вратари"
-
-msgid "Wild Card"
-msgstr "Уайлд-кард"
-
-msgid "Eastern Conference"
-msgstr "Восточная конференция"
-
-msgid "Western Conference"
-msgstr "Западная конференция"
-
-msgid "Playoffs"
-msgstr "Плей-офф"
-
-msgid "Wins"
-msgstr "Победы"
-
-msgid "Losses"
-msgstr "Поражения"
-
-msgid "Shutouts"
-msgstr "Сухие матчи"
-
-msgid "SHO"
-msgstr "СМ"
-
-msgid "GAA"
-msgstr "КН"
-
-msgid "SV%"
-msgstr "%ОБ"
-
-msgid "Schedule"
-msgstr "Расписание"
-
-msgid "Stats"
-msgstr "Статистика"
-
-msgid "Monday"
-msgstr "Понедельник"
-
-msgid "Tuesday"
-msgstr "Вторник"
-
-msgid "Wednesday"
-msgstr "Среда"
-
-msgid "Thursday"
-msgstr "Четверг"
-
-msgid "Friday"
-msgstr "Пятница"
-
-msgid "Saturday"
-msgstr "Суббота"
-
-msgid "Sunday"
-msgstr "Воскресенье"
-
-msgid "Display"
-msgstr "Экран"
-
-msgid "Layout"
-msgstr "Макет"
-
-msgid "Search"
+#: ../contents/ui/views/CalendarView.qml:72
+#: ../contents/ui/views/TeamHubView.qml:242 ../contents/ui/main.qml:777
+#, fuzzy
+msgid "March"
 msgstr "Поиск"
 
-msgid "Calendar"
-msgstr "Календарь"
+#: ../contents/ui/views/CalendarView.qml:72
+#: ../contents/ui/views/TeamHubView.qml:242 ../contents/ui/main.qml:777
+msgid "April"
+msgstr ""
 
+#: ../contents/ui/views/CalendarView.qml:73
+#: ../contents/ui/views/TeamHubView.qml:242 ../contents/ui/main.qml:778
+#, fuzzy
+msgid "May"
+msgstr "Понедельник"
+
+#: ../contents/ui/views/CalendarView.qml:73
+#: ../contents/ui/views/TeamHubView.qml:242 ../contents/ui/main.qml:778
+msgid "June"
+msgstr ""
+
+#: ../contents/ui/views/CalendarView.qml:73
+#: ../contents/ui/views/TeamHubView.qml:242 ../contents/ui/main.qml:778
+msgid "July"
+msgstr ""
+
+#: ../contents/ui/views/CalendarView.qml:73
+#: ../contents/ui/views/TeamHubView.qml:242 ../contents/ui/main.qml:778
+msgid "August"
+msgstr ""
+
+#: ../contents/ui/views/CalendarView.qml:74
+#: ../contents/ui/views/TeamHubView.qml:242 ../contents/ui/main.qml:779
+msgid "September"
+msgstr ""
+
+#: ../contents/ui/views/CalendarView.qml:74
+#: ../contents/ui/views/TeamHubView.qml:242 ../contents/ui/main.qml:779
+msgid "October"
+msgstr ""
+
+#: ../contents/ui/views/CalendarView.qml:74
+#: ../contents/ui/views/TeamHubView.qml:242 ../contents/ui/main.qml:779
+msgid "November"
+msgstr ""
+
+#: ../contents/ui/views/CalendarView.qml:74
+#: ../contents/ui/views/TeamHubView.qml:242 ../contents/ui/main.qml:779
+msgid "December"
+msgstr ""
+
+#: ../contents/ui/views/CalendarView.qml:105
 msgid "Today"
 msgstr "Сегодня"
 
-msgid "Atlantic"
-msgstr "Атлантический"
+#: ../contents/ui/views/CalendarView.qml:120
+#: ../contents/ui/views/TeamHubView.qml:259
+msgid "Su"
+msgstr ""
 
-msgid "Metropolitan"
-msgstr "Столичный"
+#: ../contents/ui/views/CalendarView.qml:120
+#: ../contents/ui/views/TeamHubView.qml:259
+msgid "Mo"
+msgstr ""
 
-msgid "Central"
-msgstr "Центральный"
+#: ../contents/ui/views/CalendarView.qml:120
+#: ../contents/ui/views/TeamHubView.qml:259
+msgid "Tu"
+msgstr ""
 
-msgid "Pacific"
-msgstr "Тихоокеанский"
+#: ../contents/ui/views/CalendarView.qml:120
+#: ../contents/ui/views/TeamHubView.qml:259
+#, fuzzy
+msgid "We"
+msgstr "В"
 
-msgid "First Round"
-msgstr "Первый раунд"
+#: ../contents/ui/views/CalendarView.qml:120
+#: ../contents/ui/views/TeamHubView.qml:259
+msgid "Th"
+msgstr ""
 
-msgid "Second Round"
-msgstr "Второй раунд"
+#: ../contents/ui/views/CalendarView.qml:120
+#: ../contents/ui/views/TeamHubView.qml:259
+msgid "Fr"
+msgstr ""
 
-msgid "Conference Finals"
-msgstr "Финалы конференций"
+#: ../contents/ui/views/CalendarView.qml:120
+#: ../contents/ui/views/TeamHubView.qml:259
+msgid "Sa"
+msgstr ""
 
-msgid "Stanley Cup Final"
-msgstr "Финал Кубка Стэнли"
+#: ../contents/ui/views/PlayerView.qml:116
+msgid "‹ Search"
+msgstr "‹ Поиск"
 
-msgid "Team display"
-msgstr "Отображение команд"
+#: ../contents/ui/views/PlayerView.qml:117
+msgid "‹ Stats"
+msgstr "‹ Статистика"
 
-msgid "Icon style:"
-msgstr "Стиль иконок:"
+#: ../contents/ui/views/PlayerView.qml:118
+#: ../contents/ui/views/LeadersView.qml:25
+#: ../contents/ui/views/StandingsView.qml:32
+#: ../contents/ui/views/TeamHubView.qml:28
+#: ../contents/ui/views/BracketView.qml:24
+#: ../contents/ui/views/SearchView.qml:29
+msgid "‹ Match"
+msgstr "‹ Матч"
 
-msgid "Pastilles"
-msgstr "Значки"
+#: ../contents/ui/views/PlayerView.qml:119
+msgid "‹ History"
+msgstr "‹ История"
 
-msgid "Logos"
-msgstr "Логотипы"
+#: ../contents/ui/views/PlayerView.qml:120
+#, fuzzy
+msgid "‹ Leaders"
+msgstr "Лидеры"
 
-msgid "Season Comparison"
-msgstr "Сравнение в сезоне"
-
-msgid "Power Play %"
-msgstr "Большинство %"
-
-msgid "Penalty Kill %"
-msgstr "Меньшинство %"
-
-msgid "Faceoffs %"
-msgstr "Вбрасывания %"
-
-msgid "GF/G"
-msgstr "ШЗ/И"
-
-msgid "GA/G"
-msgstr "ШП/И"
-
-msgid "Watch goal highlight"
-msgstr "Смотреть повтор гола"
-
-msgid "Divisions"
-msgstr "Дивизионы"
-
-msgid "League"
-msgstr "Лига"
-
-msgid "Clinched Playoff Spot"
-msgstr "Место в плей-офф гарантировано"
-
-msgid "Clinched Division"
-msgstr "Титул дивизиона гарантирован"
-
-msgid "Clinched Conference"
-msgstr "Титул конференции гарантирован"
-
-msgid "Eliminated from Playoffs"
-msgstr "Выбыл из плей-офф"
-
+#: ../contents/ui/views/PlayerView.qml:141
+#: ../contents/ui/views/PlayerView.qml:378
 msgid "Season"
 msgstr "Сезон"
 
-msgid "Season history"
-msgstr "История сезона"
+#: ../contents/ui/views/PlayerView.qml:149 ../contents/ui/main.qml:1765
+msgid "Playoffs"
+msgstr "Плей-офф"
 
-msgid "Playoff history"
-msgstr "История плей-офф"
+#: ../contents/ui/views/PlayerView.qml:251
+msgid "years"
+msgstr ""
 
+#: ../contents/ui/views/PlayerView.qml:262
+msgid "Height:"
+msgstr ""
+
+#: ../contents/ui/views/PlayerView.qml:262
+msgid "Weight:"
+msgstr ""
+
+#: ../contents/ui/views/PlayerView.qml:271
+msgid "Born:"
+msgstr ""
+
+#: ../contents/ui/views/PlayerView.qml:286
+msgid "Birthplace:"
+msgstr ""
+
+#: ../contents/ui/views/PlayerView.qml:304
 msgid "Season stats"
 msgstr "Статистика сезона"
 
+#: ../contents/ui/views/PlayerView.qml:304
 msgid "Playoff stats"
 msgstr "Статистика плей-офф"
 
-msgid "WESTERN CONFERENCE"
-msgstr "ЗАПАДНАЯ КОНФЕРЕНЦИЯ"
+#: ../contents/ui/views/PlayerView.qml:321
+#: ../contents/ui/views/PlayerView.qml:327
+#: ../contents/ui/views/PlayerView.qml:381
+#: ../contents/ui/views/ScheduleView.qml:260
+#: ../contents/ui/views/ScheduleView.qml:318
+msgid "PJ"
+msgstr "И"
 
-msgid "EASTERN CONFERENCE"
-msgstr "ВОСТОЧНАЯ КОНФЕРЕНЦИЯ"
+#: ../contents/ui/views/PlayerView.qml:322
+#: ../contents/ui/views/PlayerView.qml:382
+#: ../contents/ui/views/ScheduleView.qml:319
+msgid "W"
+msgstr "В"
 
-msgid "STANLEY CUP FINALS"
-msgstr "ФИНАЛ КУБКА СТЭНЛИ"
+#: ../contents/ui/views/PlayerView.qml:323
+#: ../contents/ui/views/PlayerView.qml:384
+#: ../contents/ui/views/ScheduleView.qml:321
+#: ../contents/ui/views/LeadersView.qml:216
+msgid "GAA"
+msgstr "КН"
 
-msgid "FINALS"
-msgstr "ФИНАЛ"
+#: ../contents/ui/views/PlayerView.qml:324
+#: ../contents/ui/views/PlayerView.qml:385
+#: ../contents/ui/views/ScheduleView.qml:322
+#: ../contents/ui/views/LeadersView.qml:221
+msgid "SV%"
+msgstr "%ОБ"
 
-msgid "Séries 2026"
-msgstr "Плей-офф 2026"
+#: ../contents/ui/views/PlayerView.qml:325
+msgid "SHO"
+msgstr "СМ"
+
+#: ../contents/ui/views/PlayerView.qml:330
+#: ../contents/ui/views/PlayerView.qml:384
+#: ../contents/ui/views/ScheduleView.qml:263
+msgid "PTS"
+msgstr "Очки"
+
+#: ../contents/ui/views/PlayerView.qml:366
+msgid "Season history"
+msgstr "История сезона"
+
+#: ../contents/ui/views/PlayerView.qml:366
+msgid "Playoff history"
+msgstr "История плей-офф"
+
+#: ../contents/ui/views/PlayerView.qml:380
+#: ../contents/ui/views/StandingsView.qml:191
+msgid "Team"
+msgstr "Команда"
+
+#: ../contents/ui/views/PlayerView.qml:383
+#: ../contents/ui/views/ScheduleView.qml:320
+msgid "L"
+msgstr "П"
+
+#: ../contents/ui/views/PlayerView.qml:385
+#: ../contents/ui/views/ScheduleView.qml:264
+msgid "+/-"
+msgstr ""
+
+#: ../contents/ui/views/PlayerView.qml:489
+#: ../contents/ui/views/TeamHubView.qml:140
+#, fuzzy
+msgid "Last games"
+msgstr "Нет матчей"
+
+#: ../contents/ui/views/DetailView.qml:46
+#: ../contents/ui/views/StandingsView.qml:42
+#: ../contents/ui/views/DesktopRepresentation.qml:110
+msgid "Standings"
+msgstr "Таблица"
+
+#: ../contents/ui/views/DetailView.qml:53
+#: ../contents/ui/views/LeadersView.qml:31
+#: ../contents/ui/views/DesktopRepresentation.qml:116
+msgid "Leaders"
+msgstr "Лидеры"
+
+#: ../contents/ui/views/DetailView.qml:61
+#, fuzzy
+msgid "2026 Playoffs"
+msgstr "Плей-офф"
+
+#: ../contents/ui/views/DetailView.qml:69
+#: ../contents/ui/views/SearchView.qml:38
+#: ../contents/ui/views/SearchView.qml:77
+msgid "Search"
+msgstr "Поиск"
+
+#: ../contents/ui/views/DetailView.qml:150
+#, fuzzy
+msgid "Penalties"
+msgstr "Меньшинство %"
+
+#: ../contents/ui/views/DetailView.qml:161
+msgid "Stars"
+msgstr ""
+
+#: ../contents/ui/views/ScheduleView.qml:62
+#: ../contents/ui/views/ScheduleView.qml:73
+#: ../contents/ui/views/TeamHubView.qml:213
+msgid "Stats"
+msgstr "Статистика"
+
+#: ../contents/ui/views/ScheduleView.qml:62
+#: ../contents/ui/views/ScheduleView.qml:73
+msgid "Schedule"
+msgstr "Расписание"
+
+#: ../contents/ui/views/ScheduleView.qml:138
+#: ../contents/ui/views/TeamHubView.qml:164
+#: ../contents/ui/views/detail/MatchPreview.qml:136
+msgid "vs"
+msgstr ""
+
+#: ../contents/ui/views/ScheduleView.qml:138
+#: ../contents/ui/views/TeamHubView.qml:164
+msgid "@"
+msgstr ""
+
+#: ../contents/ui/views/ScheduleView.qml:173
+msgid "LIVE"
+msgstr "LIVE"
+
+#: ../contents/ui/views/ScheduleView.qml:215
+#: ../contents/ui/views/DayView.qml:73
+#: ../contents/ui/CompactRepresentation.qml:41 ../contents/ui/main.qml:411
+msgid "No games"
+msgstr "Нет матчей"
+
+#: ../contents/ui/views/ScheduleView.qml:259
+#: ../contents/ui/views/ScheduleView.qml:317
+msgid "Player"
+msgstr "Игрок"
+
+#: ../contents/ui/views/ScheduleView.qml:261
+msgid "B"
+msgstr ""
+
+#: ../contents/ui/views/ScheduleView.qml:262
+msgid "A"
+msgstr ""
+
+#: ../contents/ui/views/ScheduleView.qml:303
+#: ../contents/ui/views/LeadersView.qml:202
+msgid "Goalies"
+msgstr "Вратари"
+
+#: ../contents/ui/views/LeadersView.qml:46
+msgid "Fwd"
+msgstr ""
+
+#: ../contents/ui/views/LeadersView.qml:47
+msgid "Def"
+msgstr ""
+
+#: ../contents/ui/views/LeadersView.qml:48
+#, fuzzy
+msgid "Goal"
+msgstr "Голы"
+
+#: ../contents/ui/views/LeadersView.qml:197
+#: ../contents/ui/views/detail/MatchStats.qml:110
+msgid "PIM"
+msgstr "ШТ"
+
+#: ../contents/ui/views/LeadersView.qml:206
+#: ../contents/ui/views/detail/MatchPreview.qml:90
+msgid "Wins"
+msgstr "Победы"
+
+#: ../contents/ui/views/LeadersView.qml:211
+msgid "Shutouts"
+msgstr "Сухие матчи"
+
+#: ../contents/ui/views/StandingsView.qml:55 ../contents/ui/main.qml:2773
+msgid "Wild Card"
+msgstr "Уайлд-кард"
+
+#: ../contents/ui/views/StandingsView.qml:68
+msgid "Divisions"
+msgstr "Дивизионы"
+
+#: ../contents/ui/views/StandingsView.qml:81
+msgid "League"
+msgstr "Лига"
+
+#: ../contents/ui/views/StandingsView.qml:348
+msgid "Clinched Playoff Spot"
+msgstr "Место в плей-офф гарантировано"
+
+#: ../contents/ui/views/StandingsView.qml:348
+msgid "Clinched Division"
+msgstr "Титул дивизиона гарантирован"
+
+#: ../contents/ui/views/StandingsView.qml:348
+msgid "Clinched Conference"
+msgstr "Титул конференции гарантирован"
+
+#: ../contents/ui/views/StandingsView.qml:353
+msgid "Eliminated from Playoffs"
+msgstr "Выбыл из плей-офф"
+
+#: ../contents/ui/views/TeamHubView.qml:28
+msgid "‹ Standings"
+msgstr "‹ Таблица"
+
+#: ../contents/ui/views/TeamHubView.qml:47
+#: ../contents/ui/views/TeamHubView.qml:201
+#, fuzzy
+msgid "Season Calendar"
+msgstr "Календарь"
+
+#: ../contents/ui/views/TeamHubView.qml:367
+msgid "Home"
+msgstr ""
+
+#: ../contents/ui/views/TeamHubView.qml:372
+msgid "Away"
+msgstr ""
+
+#: ../contents/ui/views/DesktopRepresentation.qml:40
+#: ../contents/ui/views/DayView.qml:168 ../contents/ui/configDisplay.qml:181
+#: ../contents/ui/main.qml:431 ../contents/ui/main.qml:952
+msgid "Final"
+msgstr "Завершен"
+
+#: ../contents/ui/views/DesktopRepresentation.qml:89 ../contents/ui/main.qml:16
+#: ../contents/ui/main.qml:409
+msgid "NHL Scores"
+msgstr "Результаты НХЛ"
+
+#: ../contents/ui/views/DesktopRepresentation.qml:103
+msgid "just now"
+msgstr ""
+
+#: ../contents/ui/views/DesktopRepresentation.qml:104
+msgid "1 min ago"
+msgstr ""
+
+#: ../contents/ui/views/DesktopRepresentation.qml:105
+msgid "min ago"
+msgstr ""
+
+#: ../contents/ui/views/DesktopRepresentation.qml:302
+msgid "No games today"
+msgstr "Сегодня матчей нет"
+
+#: ../contents/ui/views/DesktopRepresentation.qml:328
+#, fuzzy
+msgid "No games for your team"
+msgstr "Сегодня матчей нет"
+
+#: ../contents/ui/views/DesktopRepresentation.qml:328
+msgid "No favorite team set"
+msgstr ""
+
+#: ../contents/ui/views/DayView.qml:26
+msgid "✕"
+msgstr ""
+
+#: ../contents/ui/views/DayView.qml:57
+msgid "Calendar"
+msgstr "Календарь"
+
+#: ../contents/ui/views/DayView.qml:166
+msgid "arena"
+msgstr ""
+
+#: ../contents/ui/views/DayView.qml:166
+msgid "local"
+msgstr ""
+
+#: ../contents/ui/views/SearchView.qml:56
+#, fuzzy
+msgid "Player name…"
+msgstr "Игрок"
+
+#: ../contents/ui/views/SearchView.qml:96
+msgid "Searching players…"
+msgstr ""
+
+#: ../contents/ui/views/SearchView.qml:163
+msgid "Retired"
+msgstr ""
+
+#: ../contents/ui/views/detail/MatchPreview.qml:24
+msgid "Season Comparison"
+msgstr "Сравнение в сезоне"
+
+#: ../contents/ui/views/detail/MatchPreview.qml:31
+msgid "Power Play %"
+msgstr "Большинство %"
+
+#: ../contents/ui/views/detail/MatchPreview.qml:32
+msgid "Penalty Kill %"
+msgstr "Меньшинство %"
+
+#: ../contents/ui/views/detail/MatchPreview.qml:33
+#: ../contents/ui/views/detail/MatchStats.qml:110
+msgid "Faceoffs %"
+msgstr "Вбрасывания %"
+
+#: ../contents/ui/views/detail/MatchPreview.qml:34
+msgid "GF/G"
+msgstr "ШЗ/И"
+
+#: ../contents/ui/views/detail/MatchPreview.qml:35
+msgid "GA/G"
+msgstr "ШП/И"
+
+#: ../contents/ui/views/detail/MatchPreview.qml:64
+msgid "Season series"
+msgstr "Серия в сезоне"
+
+#: ../contents/ui/views/detail/MatchPreview.qml:180
+msgid "Points leaders (last 5 games)"
+msgstr "Лидеры по очкам (последние 5 игр)"
+
+#: ../contents/ui/views/detail/MatchPreview.qml:227
+msgid "Probable goalies"
+msgstr "Вероятные вратари"
+
+#: ../contents/ui/views/detail/MatchStats.qml:73
+msgid "Shots on Goal"
+msgstr "Броски в створ"
+
+#: ../contents/ui/views/detail/MatchStats.qml:110
+msgid "Power Play"
+msgstr "Большинство"
+
+#: ../contents/ui/views/detail/MatchStats.qml:110
+msgid "Hits"
+msgstr ""
+
+#: ../contents/ui/views/detail/MatchStats.qml:110
+msgid "Blocks"
+msgstr ""
+
+#: ../contents/ui/views/detail/MatchStats.qml:110
+msgid "Giveaways"
+msgstr ""
+
+#: ../contents/ui/views/detail/MatchStats.qml:110
+msgid "Takeaways"
+msgstr ""
+
+#: ../contents/ui/views/detail/GoalsList.qml:85
+#, fuzzy
+msgid "Assists: "
+msgstr "Передачи"
+
+#: ../contents/ui/views/detail/GoalsList.qml:111
+msgid "unassisted"
+msgstr ""
+
+#: ../contents/ui/views/detail/GoalsList.qml:122
+msgid "Watch goal highlight"
+msgstr "Смотреть повтор гола"
+
+#: ../contents/ui/views/detail/DetailHeader.qml:67
+#: ../contents/ui/views/detail/DetailHeader.qml:197
+msgid "Record"
+msgstr ""
+
+#: ../contents/ui/configGeneral.qml:350
+msgid "Favorite teams"
+msgstr ""
+
+#: ../contents/ui/configGeneral.qml:368
+msgid "Select / deselect all teams"
+msgstr ""
+
+#: ../contents/ui/configGeneral.qml:433 ../contents/config/config.qml:7
+msgid "Display"
+msgstr "Экран"
+
+#: ../contents/ui/configGeneral.qml:439
+#, fuzzy
+msgid "Max games to display:"
+msgstr "Сегодня матчей нет"
+
+#: ../contents/ui/configGeneral.qml:447
+#, fuzzy
+msgid "Leaders limit:"
+msgstr "Лидеры"
+
+#: ../contents/ui/configGeneral.qml:460
+msgid "Franchise leaders limit:"
+msgstr ""
+
+#: ../contents/ui/configGeneral.qml:483
+msgid "Match display interval (hours relative to now)"
+msgstr ""
+
+#: ../contents/ui/configGeneral.qml:522
+msgid "Past (-%1h)"
+msgstr ""
+
+#: ../contents/ui/configGeneral.qml:532
+msgid "Now"
+msgstr ""
+
+#: ../contents/ui/configGeneral.qml:541
+msgid "Future (+%1h)"
+msgstr ""
+
+#: ../contents/ui/configGeneral.qml:558
+msgid "Showing games from <b>%1h</b> to <b>+%2h</b>"
+msgstr ""
+
+#: ../contents/ui/configGeneral.qml:564
+msgid "Notifications"
+msgstr ""
+
+#: ../contents/ui/configGeneral.qml:570
+#, fuzzy
+msgid "Refresh interval:"
+msgstr "Обновить сейчас"
+
+#: ../contents/ui/configGeneral.qml:582
+msgid " sec"
+msgstr ""
+
+#: ../contents/ui/configGeneral.qml:584
+msgid "Enable system notifications:"
+msgstr ""
+
+#: ../contents/ui/configGeneral.qml:589
+msgid "For all teams:"
+msgstr ""
+
+#: ../contents/ui/configGeneral.qml:595
+msgid "Goal blink duration:"
+msgstr ""
+
+#: ../contents/ui/configGeneral.qml:604
+msgid "sec."
+msgstr ""
+
+#: ../contents/ui/configGeneral.qml:606
+msgid "Goal sound volume:"
+msgstr ""
+
+#: ../contents/ui/configDisplay.qml:86
+msgid "Status badge colors"
+msgstr ""
+
+#: ../contents/ui/configDisplay.qml:90
+#, fuzzy
+msgid "LIVE:"
+msgstr "LIVE"
+
+#: ../contents/ui/configDisplay.qml:95
+msgid "Choose LIVE color"
+msgstr ""
+
+#: ../contents/ui/configDisplay.qml:121 ../contents/ui/configDisplay.qml:158
+#: ../contents/ui/configDisplay.qml:195
+msgid "Reset to default"
+msgstr ""
+
+#: ../contents/ui/configDisplay.qml:127
+#, fuzzy
+msgid "Upcoming:"
+msgstr "Предстоящий"
+
+#: ../contents/ui/configDisplay.qml:132
+msgid "Choose Upcoming color"
+msgstr ""
+
+#: ../contents/ui/configDisplay.qml:144 ../contents/ui/main.qml:954
+msgid "Upcoming"
+msgstr "Предстоящий"
+
+#: ../contents/ui/configDisplay.qml:164
+#, fuzzy
+msgid "Final:"
+msgstr "Завершен"
+
+#: ../contents/ui/configDisplay.qml:169
+msgid "Choose Final color"
+msgstr ""
+
+#: ../contents/ui/configDisplay.qml:202
+msgid "Badge options"
+msgstr ""
+
+#: ../contents/ui/configDisplay.qml:205
+msgid "Show OT/SO suffix in badge"
+msgstr ""
+
+#: ../contents/ui/configDisplay.qml:210
+msgid "Show upcoming game time under badge"
+msgstr ""
+
+#: ../contents/ui/configDisplay.qml:217
+msgid "Team display"
+msgstr "Отображение команд"
+
+#: ../contents/ui/configDisplay.qml:220
+msgid "Icon style:"
+msgstr "Стиль иконок:"
+
+#: ../contents/ui/configDisplay.qml:223
+msgid "Pastilles"
+msgstr "Значки"
+
+#: ../contents/ui/configDisplay.qml:228
+msgid "Logos"
+msgstr "Логотипы"
+
+#: ../contents/ui/configDisplay.qml:236
+msgid "Layout"
+msgstr "Макет"
+
+#: ../contents/ui/configDisplay.qml:239
+msgid "Desktop:"
+msgstr ""
+
+#: ../contents/ui/configDisplay.qml:240
+msgid "Compact desktop mode (favorite team only)"
+msgstr ""
+
+#: ../contents/ui/configDisplay.qml:247
+msgid "Score layout:"
+msgstr ""
+
+#: ../contents/ui/configDisplay.qml:248
+msgid "Score below (column)"
+msgstr ""
+
+#: ../contents/ui/configDisplay.qml:248
+msgid "Score next to name (row)"
+msgstr ""
+
+#: ../contents/ui/configDisplay.qml:248
+msgid "Ultra-compact (dots + score)"
+msgstr ""
+
+#: ../contents/ui/configDisplay.qml:264
+msgid "N/A (desktop widget)"
+msgstr ""
+
+#: ../contents/ui/configDisplay.qml:264
+msgid "Fixed (vertical panel)"
+msgstr ""
+
+#: ../contents/ui/configDisplay.qml:270
+msgid "Spacing between games:"
+msgstr ""
+
+#: ../contents/ui/configDisplay.qml:283
+msgid "Date mode:"
+msgstr ""
+
+#: ../contents/ui/configDisplay.qml:284
+msgid "Local timezone (computer)"
+msgstr ""
+
+#: ../contents/ui/configDisplay.qml:284
+msgid "Venue timezone (arena)"
+msgstr ""
+
+#: ../contents/ui/main.qml:287 ../contents/ui/main.qml:337
+msgid "Shootout"
+msgstr "Буллиты"
+
+#: ../contents/ui/main.qml:288 ../contents/ui/main.qml:289
+#: ../contents/ui/main.qml:338 ../contents/ui/main.qml:339
+msgid "Overtime"
+msgstr "Овертайм"
+
+#: ../contents/ui/main.qml:290 ../contents/ui/main.qml:340
+msgid "1st period"
+msgstr "1-й период"
+
+#: ../contents/ui/main.qml:291 ../contents/ui/main.qml:341
+msgid "2nd period"
+msgstr "2-й период"
+
+#: ../contents/ui/main.qml:292 ../contents/ui/main.qml:342
+msgid "3rd period"
+msgstr "3-й период"
+
+#: ../contents/ui/main.qml:293 ../contents/ui/main.qml:343
+msgid "Period"
+msgstr "Период"
+
+#: ../contents/ui/main.qml:312
+msgid "No goals recorded."
+msgstr ""
+
+#: ../contents/ui/main.qml:390
+msgid "Refresh now"
+msgstr "Обновить сейчас"
+
+#: ../contents/ui/main.qml:551
+#, fuzzy
+msgid "GOAL!"
+msgstr "ГОЛ"
+
+#: ../contents/ui/main.qml:552
+#, fuzzy
+msgid "GOAL: %1"
+msgstr "ГОЛ"
+
+#: ../contents/ui/main.qml:775
+msgid "Sunday"
+msgstr "Воскресенье"
+
+#: ../contents/ui/main.qml:775
+msgid "Monday"
+msgstr "Понедельник"
+
+#: ../contents/ui/main.qml:775
+msgid "Tuesday"
+msgstr "Вторник"
+
+#: ../contents/ui/main.qml:775
+msgid "Wednesday"
+msgstr "Среда"
+
+#: ../contents/ui/main.qml:776
+msgid "Thursday"
+msgstr "Четверг"
+
+#: ../contents/ui/main.qml:776
+msgid "Friday"
+msgstr "Пятница"
+
+#: ../contents/ui/main.qml:776
+msgid "Saturday"
+msgstr "Суббота"
+
+#: ../contents/ui/main.qml:916
+msgid "OT"
+msgstr "ОТ"
+
+#: ../contents/ui/main.qml:916 ../contents/ui/main.qml:921
+#: ../contents/ui/main.qml:927 ../contents/ui/main.qml:965
+msgid "SO"
+msgstr "Бул"
+
+#: ../contents/ui/main.qml:921 ../contents/ui/main.qml:928
+msgid "1st"
+msgstr "1-й"
+
+#: ../contents/ui/main.qml:921 ../contents/ui/main.qml:929
+msgid "2nd"
+msgstr "2-й"
+
+#: ../contents/ui/main.qml:921 ../contents/ui/main.qml:930
+msgid "3rd"
+msgstr "3-й"
+
+#: ../contents/ui/main.qml:1147
+msgid "Standings not available for simulation"
+msgstr ""
+
+#: ../contents/ui/main.qml:1293
+msgid "Slashing"
+msgstr ""
+
+#: ../contents/ui/main.qml:1294
+msgid "Hooking"
+msgstr ""
+
+#: ../contents/ui/main.qml:1295
+msgid "Roughing"
+msgstr ""
+
+#: ../contents/ui/main.qml:1296
+msgid "High sticking"
+msgstr ""
+
+#: ../contents/ui/main.qml:1297
+msgid "Tripping"
+msgstr ""
+
+#: ../contents/ui/main.qml:1298
+#, fuzzy
+msgid "Interference"
+msgstr "Восточная конференция"
+
+#: ../contents/ui/main.qml:1299
+msgid "Holding"
+msgstr ""
+
+#: ../contents/ui/main.qml:1300
+msgid "Holding the stick"
+msgstr ""
+
+#: ../contents/ui/main.qml:1301
+msgid "Elbowing"
+msgstr ""
+
+#: ../contents/ui/main.qml:1302
+msgid "Charging"
+msgstr ""
+
+#: ../contents/ui/main.qml:1303
+#, fuzzy
+msgid "Boarding"
+msgstr "Загрузка…"
+
+#: ../contents/ui/main.qml:1304
+msgid "Cross-checking"
+msgstr ""
+
+#: ../contents/ui/main.qml:1305
+msgid "Delay of game"
+msgstr ""
+
+#: ../contents/ui/main.qml:1306
+msgid "Unsportsmanlike conduct"
+msgstr ""
+
+#: ../contents/ui/main.qml:1307
+msgid "Too many men"
+msgstr ""
+
+#: ../contents/ui/main.qml:1308
+#, fuzzy
+msgid "Goalie interference"
+msgstr "Титул конференции гарантирован"
+
+#: ../contents/ui/main.qml:1309
+msgid "Misconduct"
+msgstr ""
+
+#: ../contents/ui/main.qml:1310
+msgid "Game misconduct"
+msgstr ""
+
+#: ../contents/ui/main.qml:1311
+msgid "Fighting"
+msgstr ""
+
+#: ../contents/ui/main.qml:1312
+msgid "Instigating"
+msgstr ""
+
+#: ../contents/ui/main.qml:1313
+#, fuzzy
+msgid "Diving"
+msgstr "Дивизионы"
+
+#: ../contents/ui/main.qml:1314
+msgid "Embellishment"
+msgstr ""
+
+#: ../contents/ui/main.qml:1315
+msgid "Kneeing"
+msgstr ""
+
+#: ../contents/ui/main.qml:1316
+msgid "Spearing"
+msgstr ""
+
+#: ../contents/ui/main.qml:1317
+#, fuzzy
+msgid "Butt-ending"
+msgstr "Таблица"
+
+#: ../contents/ui/main.qml:1318
+msgid "Checking from behind"
+msgstr ""
+
+#: ../contents/ui/main.qml:1319
+msgid "Head contact"
+msgstr ""
+
+#: ../contents/ui/main.qml:1320
+msgid "Match penalty"
+msgstr ""
+
+#: ../contents/ui/main.qml:1396 ../contents/ui/main.qml:1408
+msgid "No results"
+msgstr ""
+
+#: ../contents/ui/main.qml:1761
+msgid "First Round"
+msgstr "Первый раунд"
+
+#: ../contents/ui/main.qml:1762
+msgid "Second Round"
+msgstr "Второй раунд"
+
+#: ../contents/ui/main.qml:1763
+msgid "Conference Finals"
+msgstr "Финалы конференций"
+
+#: ../contents/ui/main.qml:1764
+msgid "Stanley Cup Final"
+msgstr "Финал Кубка Стэнли"
+
+#: ../contents/ui/main.qml:2772
+msgid "Atlantic"
+msgstr "Атлантический"
+
+#: ../contents/ui/main.qml:2772
+msgid "Metropolitan"
+msgstr "Столичный"
+
+#: ../contents/ui/main.qml:2772
+msgid "Central"
+msgstr "Центральный"
+
+#: ../contents/ui/main.qml:2772
+msgid "Pacific"
+msgstr "Тихоокеанский"
+
+#: ../contents/ui/main.qml:2773
+msgid "Eastern Conference"
+msgstr "Восточная конференция"
+
+#: ../contents/ui/main.qml:2773
+msgid "Western Conference"
+msgstr "Западная конференция"
+
+#: ../contents/config/config.qml:6
+msgid "General"
+msgstr ""
+
+#~ msgid "Intermission"
+#~ msgstr "Перерыв"
+
+#~ msgid "Losses"
+#~ msgstr "Поражения"
+
+#~ msgid "WESTERN CONFERENCE"
+#~ msgstr "ЗАПАДНАЯ КОНФЕРЕНЦИЯ"
+
+#~ msgid "EASTERN CONFERENCE"
+#~ msgstr "ВОСТОЧНАЯ КОНФЕРЕНЦИЯ"
+
+#~ msgid "STANLEY CUP FINALS"
+#~ msgstr "ФИНАЛ КУБКА СТЭНЛИ"
+
+#~ msgid "FINALS"
+#~ msgstr "ФИНАЛ"
+
+#~ msgid "Séries 2026"
+#~ msgstr "Плей-офф 2026"

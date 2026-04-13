@@ -6,6 +6,7 @@ import org.kde.plasma.plasmoid 2.0
 import QtMultimedia
 import org.kde.plasma.core 2.0 as PlasmaCore
 import org.kde.kirigami 2.20 as Kirigami
+import org.kde.notification 1.0 as KNotification
 
 import "logic.js" as Logic
 import "components" as Components
@@ -78,8 +79,9 @@ PlasmoidItem {
     }
     property int  spacingBetweenGames: Plasmoid.configuration.spacingBetweenGames !== undefined ? Plasmoid.configuration.spacingBetweenGames : 2
     property bool ultraCompact: Plasmoid.configuration.ultraCompact || false
-    property int lookaheadDays: Plasmoid.configuration.lookaheadDays !== undefined
-                                 ? Plasmoid.configuration.lookaheadDays : 2
+    property int  pastHours:     Plasmoid.configuration.pastHours !== undefined ? Plasmoid.configuration.pastHours : 12
+    property int  upcomingHours: Plasmoid.configuration.upcomingHours !== undefined ? Plasmoid.configuration.upcomingHours : 12
+
     function updateFavoriteTeams() {
         let f = Plasmoid.configuration.favorites || ""
         favoriteTeams = f.split(/\s*,\s*/).filter(function(s){
@@ -94,11 +96,7 @@ PlasmoidItem {
     property bool showLogos: Plasmoid.configuration.showLogos || false
     property bool showUpcomingTime: (Plasmoid.configuration.showUpcomingTime !== false)
     property string dateMode: Plasmoid.configuration.dateMode || 'local'
-    property bool showToday:    Plasmoid.configuration.showToday
-    property int  pastDays:     Plasmoid.configuration.pastDays !== undefined
-                                ? Plasmoid.configuration.pastDays : 0
     property int  pollInterval:  Plasmoid.configuration.pollInterval || 20
-
     // ── GESTION DE L'ÉTAT (Groupée) ──────────────────────────────────
     
     readonly property QtObject nav: QtObject {
@@ -129,6 +127,9 @@ PlasmoidItem {
         property bool initialLoading: true
         property date lastUpdated
         property string debugMsg: ""
+        property bool   loading: false
+        property string error: ""
+        property bool   isOffline: false
         property int    pulse: 0
         property int    refreshGen: 0
         property var    penaltiesMap: ({})
@@ -388,6 +389,7 @@ PlasmoidItem {
     function action_refreshNow() { refresh() }
 
     Component.onCompleted: {
+        Logic.initializeCache(Plasmoid.configuration)
         try {
             Plasmoid.setAction("refreshNow", i18n("Refresh now"), "view-refresh")
         } catch(e) {
@@ -520,11 +522,55 @@ PlasmoidItem {
         }
     }
 
+    property bool showCompactDesktop: Plasmoid.configuration.showCompactDesktop
+    property var popupRef: null
+    property bool notificationsAllTeams: Plasmoid.configuration.notificationsAllTeams || false
+    property bool enableNotifications: (Plasmoid.configuration.enableNotifications !== false)
+
+    KNotification.Notification {
+        id: systemGoalNotification
+        componentName: "plasma_applet_org.dany.nhlscores"
+        eventId: "goal"
+        iconName: "org.dany.nhlscores"
+    }
+
     function triggerGoalBlink(away, home, ag, hg, prevAg, prevHg, gameId) {
         if (ag > prevAg || hg > prevHg) {
             let scorer = (ag > prevAg && hg > prevHg) ? 'both'
                        : (ag > prevAg) ? 'away' : 'home'
             startBlink(gameId, scorer)
+
+            // ── Notifications Système (KNotification) ──────────────────
+            if (root.enableNotifications) {
+                let showNotify = root.notificationsAllTeams
+                if (!showNotify) {
+                    // Vérifier si une des équipes est favorite
+                    if (root.favoriteTeams.indexOf(away) >= 0 || root.favoriteTeams.indexOf(home) >= 0) {
+                        showNotify = true
+                    }
+                }
+
+                if (showNotify) {
+                    let teamWhoScored = (scorer === 'away') ? away : (scorer === 'home' ? home : "")
+                    let title = i18n("GOAL!")
+                    if (teamWhoScored !== "") title = i18n("GOAL: %1", teamWhoScored)
+                    
+                    systemGoalNotification.title = title
+                    systemGoalNotification.text = away + " " + ag + " - " + hg + " " + home
+
+                    // Utiliser le logo de l'équipe si disponible
+                    if (teamWhoScored !== "") {
+                        let logoPath = Qt.resolvedUrl("../logos/" + teamWhoScored + ".svg").toString()
+                        // KNotification accepte les chemins locaux (sans file://)
+                        systemGoalNotification.iconName = logoPath.replace("file://", "")
+                    } else {
+                        systemGoalNotification.iconName = "org.dany.nhlscores"
+                    }
+                    
+                    systemGoalNotification.sendEvent()
+                }
+            }
+
             // Vérifier toutes les équipes avec son activé
             let teams = root.soundTeams
             // Compatibilité legacy
@@ -621,66 +667,18 @@ PlasmoidItem {
         'VAN':'#008852','VGK':'#333F42','WPG':'#AC162C','WSH':'#041E42'
     })
 
-    // (L'ancienne fonction teamColor a été remplacée par Logic.getTeamColor)
-
-    // Retourne une version de la couleur d'équipe lisible sur le fond du thème.
-    // forText: si vrai, applique un contraste plus fort pour la lisibilité de la police.
     function teamColorAdapted(code, opponentCode, isAway, forText) {
-        var hex = Logic.getTeamColorAdapted(code, opponentCode, isAway, null)
-        if (!hex) return Kirigami.Theme.textColor
+        let bg = (typeof Kirigami !== 'undefined' && Kirigami.Theme) ? Kirigami.Theme.backgroundColor : "#ffffff"
+        return Logic.getTeamColorAdapted(code, opponentCode, isAway, forText, bg)
+    }
 
-        // Luminance de la couleur d'équipe
-        var h = hex.replace('#','')
-        var r = parseInt(h.substring(0,2),16)/255
-        var g = parseInt(h.substring(2,4),16)/255
-        var b = parseInt(h.substring(4,6),16)/255
-        var rl = r<=0.03928?r/12.92:Math.pow((r+0.055)/1.055,2.4)
-        var gl = g<=0.03928?g/12.92:Math.pow((g+0.055)/1.055,2.4)
-        var bl = b<=0.03928?b/12.92:Math.pow((b+0.055)/1.055,2.4)
-        var L = 0.2126*rl + 0.7152*gl + 0.0722*bl
+    function teamTextColor(teamCode, opponentCode, isAway) {
+        let bg = (typeof Kirigami !== 'undefined' && Kirigami.Theme) ? Kirigami.Theme.backgroundColor : "#ffffff"
+        return Logic.getTeamTextColor(teamCode, opponentCode, isAway, bg)
+    }
 
-        // Luminance du fond du thème
-        var bg = Kirigami.Theme.backgroundColor
-        var br = bg.r <= 0.03928 ? bg.r/12.92 : Math.pow((bg.r+0.055)/1.055,2.4)
-        var bgg = bg.g <= 0.03928 ? bg.g/12.92 : Math.pow((bg.g+0.055)/1.055,2.4)
-        var bb = bg.b <= 0.03928 ? bg.b/12.92 : Math.pow((bg.b+0.055)/1.055,2.4)
-        var Lbg = 0.2126*br + 0.7152*bgg + 0.0722*bb
-
-        // Ratio de contraste
-        var contrast = (Math.max(L, Lbg) + 0.05) / (Math.min(L, Lbg) + 0.05)
-        
-        // Pour le texte, on veut un contraste bien plus élevé (minimum 3.0)
-        var minContrast = forText ? 3.0 : 1.8
-        if (contrast >= minContrast) return hex 
-
-        // Si c'est du texte noir sur fond noir -> on force une couleur claire
-        if (forText && Lbg < 0.25 && L < 0.2) return "#cccccc"
-
-        // Exception pour le fond des badges (non-texte) : on accepte le noir
-        if (!forText && Lbg < 0.25 && L < 0.05) return "#181818"
-
-        // Sinon, calcul d'éclaircissement/assombrissement standard...
-        if (Lbg < 0.25) {
-            // Mélange avec blanc jusqu'à obtenir assez de contraste
-            var ri = parseInt(h.substring(0,2),16)
-            var gi = parseInt(h.substring(2,4),16)
-            var bi2 = parseInt(h.substring(4,6),16)
-            var t = 0.55  // facteur d'éclaircissement
-            ri = Math.round(ri + (255 - ri) * t)
-            gi = Math.round(gi + (255 - gi) * t)
-            bi2 = Math.round(bi2 + (255 - bi2) * t)
-            return '#' + ('0'+ri.toString(16)).slice(-2)
-                       + ('0'+gi.toString(16)).slice(-2)
-                       + ('0'+bi2.toString(16)).slice(-2)
-        }
-
-        // Thème clair : assombrir la couleur d'équipe
-        var ri2 = Math.round(parseInt(h.substring(0,2),16) * 0.55)
-        var gi2 = Math.round(parseInt(h.substring(2,4),16) * 0.55)
-        var bi3 = Math.round(parseInt(h.substring(4,6),16) * 0.55)
-        return '#' + ('0'+ri2.toString(16)).slice(-2)
-                   + ('0'+gi2.toString(16)).slice(-2)
-                   + ('0'+bi3.toString(16)).slice(-2)
+    function teamBadgeTextColor(teamCode) {
+        return Logic.getTeamBadgeTextColor(teamCode)
     }
 
     // Retourne 'white' ou 'black' selon la luminance de la couleur d'équipe
@@ -776,21 +774,22 @@ PlasmoidItem {
         return Logic.venueTimeStr(msUTC, homeTeam)
     }
 
-    function teamTextColor(teamCode, opponentCode, isAway) {
-        return Logic.getTeamTextColor(teamCode, opponentCode, isAway)
-    }
-
     function fetchLeagueByDates(days, cb){
         let acc=[]
         let pending=days.length
         let errors=[]
+        let offlineCount = 0
         if(pending===0){ cb(acc, errors); return }
         days.forEach(function(d){
-            Logic.ApiService.getScoreboard(dateISO(d), function(err,data){
+            Logic.ApiService.getScoreboard(dateISO(d), function(err, data, isOffline){
+                if (isOffline) offlineCount++
                 if(err){ errors.push(String(err)) }
                 else if (data && data.games){ acc = acc.concat(data.games) }
                 pending--
-                if(pending===0) cb(acc, errors)
+                if(pending===0) {
+                    glob.isOffline = (offlineCount > 0 && acc.length > 0)
+                    cb(acc, errors)
+                }
             })
         })
     }
@@ -801,9 +800,11 @@ PlasmoidItem {
         let acc=[]
         let errors=[]
         let pending=teamCodes.length
+        let offlineCount = 0
         if(pending===0){ cb(acc, errors); return }
         teamCodes.forEach(function(team){
-            Logic.ApiService.getScoreboardNow(team, function(err, data){
+            Logic.ApiService.getScoreboardNow(team, function(err, data, isOffline){
+                if (isOffline) offlineCount++
                 if (err) { errors.push(String(err)) }
                 else if (data && data.gamesByDate) {
                     for (let i=0;i<data.gamesByDate.length;i++){
@@ -812,7 +813,10 @@ PlasmoidItem {
                     }
                 }
                 pending--
-                if (pending===0) cb(acc, errors)
+                if (pending===0) {
+                    glob.isOffline = (offlineCount > 0 && acc.length > 0)
+                    cb(acc, errors)
+                }
             })
         })
     }
@@ -821,45 +825,43 @@ PlasmoidItem {
         glob.refreshGen++
         const myGen = glob.refreshGen
 
-        // Rafraîchir les détails du match actif si le hub est ouvert
+        // Rafraîchir les détails du match actif si ouvert
         if (nav.detail && det.gameId !== 0) {
             fetchDetail(det.gameId)
         }
 
+        let now = new Date()
+        let startTime = new Date(now.getTime() - (root.pastHours * 3600000))
+        let endTime = new Date(now.getTime() + (root.upcomingHours * 3600000))
+
+
+        // On récupère les dates ISO uniques couvrant l'intervalle [startTime, endTime]
         let days = []
-        let base = new Date()
-        let currentHour = base.getHours()
-        base.setHours(0, 0, 0, 0)
+        let iter = new Date(startTime.getTime())
+        iter.setHours(0,0,0,0)
+        let lastDate = new Date(endTime.getTime())
+        lastDate.setHours(0,0,0,0)
 
-        // jours précédents
-        let startPd = pastDays
-        // Si l'option est à 0, on "force" l'affichage d'hier (1 jour) seulement avant midi
-        if (pastDays === 0 && currentHour < 12) {
-            startPd = 1
+        while (iter <= lastDate) {
+            days.push(new Date(iter.getTime()))
+            iter.setDate(iter.getDate() + 1)
         }
 
-        for (let pd = startPd; pd >= 1; pd--) {
-            days.push(new Date(base.getTime() - pd*24*3600*1000))
-        }
-
-        // aujourd'hui (toujours inclus)
-        days.push(new Date(base))
-
-        // futur
-        for (let i = 1; i <= lookaheadDays; i++) {
-            days.push(new Date(base.getTime() + i*24*3600*1000))
+        if (days.length === 0) {
+            return
         }
 
         fetchLeagueByDates(days, function(leagueGames, leagueErrs) {
-            if (myGen !== glob.refreshGen) return  // requête obsolète, on abandonne
+            if (myGen !== glob.refreshGen) return
+            
+            // On envoie tout à buildFromRawGames qui fera le tri final
             if (leagueGames && leagueGames.length) {
                 buildFromRawGames(leagueGames, leagueErrs)
             } else {
                 const pool = showAllTeams ? allTeams : favoriteTeams
                 fetchTeamNow(pool, function(teamGames, teamErrs) {
                     if (myGen !== glob.refreshGen) return
-                    buildFromRawGames(teamGames || [],
-                                      (leagueErrs||[]).concat(teamErrs||[]))
+                    buildFromRawGames(teamGames || [], (leagueErrs||[]).concat(teamErrs||[]))
                 })
             }
         })
@@ -1453,6 +1455,18 @@ PlasmoidItem {
     }
 
     // ── Fiche joueur ─────────────────────────────────────────────────
+    function fetchPlayer(playerId) {
+        if (!playerId) return
+        ply.loading = true
+        ply.error   = ''
+        ply.data    = null
+        Logic.ApiService.getPlayerLanding(playerId, function(err, data) {
+            ply.loading = false
+            if (err) { ply.error = String(err); return }
+            ply.data = data
+        })
+    }
+
     function openPlayer(playerId, from) {
         if (!playerId) return
         nav.player    = true
@@ -1491,6 +1505,104 @@ PlasmoidItem {
     }
 
     // ── Ouvrir le hub d'équipe ──────────────────────────────────────
+    function fetchTeamHub(teamCode, from) {
+        hub.code    = teamCode
+        sch.team    = teamCode // Important pour le calendrier
+        hub.from    = from || 'detail'
+        hub.loading = true
+        hub.error   = ''
+        hub.record  = ''
+        hub.coach   = ''
+        hub.fullName = ''
+        hub.w       = 0
+        hub.l       = 0
+        hub.ot      = 0
+        hub.pts     = 0
+        hub.gp      = 0
+        hub.standing = ''
+        hub.lastGames = []
+        hub.nextGame  = null
+
+        let pending = 3   // schedule, standings, entraîneur(direct)
+        function done() { pending--; if (pending <= 0) hub.loading = false }
+
+        // 1. Calendrier → derniers matchs + prochain
+        fetchSchedule(teamCode) // Pour peupler sch.gamesMap
+        Logic.ApiService.getTeamSchedule(teamCode, function(err, data) {
+                if (!err && data && data.games) {
+                    let past = data.games.filter(function(g) {
+                        return g.gameState === 'OFF' || g.gameState === 'FINAL'
+                    }).slice(-5)
+                    let next = data.games.find(function(g) {
+                        return g.gameState === 'FUT' || g.gameState === 'PRE'
+                    })
+                    hub.lastGames = past.map(function(g) {
+                        let isHome = g.homeTeam && g.homeTeam.abbrev === teamCode
+                        let opp    = isHome ? (g.awayTeam && g.awayTeam.abbrev) : (g.homeTeam && g.homeTeam.abbrev)
+                        let gf     = isHome ? (g.homeTeam && g.homeTeam.score) : (g.awayTeam && g.awayTeam.score)
+                        let ga     = isHome ? (g.awayTeam && g.awayTeam.score) : (g.homeTeam && g.homeTeam.score)
+                        let win    = gf > ga
+                        let ot     = g.periodDescriptor && (g.periodDescriptor.periodType === 'OT' || g.periodDescriptor.periodType === 'SO')
+                        return { opp: opp, gf: gf, ga: ga, win: win, ot: ot,
+                                 home: isHome, start: g.startTimeUTC }
+                    })
+                    if (next) {
+                        let isHome = next.homeTeam && next.homeTeam.abbrev === teamCode
+                        let opp = isHome ? (next.awayTeam && next.awayTeam.abbrev)
+                                         : (next.homeTeam && next.homeTeam.abbrev)
+                        hub.nextGame = { opp: opp, home: isHome, start: next.startTimeUTC }
+                    }
+                }
+                done()
+            })
+
+        // 2. Standings → fiche + position
+        Logic.ApiService.getStandings(function(err, data) {
+                if (!err && data && data.standings) {
+                    let team = data.standings.find(function(s) {
+                        return s.teamAbbrev && s.teamAbbrev.default === teamCode
+                    })
+                    if (team) {
+                        hub.record   = (team.wins || 0) + "-" + (team.losses || 0) + "-" + (team.otLosses || 0)
+                        var cn = team.teamCommonName ? (team.teamCommonName.default || team.teamCommonName) : ''
+                        var pn = team.teamPlaceNameWithPreposition ? (team.teamPlaceNameWithPreposition.fr || team.teamPlaceNameWithPreposition.default || '') : ''
+                        hub.fullName = cn + (pn ? ' ' + pn : '')
+                        hub.w        = team.wins        || 0
+                        hub.l        = team.losses      || 0
+                        hub.ot       = team.otLosses    || 0
+                        hub.pts      = team.points      || 0
+                        hub.gp       = team.gamesPlayed || 0
+                        let div   = team.divisionName || ''
+                        let rank  = team.divisionSequence || team.wildcardSequence || ''
+                        hub.standing = rank + (rank ? " · " : "") + div
+                    }
+                }
+                done()
+            })
+
+        // 4. Entraîneur
+        var coaches = {
+            'ANA': 'Greg Cronin',       'UTA': 'André Tourigny',
+            'BOS': 'Joe Sacco',         'BUF': 'Lindy Ruff',
+            'CAR': "Rod Brind'Amour",   'CBJ': 'Dean Evason',
+            'CGY': 'Ryan Huska',        'CHI': 'Anders Sorensen',
+            'COL': 'Jared Bednar',      'DAL': 'Peter DeBoer',
+            'DET': 'Derek Lalonde',     'EDM': 'Kris Knoblauch',
+            'FLA': 'Paul Maurice',      'LAK': 'Jim Hiller',
+            'MIN': 'John Hynes',        'MTL': 'Martin St-Louis',
+            'NJD': 'Sheldon Keefe',     'NSH': 'Andrew Brunette',
+            'NYI': 'Patrick Roy',        NYR: 'Peter Laviolette',
+            'OTT': 'Travis Green',      'PHI': 'John Tortorella',
+            'PIT': 'Mike Sullivan',     'SEA': 'Dan Bylsma',
+            'SJS': 'Ryan Warsofsky',    'STL': 'Drew Bannister',
+            'TBL': 'Jon Cooper',        'TOR': 'Craig Berube',
+            'VAN': 'Rick Tocchet',      'VGK': 'Bruce Cassidy',
+            'WPG': 'Scott Arniel',      'WSH': 'Spencer Carbery'
+        }
+        hub.coach = coaches[teamCode] || ''
+        done()
+    }
+
     function openTeamHub(teamCode, from) {
         nav.teamHub    = true
         hub.code    = teamCode
@@ -1622,32 +1734,23 @@ PlasmoidItem {
     function buildFromRawGames(games, errors){
         games = games || []
         const now = new Date()
-        const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0)
-        let cutoff
+        const startTime = now.getTime() - (root.pastHours * 3600000)
+        const endTime = now.getTime() + (root.upcomingHours * 3600000)
 
-        if (pastDays > 0) {
-            // Minuit du premier jour précédent demandé
-            cutoff = new Date(todayStart.getTime() - pastDays * 24 * 3600000)
-        } else if (showToday) {
-            // Aujourd'hui : maintenant - 15h (pour couvrir les matchs en soirée d'hier soir)
-            cutoff = new Date(now.getTime() - 15 * 3600000)
-        } else {
-            // Par défaut : minuit aujourd'hui
-            cutoff = todayStart
-        }
-        const endWin = new Date(now.getFullYear(), now.getMonth(), now.getDate() + lookaheadDays, 23, 59, 59, 999)
-        function inWindow(g){ const t = new Date(g.startTimeUTC || now); return t >= cutoff && t <= endWin }
-        let filtered = games.filter(function(g){ return inWindow(g) })
+
+        // Filtrage temporel précis
+        let filtered = games.filter(function(g){
+            if (!g.startTimeUTC) return false
+            const t = new Date(g.startTimeUTC).getTime()
+            return t >= startTime && t <= endTime
+        })
+
 
         if (!showAllTeams && favoriteTeams.length){
-
             filtered = filtered.filter(function(g){
-
                 const h = g.homeTeam && g.homeTeam.abbrev
                 const a = g.awayTeam && g.awayTeam.abbrev
-
-                return favoriteTeams.indexOf(h) >= 0 ||
-                favoriteTeams.indexOf(a) >= 0
+                return favoriteTeams.indexOf(h) >= 0 || favoriteTeams.indexOf(a) >= 0
             })
         }
 
@@ -1696,45 +1799,43 @@ PlasmoidItem {
         .sort(function(a,b){ return a.start - b.start })
 
         uniq = uniq.slice(0, maxGames)
-        // Sauvegarder les scores précédents avant de vider le modèle
+        
+        // Sauvegarder les scores précédents pour la détection des buts
         let snapshot = {}
         for (let si = 0; si < todayGames.count; si++) {
             let sg = todayGames.get(si)
-            snapshot[sg.gameId] = { ag: sg.ag, hg: sg.hg, status: sg.statusRole }
+            if (sg.gameId > 0) {
+                snapshot[sg.gameId] = { ag: sg.ag, hg: sg.hg, status: sg.statusRole }
+            }
         }
         glob.prevScores = snapshot
 
-        todayGames.clear()
+        // Construire la liste cible (Matchs + Séparateurs)
+        let targetData = []
         let lastDateKey = ''
         let gameIdx = 0
         let todayKey = dateISO(new Date())
-        for (let i=0;i<uniq.length;i++) {
-
-            let liveRemain = ""
-            let livePeriod = uniq[i].period
-
-            if (uniq[i].statusRole === "LIVE") {
-                let g = uniq[i]
-                if (g.rawClock) liveRemain = g.rawClock.timeRemaining
-            }
-
-            // Insérer séparateur de date pour tout nouveau jour
+        
+        for (let i = 0; i < uniq.length; i++) {
             let gameDate = uniq[i].start ? dateISO(new Date(uniq[i].start)) : todayKey
             if (gameDate !== lastDateKey) {
                 lastDateKey = gameDate
-                todayGames.append({
-                    gameId: -1,
-                    home: '', away: '', hg: 0, ag: 0,
-                    start: uniq[i].start,
-                    statusRole: 'DATE_SEP',
+                targetData.push({
+                    gameId: -1, home: '', away: '', hg: 0, ag: 0,
+                    start: uniq[i].start, statusRole: 'DATE_SEP',
                     rawState: '', periodType: '', period: 0,
                     liveRemain: '', inIntermission: false,
                     situationCode: '1551', penaltyTime: '', intermissionRemain: '',
-                    gameType: 2, gameIndex: gameIdx  // gameIdx = index du prochain vrai match
+                    gameType: 2, gameIndex: gameIdx
                 })
             }
 
-            todayGames.append({
+            let liveRemain = ""
+            if (uniq[i].statusRole === "LIVE" && uniq[i].rawClock) {
+                liveRemain = uniq[i].rawClock.timeRemaining
+            }
+
+            targetData.push({
                 gameId: uniq[i].gameId,
                 home: uniq[i].home,
                 away: uniq[i].away,
@@ -1744,7 +1845,7 @@ PlasmoidItem {
                 statusRole: uniq[i].statusRole,
                 rawState: uniq[i].rawState,
                 periodType: uniq[i].periodType,
-                period: livePeriod,
+                period: uniq[i].period || 0,
                 liveRemain: liveRemain,
                 inIntermission: uniq[i].inIntermission || false,
                 situationCode: uniq[i].situationCode || '1551',
@@ -1753,6 +1854,32 @@ PlasmoidItem {
                 gameType: uniq[i].gameType || 2,
                 gameIndex: gameIdx++
             })
+        }
+
+        // --- Synchronisation granulaire du ListModel ---
+        // 1. Ajuster la taille du modèle
+        while (todayGames.count > targetData.length) {
+            todayGames.remove(todayGames.count - 1)
+        }
+        while (todayGames.count < targetData.length) {
+            todayGames.append(targetData[todayGames.count])
+        }
+
+        // 2. Mettre à jour uniquement les propriétés modifiées
+        for (let j = 0; j < targetData.length; j++) {
+            let current = todayGames.get(j)
+            let target = targetData[j]
+            
+            // On compare les clés essentielles pour décider s'il faut mettre à jour
+            if (current.gameId !== target.gameId || 
+                current.ag !== target.ag || current.hg !== target.hg ||
+                current.statusRole !== target.statusRole ||
+                current.liveRemain !== target.liveRemain ||
+                current.situationCode !== target.situationCode ||
+                current.inIntermission !== target.inIntermission) 
+            {
+                todayGames.set(j, target)
+            }
         }
 
         // Détecter les nouveaux buts et envoyer les notifications
@@ -1815,9 +1942,8 @@ PlasmoidItem {
         function onSoundVolumeChanged(){ root.soundVolume = Plasmoid.configuration.soundVolume !== undefined ? Plasmoid.configuration.soundVolume : 1.0 }
         function onShowAllTeamsChanged(){ refresh() }
         function onMaxGamesChanged(){ refresh() }
-        function onLookaheadDaysChanged(){ refresh() }
-        function onPastDaysChanged(){ refresh() }
-        function onShowTodayChanged(){ refresh() }
+        function onPastHoursChanged(){ root.pastHours = Plasmoid.configuration.pastHours; refresh() }
+        function onUpcomingHoursChanged(){ root.upcomingHours = Plasmoid.configuration.upcomingHours; refresh() }
         function onPollIntervalChanged(){ root.pollInterval = Plasmoid.configuration.pollInterval || 20 }
 
         function onScoreLayoutChanged(){ root.scoreLayout = Plasmoid.configuration.scoreLayout || 'stack' }
@@ -2035,8 +2161,10 @@ PlasmoidItem {
                     var ag    = g.awayTeam  ? (g.awayTeam.score   !== undefined ? g.awayTeam.score  : -1) : -1
                     var hg    = g.homeTeam  ? (g.homeTeam.score   !== undefined ? g.homeTeam.score  : -1) : -1
                     var startMs = new Date(g.startTimeUTC || '').getTime() || 0
-                    var iso   = g.startTimeUTC ? g.startTimeUTC.substring(0, 10) : ""
-                    
+
+                    // Calculer la date ISO locale (ou aréna) pour le dictionnaire du calendrier
+                    var dObj = new Date(startMs)
+                    var iso = dObj.getFullYear() + "-" + Logic.pad2(dObj.getMonth() + 1) + "-" + Logic.pad2(dObj.getDate())
                     // Résultat W/L/OTW/OTL pour l'équipe sélectionnée
                     var matchResult = ''
                     if (isFinal && ag >= 0 && hg >= 0) {
@@ -2140,6 +2268,34 @@ PlasmoidItem {
     }
 
     function openDetail(gid, away, home, ag, hg, status, ptype, period, remain, start, interm, sitCode) {
+        // En mode compact bureau, on ouvre le popup séparé au lieu de changer la vue interne
+        // detailPopup est maintenant défini dans fullRepresentation
+        if (root.isDesktop && root.showCompactDesktop && root.popupRef) {
+            // TOGGLE : si le popup est déjà ouvert pour le même match, on le ferme
+            if (root.popupRef.visible && String(det.gameId) === String(gid)) {
+                root.popupRef.visible = false
+                return
+            }
+
+            det.gameId  = gid
+            det.away    = away
+            det.home    = home
+            det.ag      = ag
+            det.hg      = hg
+            det.status  = status
+            det.pType   = ptype
+            det.period  = period
+            det.remain  = remain
+            det.start   = start
+            det.interm  = interm || false
+            det.sitCode = sitCode || '1551'
+            det.view    = 'goals'
+            fetchH2H(away, home)
+            
+            root.popupRef.visible = true
+            return
+        }
+
         // Toggle : fermer si le même match est déjà ouvert
         if (nav.detail && det.gameId === gid) {
             nav.detail = false
@@ -2174,7 +2330,7 @@ PlasmoidItem {
         det.goals   = []
         det.stats   = ({})
         det.venue = ''; det.seriesAway = 0; det.seriesHome = 0; det.seriesTotal = false; det.h2hGames = []
-        det.awayRecord = ''; det.homeRecord = ''
+        det.awayRecord = ({}); det.homeRecord = ({})
         det.awayLeaders = []; det.homeLeaders = []
         det.awayGoalie = null; det.homeGoalie = null
         det.sitCode  = sitCode || '1551'
@@ -2213,6 +2369,10 @@ PlasmoidItem {
     }
 
     function fetchDetail(gid) {
+        // Optimisation : si le match est déjà FINAL et qu'on a déjà chargé les données, on peut ignorer le rafraîchissement
+        if (det.gameId === gid && det.status === 'FINAL' && det.goals.length > 0 && !det.loading) {
+            return
+        }
         det.loading = true
         var done = 0
         function tryDone() { done++; if (done >= 3) det.loading = false }
@@ -2321,6 +2481,7 @@ PlasmoidItem {
                                     if (!p) continue
                                     var name = p.name ? (p.name.default || '') : ''
                                     result.push({
+                                        id:    p.playerId || 0,
                                         cat:   cat,
                                         name:  name,
                                         value: p.value !== undefined ? p.value : '–'
@@ -2354,6 +2515,7 @@ PlasmoidItem {
                                     : g.goalsAgainstAverage !== undefined ? parseFloat(g.goalsAgainstAverage).toFixed(3) : '–'
                             var svp = g.savePctg !== undefined ? g.savePctg : (g.savePercentage !== undefined ? g.savePercentage : null)
                             return {
+                                id:     g.playerId || 0,
                                 name:   name,
                                 record: recStr,
                                 gaa:    gaa,
@@ -2628,106 +2790,132 @@ PlasmoidItem {
 
     fullRepresentation: Item {
         id: fullRoot
-        implicitWidth:  root.isDesktop ? 400 : 440
+        implicitWidth:  root.isDesktop ? 440 : 440
         implicitHeight: root.isDesktop ? 520 : 520
+        Layout.minimumWidth: root.showCompactDesktop ? 160 : 400
+        Layout.minimumHeight: root.showCompactDesktop ? 60 : 300
         Layout.fillWidth:  root.isDesktop
         Layout.fillHeight: root.isDesktop
 
-        // --- Vue bureau (Fond) ---
-        Loader {
-            anchors.fill: parent
-            active: root.isDesktop
-            visible: active && root.activeView === "desktop"
-            sourceComponent: desktopRepresentation
+        // ── Objets de contrôle pour le popup ──────────────────────────
+        QtObject {
+            id: popupNav
+            property bool standings: false; property bool leaders: false; property bool search: false
+            property bool teamHub: false; property bool player: false; property bool schedule: false
+            property bool franchiseLeaders: false; property bool bracket: false; property bool calendar: false
+            property bool dayView: false; property bool detail: true
+
+            // Synchronisation avec StackView : si une vue secondaire est fermée via nav, on pop
+            onStandingsChanged: if (!standings && popupStack.depth > 1) popupStack.pop()
+            onLeadersChanged: if (!leaders && popupStack.depth > 1) popupStack.pop()
+            onSearchChanged: if (!search && popupStack.depth > 1) popupStack.pop()
+            onTeamHubChanged: if (!teamHub && popupStack.depth > 1) popupStack.pop()
+            onPlayerChanged: if (!player && popupStack.depth > 1) popupStack.pop()
+            onScheduleChanged: if (!schedule && popupStack.depth > 1) popupStack.pop()
+            onFranchiseLeadersChanged: if (!franchiseLeaders && popupStack.depth > 1) popupStack.pop()
+            onBracketChanged: if (!bracket && popupStack.depth > 1) popupStack.pop()
+            onCalendarChanged: if (!calendar && popupStack.depth > 1) popupStack.pop()
+            onDayViewChanged: if (!dayView && popupStack.depth > 1) popupStack.pop()
         }
 
-        // --- Vue Détail Match ---
-        Loader {
-            anchors.fill: parent
-            active: nav.detail
-            asynchronous: true
-            visible: active && root.activeView === "detail"
-            source: "views/DetailView.qml"
-            onLoaded: item.controller = root
+        QtObject {
+            id: popupProxy
+            property var det: root.det; property var glob: root.glob; property var std: root.std
+            property var lead: root.lead; property var srch: root.srch; property var hub: root.hub
+            property var flead: root.flead; property var sch: root.sch; property var cal: root.cal
+            property var brk: root.brk; property var ply: root.ply; property var day: root.day
+            property var standingsFlatModelAlias: root.standingsFlatModelAlias
+            property var styles: root.styles
+            property color liveColor: root.liveColor; property bool showLogos: root.showLogos
+            property bool showAllTeams: root.showAllTeams; property var favoriteTeams: root.favoriteTeams
+            property var nav: popupNav; property bool isPopup: true; property var popupRef: detailPopup
+
+            function teamLogoUrl(c) { return root.teamLogoUrl(c) }
+            function teamColorAdapted(c,o,a,t) { return root.teamColorAdapted(c,o,a,t) }
+            function teamTextColor(c,o,a) { return root.teamTextColor(c,o,a) }
+            function parseSituation(s,a,h) { return root.parseSituation(s,a,h) }
+            function statusSuffix(s,p) { return root.statusSuffix(s,p) }
+            function liveClockText(p,n,r) { return root.liveClockText(p,n,r) }
+            function livePeriodText(p,n) { return root.livePeriodText(p,n) }
+            function localTimeStr(m) { return root.localTimeStr(m) }
+            function localeDateLong(m) { return root.localeDateLong(m) }
+            function statusColor(s) { return root.statusColor(s) }
+            function badgeLine1(s,rs,pt,p,lr,sm,ht,i) { return root.badgeLine1(s,rs,pt,p,lr,sm,ht,i) }
+            function badgeLine2(s,rs,pt,p,lr,sm,ht,i) { return root.badgeLine2(s,rs,pt,p,lr,sm,ht,i) }
+            function penaltyDesc(p) { return root.penaltyDesc(p) }
+            function blinkOpacity(g,s) { return root.blinkOpacity(g,s) }
+            function gameCenterUrl(a,h,s,g) { return root.gameCenterUrl(a,h,s,g) }
+            function buildStandingsModel() { root.buildStandingsModel() }
+            function refresh() { root.fetchDetail(root.det.gameId) }
+            function closePopup() { detailPopup.visible = false }
+            function goBack() { if (popupStack.depth > 1) popupStack.pop(); else detailPopup.visible = false }
+
+            function openStandings() { popupNav.standings=true; root.fetchStandings(); popupStack.push(standingsViewComp, {"ctrl": popupProxy}) }
+            function openLeaders() { popupNav.leaders=true; root.fetchLeaders(); popupStack.push(leadersViewComp, {"ctrl": popupProxy}) }
+            function openSearch() { popupNav.search=true; popupStack.push(searchViewComp, {"ctrl": popupProxy}) }
+            function openTeamHub(c,f) { popupNav.teamHub=true; root.fetchTeamHub(c,f); popupStack.push(teamHubViewComp, {"ctrl": popupProxy}) }
+            function openPlayer(id,f) { popupNav.player=true; root.fetchPlayer(id); popupStack.push(playerViewComp, {"ctrl": popupProxy}) }
+            function openSchedule(c,s) { popupNav.schedule=true; if(s)root.fetchTeamStats(c); else root.fetchSchedule(c); popupStack.push(scheduleViewComp, {"ctrl": popupProxy}) }
+            function openFranchiseLeaders(c) { popupNav.franchiseLeaders=true; root.fetchFranchiseLeaders(c); popupStack.push(franchiseLeadersViewComp, {"ctrl": popupProxy}) }
+            function openPlayoffBracket() { popupNav.bracket=true; root.fetchPlayoffBracket(); popupStack.push(bracketViewComp, {"ctrl": popupProxy}) }
+            function openSimulationBracket() { popupNav.bracket=true; root.fetchPlayoffBracket(); popupStack.push(bracketViewComp, {"ctrl": popupProxy}) }
+            function openCalendar() { popupNav.calendar=true; popupStack.push(calendarViewComp, {"ctrl": popupProxy}) }
+            function openDayView(d) { popupNav.dayView=true; root.fetchDayView(d); popupStack.push(dayViewComp, {"ctrl": popupProxy}) }
+            function openDetail(gid,a,h,as,hs,st,pt,p,r,s,i,sc) {
+                root.det.gameId = gid; root.fetchDetail(gid);
+                popupStack.push(detailViewComp, {"ctrl": popupProxy})
+            }
         }
 
-        // --- Vue Standings ---
-        Loader {
-            anchors.fill: parent
-            active: nav.standings
-            asynchronous: false
-            visible: active && root.activeView === "standings"
-            source: "views/StandingsView.qml"
-            onLoaded: item.controller = root
+        PlasmaCore.Dialog {
+            id: detailPopup; visualParent: fullRoot; location: Plasmoid.location; type: PlasmaCore.Dialog.AppletPopup
+            visible: false; flags: Qt.WindowStaysOnTopHint
+            mainItem: Item {
+                width: 440; height: 540
+                StackView {
+                    id: popupStack; anchors.fill: parent; initialItem: detailViewComp
+                    Component.onCompleted: if (currentItem) currentItem.ctrl = popupProxy
+                }
+            }
+            onVisibleChanged: { if (visible) { while(popupStack.depth > 1) popupStack.pop(); root.fetchDetail(root.det.gameId) } }
+            Component.onCompleted: root.popupRef = detailPopup
         }
 
-        // --- Vue Franchise Leaders ---
-        Loader {
-            anchors.fill: parent
-            active: nav.franchiseLeaders
-            asynchronous: false
-            visible: active && root.activeView === "franchiseLeaders"
-            source: "views/FranchiseLeadersView.qml"
-            onLoaded: item.controller = root
+        StackView { id: mainStack; anchors.fill: parent; initialItem: desktopViewComp }
+
+        Connections {
+            target: root
+            function onActiveViewChanged() {
+                if (root.activeView === "desktop") { while (mainStack.depth > 1) mainStack.pop() }
+                else {
+                    var comp = null
+                    if (root.activeView === "detail") comp = detailViewComp
+                    else if (root.activeView === "standings") comp = standingsViewComp
+                    else if (root.activeView === "leaders") comp = leadersViewComp
+                    else if (root.activeView === "search") comp = searchViewComp
+                    else if (root.activeView === "teamHub") comp = teamHubViewComp
+                    else if (root.activeView === "player") comp = playerViewComp
+                    else if (root.activeView === "schedule") comp = scheduleViewComp
+                    else if (root.activeView === "franchiseLeaders") comp = franchiseLeadersViewComp
+                    else if (root.activeView === "bracket") comp = bracketViewComp
+                    else if (root.activeView === "calendar") comp = calendarViewComp
+                    else if (root.activeView === "dayView") comp = dayViewComp
+                    if (comp) { if (mainStack.depth > 1) mainStack.replace(comp); else mainStack.push(comp) }
+                }
+            }
         }
 
-        // --- Vue Leaders ---
-        Loader {
-            anchors.fill: parent
-            active: nav.leaders
-            asynchronous: false
-            visible: active && root.activeView === "leaders"
-            source: "views/LeadersView.qml"
-            onLoaded: item.controller = root
-        }
-
-        // --- Vue Search ---
-        Loader {
-            anchors.fill: parent
-            active: nav.search
-            asynchronous: false
-            visible: active && root.activeView === "search"
-            source: "views/SearchView.qml"
-            onLoaded: item.controller = root
-        }
-
-        // --- Vue Team Hub ---
-        Loader {
-            anchors.fill: parent
-            active: nav.teamHub
-            asynchronous: false
-            visible: active && root.activeView === "teamHub"
-            source: "views/TeamHubView.qml"
-            onLoaded: item.controller = root
-        }
-
-        // --- Vue Player ---
-        Loader {
-            anchors.fill: parent
-            active: nav.player
-            asynchronous: false
-            visible: active && root.activeView === "player"
-            source: "views/PlayerView.qml"
-            onLoaded: item.controller = root
-        }
-
-        // --- Vues utilitaires ---
-        Loader { anchors.fill: parent; active: nav.schedule; visible: active && root.activeView === "schedule"; source: "views/ScheduleView.qml"; onLoaded: item.controller = root }
-        Loader { anchors.fill: parent; active: nav.bracket;  visible: active && root.activeView === "bracket";  source: "views/BracketView.qml";  onLoaded: item.controller = root }
-        Loader { anchors.fill: parent; active: nav.calendar; visible: active && root.activeView === "calendar"; source: "views/CalendarView.qml"; onLoaded: item.controller = root }
-        Loader { anchors.fill: parent; active: nav.dayView;  visible: active && root.activeView === "dayView";  source: "views/DayView.qml";      onLoaded: item.controller = root }
+        Component { id: desktopViewComp; Loader { id: ldDesktop; property var ctrl: root; width: parent ? parent.width : 0; height: parent ? parent.height : 0; source: "views/DesktopRepresentation.qml"; Binding { target: ldDesktop.item; property: "controller"; value: ldDesktop.ctrl; when: ldDesktop.status === Loader.Ready } } }
+        Component { id: detailViewComp; Loader { id: ldDetail; property var ctrl: root; width: parent ? parent.width : 0; height: parent ? parent.height : 0; source: "views/DetailView.qml"; Binding { target: ldDetail.item; property: "controller"; value: ldDetail.ctrl; when: ldDetail.status === Loader.Ready } } }
+        Component { id: standingsViewComp; Loader { id: ldStand; property var ctrl: root; width: parent ? parent.width : 0; height: parent ? parent.height : 0; source: "views/StandingsView.qml"; Binding { target: ldStand.item; property: "controller"; value: ldStand.ctrl; when: ldStand.status === Loader.Ready } } }
+        Component { id: franchiseLeadersViewComp; Loader { id: ldFlead; property var ctrl: root; width: parent ? parent.width : 0; height: parent ? parent.height : 0; source: "views/FranchiseLeadersView.qml"; Binding { target: ldFlead.item; property: "controller"; value: ldFlead.ctrl; when: ldFlead.status === Loader.Ready } } }
+        Component { id: leadersViewComp; Loader { id: ldLead; property var ctrl: root; width: parent ? parent.width : 0; height: parent ? parent.height : 0; source: "views/LeadersView.qml"; Binding { target: ldLead.item; property: "controller"; value: ldLead.ctrl; when: ldLead.status === Loader.Ready } } }
+        Component { id: searchViewComp; Loader { id: ldSrch; property var ctrl: root; width: parent ? parent.width : 0; height: parent ? parent.height : 0; source: "views/SearchView.qml"; Binding { target: ldSrch.item; property: "controller"; value: ldSrch.ctrl; when: ldSrch.status === Loader.Ready } } }
+        Component { id: teamHubViewComp; Loader { id: ldHub; property var ctrl: root; width: parent ? parent.width : 0; height: parent ? parent.height : 0; source: "views/TeamHubView.qml"; Binding { target: ldHub.item; property: "controller"; value: ldHub.ctrl; when: ldHub.status === Loader.Ready } } }
+        Component { id: playerViewComp; Loader { id: ldPly; property var ctrl: root; width: parent ? parent.width : 0; height: parent ? parent.height : 0; source: "views/PlayerView.qml"; Binding { target: ldPly.item; property: "controller"; value: ldPly.ctrl; when: ldPly.status === Loader.Ready } } }
+        Component { id: scheduleViewComp; Loader { id: ldSch; property var ctrl: root; width: parent ? parent.width : 0; height: parent ? parent.height : 0; source: "views/ScheduleView.qml"; Binding { target: ldSch.item; property: "controller"; value: ldSch.ctrl; when: ldSch.status === Loader.Ready } } }
+        Component { id: bracketViewComp;  Loader { id: ldBrk; property var ctrl: root; width: parent ? parent.width : 0; height: parent ? parent.height : 0; source: "views/BracketView.qml";  Binding { target: ldBrk.item; property: "controller"; value: ldBrk.ctrl; when: ldBrk.status === Loader.Ready } } }
+        Component { id: calendarViewComp; Loader { id: ldCal; property var ctrl: root; width: parent ? parent.width : 0; height: parent ? parent.height : 0; source: "views/CalendarView.qml"; Binding { target: ldCal.item; property: "controller"; value: ldCal.ctrl; when: ldCal.status === Loader.Ready } } }
+        Component { id: dayViewComp;      Loader { id: ldDay; property var ctrl: root; width: parent ? parent.width : 0; height: parent ? parent.height : 0; source: "views/DayView.qml";      Binding { target: ldDay.item; property: "controller"; value: ldDay.ctrl; when: ldDay.status === Loader.Ready } } }
     }
-
-    // ══════════════════════════════════════════════════════════════════════
-    // DESKTOP REPRESENTATION — liste de cartes enrichies, redimensionnable
-    // ══════════════════════════════════════════════════════════════════════
-    Component {
-        id: desktopRepresentation
-        Loader {
-            source: "views/DesktopRepresentation.qml"
-            onLoaded: item.controller = root
-        }
-    }
-
-
 }

@@ -4,6 +4,7 @@ import QtQuick.Controls 2.15
 import org.kde.kirigami 2.20 as Kirigami
 import "../logic.js" as Logic
 import "../components" as Components
+import "detail" as Detail
 
 ScrollView {
     id: detailRoot
@@ -32,69 +33,56 @@ ScrollView {
                 text: "✕"
                 flat: true
                 onClicked: {
-                    controller.nav.detail = false
-                    controller.expanded = false
+                    if (controller && controller.closePopup) {
+                        controller.closePopup()
+                    } else if (controller) {
+                        controller.nav.detail = false
+                        controller.expanded = false
+                    }
                 }
             }
-            Item {
-                Layout.fillWidth: true
-            }
+            Item { Layout.fillWidth: true }
             Button {
                 text: i18n("Standings")
                 icon.name: "view-list-symbolic"
                 flat: true
-                onClicked: {
-                    controller.openStandings()
-                }
+                onClicked: controller.openStandings()
             }
-            Item {
-                Layout.fillWidth: true
-            }
+            Item { Layout.fillWidth: true }
             Button {
                 text: i18n("Leaders")
                 icon.name: "view-statistics"
                 flat: true
-                onClicked: {
-                    controller.openLeaders()
-                }
+                onClicked: controller.openLeaders()
             }
-            Item {
-                Layout.fillWidth: true
-            }
+            Item { Layout.fillWidth: true; visible: !controller.isPopup }
             Button {
-                text: i18n("Séries 2026")
+                visible: !controller.isPopup
+                text: i18n("2026 Playoffs")
                 icon.name: "trophy-gold"
                 flat: true
-                onClicked: {
-                    controller.openSimulationBracket()
-                }
+                onClicked: controller.openSimulationBracket()
             }
-            Item {
-                Layout.fillWidth: true
-            }
+            Item { Layout.fillWidth: true; visible: !controller.isPopup }
             Button {
+                visible: !controller.isPopup
                 text: i18n("Search")
                 icon.name: "search"
                 flat: true
                 onClicked: controller.openSearch()
             }
-            Item {
-                Layout.fillWidth: true
-            }
+            Item { Layout.fillWidth: true; visible: !controller.isPopup }
             Button {
+                visible: !controller.isPopup
                 text: "NHL.com"
                 icon.name: "internet-web-browser"
                 flat: true
-                onClicked: {
-                    Qt.openUrlExternally(controller.gameCenterUrl(controller.det.away, controller.det.home, controller.det.start, controller.det.gameId))
-                }
+                onClicked: Qt.openUrlExternally(controller.gameCenterUrl(controller.det.away, controller.det.home, controller.det.start, controller.det.gameId))
             }
             Button {
                 icon.name: "view-refresh"
                 flat: true
-                onClicked: {
-                    controller.refresh()
-                }
+                onClicked: controller.refresh()
             }
         }
 
@@ -107,409 +95,15 @@ ScrollView {
             spacing: 8
 
             // ── En-tête score ────────────────────────────────────────
-            RowLayout {
+            Detail.DetailHeader {
                 Layout.fillWidth: true
-                Layout.leftMargin: 12
-                Layout.rightMargin: 12
-                Layout.alignment: Qt.AlignHCenter
-                spacing: 8
-
-                // Visiteur
-                Column {
-                    spacing: 2
-                    Layout.alignment: Qt.AlignVCenter
-                    Item {
-                        width: 150
-                        height: 150
-                        anchors.horizontalCenter: parent.horizontalCenter
-                        Image {
-                            anchors.fill: parent
-                            source: controller ? controller.teamLogoUrl(controller.det.away) : ""
-                            fillMode: Image.PreserveAspectFit
-                            smooth: true
-                        }
-                        HoverHandler {
-                            cursorShape: Qt.PointingHandCursor
-                        }
-                        TapHandler {
-                            onTapped: {
-                                controller.openTeamHub(controller.det.away, "detail")
-                            }
-                        }
-                    }
-                    Label {
-                        anchors.horizontalCenter: parent.horizontalCenter
-                        visible: controller && controller.det.status !== 'UPCOMING'
-                        text: controller ? String(controller.det.ag) : "0"
-                        font.pixelSize: 32
-                        font.bold: true
-                        color: Kirigami.Theme.textColor
-                    }
-                    ColumnLayout {
-                        anchors.horizontalCenter: parent.horizontalCenter
-                        visible: controller && controller.det.status === 'UPCOMING'
-                        spacing: 0
-                        Label {
-                            text: controller ? controller.det.awayRecord : ""
-                            font.pixelSize: 14; font.bold: true
-                            color: controller ? controller.teamColorAdapted(controller.det.away, controller.det.home, true, true) : "gray"
-                            Layout.alignment: Qt.AlignHCenter
-                        }
-                        Label {
-                            text: i18n("Record")
-                            font.pixelSize: 9; opacity: 0.5
-                            Layout.alignment: Qt.AlignHCenter
-                        }
-                    }
-                }
-
-                // Centre
-                Column {
-                    spacing: 4
-                    Layout.fillWidth: true
-                    Layout.alignment: Qt.AlignVCenter
-
-                    // Séparateur vertical double (pour match à venir)
-                    Row {
-                        anchors.horizontalCenter: parent.horizontalCenter
-                        visible: controller && controller.det.status === 'UPCOMING'
-                        spacing: 4
-                        Rectangle {
-                            width: 4; height: 120
-                            radius: 2
-                            color: controller ? Logic.getTeamColor(controller.det.away) : Kirigami.Theme.highlightColor
-                        }
-                        Rectangle {
-                            width: 4; height: 120
-                            radius: 2
-                            color: controller ? Logic.getTeamColor(controller.det.home) : Kirigami.Theme.highlightColor
-                        }
-                    }
-
-                    Rectangle {
-                        anchors.horizontalCenter: parent.horizontalCenter
-                        visible: controller && controller.det.status === 'FINAL'
-                        radius: 5
-                        color: controller ? controller.statusColor(controller.det.status) : "gray"
-                        opacity: 0.95
-                        width: detailBadgeCol.implicitWidth + 10
-                        height: detailBadgeCol.implicitHeight + 6
-                        Column {
-                            id: detailBadgeCol
-                            anchors.centerIn: parent
-                            spacing: 0
-                            Text {
-                                anchors.horizontalCenter: parent.horizontalCenter
-                                text: controller ? controller.badgeLine1(controller.det.status, '', controller.det.pType, controller.det.period, controller.det.remain, controller.det.start, controller.det.home, controller.det.interm) : ""
-                                color: 'white'
-                                font.pixelSize: 10
-                                font.bold: true
-                            }
-                            Text {
-                                anchors.horizontalCenter: parent.horizontalCenter
-                                visible: text !== ''
-                                text: controller ? controller.badgeLine2(controller.det.status, controller.det.start, controller.det.home, controller.det.pType, controller.det.period, controller.det.remain, controller.det.interm, controller.det.intermRemain) : ""
-                                color: 'white'
-                                font.pixelSize: 9
-                                opacity: 0.85
-                            }
-                        }
-                    }
-                    Column {
-                        anchors.horizontalCenter: parent.horizontalCenter
-                        visible: controller && controller.det.status === 'LIVE'
-                        spacing: 2
-                        Label {
-                            anchors.horizontalCenter: parent.horizontalCenter
-                            text: controller ? controller.badgeLine1(controller.det.status, '', controller.det.pType, controller.det.period, controller.det.remain, controller.det.start, controller.det.home, controller.det.interm) : ""
-                            font.pixelSize: 13
-                            font.bold: true
-                            color: Kirigami.Theme.textColor
-                        }
-                        Label {
-                            anchors.horizontalCenter: parent.horizontalCenter
-                            visible: !!controller && !!controller.det.interm && (controller.det.intermRemain || "") !== ''
-                            text: controller ? controller.det.intermRemain : ""
-                            font.pixelSize: 18
-                            font.bold: true
-                            color: Kirigami.Theme.textColor
-                        }
-                        Label {
-                            anchors.horizontalCenter: parent.horizontalCenter
-                            visible: text !== ''
-                            text: controller ? controller.badgeLine2(controller.det.status, controller.det.start, controller.det.home, controller.det.pType, controller.det.period, controller.det.remain, controller.det.interm, controller.det.intermRemain) : ""
-                            font.pixelSize: 11
-                            color: Kirigami.Theme.disabledTextColor
-                        }
-                    }
-                }
-
-                // Local
-                Column {
-                    spacing: 2
-                    Layout.alignment: Qt.AlignVCenter
-                    Item {
-                        width: 150
-                        height: 150
-                        anchors.horizontalCenter: parent.horizontalCenter
-                        Image {
-                            anchors.fill: parent
-                            source: controller ? controller.teamLogoUrl(controller.det.home) : ""
-                            fillMode: Image.PreserveAspectFit
-                            smooth: true
-                        }
-                        HoverHandler {
-                            cursorShape: Qt.PointingHandCursor
-                        }
-                        TapHandler {
-                            onTapped: {
-                                controller.openTeamHub(controller.det.home, 'detail')
-                            }
-                        }
-                    }
-                    Label {
-                        anchors.horizontalCenter: parent.horizontalCenter
-                        visible: controller && controller.det.status !== 'UPCOMING'
-                        text: controller ? String(controller.det.hg) : "0"
-                        font.pixelSize: 32
-                        font.bold: true
-                        color: Kirigami.Theme.textColor
-                    }
-                    ColumnLayout {
-                        anchors.horizontalCenter: parent.horizontalCenter
-                        visible: controller && controller.det.status === 'UPCOMING'
-                        spacing: 0
-                        Label {
-                            text: controller ? controller.det.homeRecord : ""
-                            font.pixelSize: 14; font.bold: true
-                            color: controller ? controller.teamColorAdapted(controller.det.home, controller.det.away, false, true) : "gray"
-                            Layout.alignment: Qt.AlignHCenter
-                        }
-                        Label {
-                            text: i18n("Record")
-                            font.pixelSize: 9; opacity: 0.5
-                            Layout.alignment: Qt.AlignHCenter
-                        }
-                    }
-                }
-            }
-
-            // ── Bloc Info match (Heure, Date, Aréna) ──────────────────
-            ColumnLayout {
-                visible: controller && !controller.det.loading && controller.det.status === 'UPCOMING'
-                Layout.fillWidth: true
-                Layout.alignment: Qt.AlignHCenter
-                Layout.topMargin: 10
-                spacing: 2
-                Label {
-                    visible: controller && controller.det.start > 0
-                    Layout.alignment: Qt.AlignHCenter
-                    text: controller && controller.det.start > 0
-                        ? Qt.formatTime(new Date(controller.det.start), "hh:mm") + "  ·  "
-                          + controller.localeDateLong(controller.det.start)
-                        : ""
-                    font.pixelSize: 14; font.bold: true
-                    color: Kirigami.Theme.textColor
-                }
-                Label {
-                    visible: controller && (controller.det.venue || '') !== ''
-                    Layout.alignment: Qt.AlignHCenter
-                    text: controller ? controller.det.venue : ''
-                    font.pixelSize: 12; opacity: 0.6
-                    color: Kirigami.Theme.disabledTextColor
-                }
+                controller: detailRoot.controller
             }
 
             // ── Preview match à venir ─────────────────────────────────────────
-            ColumnLayout {
-                visible: controller && !controller.det.loading && controller.det.status === 'UPCOMING'
+            Detail.MatchPreview {
                 Layout.fillWidth: true
-                Layout.topMargin: 15
-                spacing: 15
-
-                // 1. Comparison de saison
-                ColumnLayout {
-                    visible: !!controller.det.teamComparison && controller.det.teamComparison.length > 0
-                    Layout.fillWidth: true
-                    spacing: 6
-                    Rectangle {
-                        Layout.fillWidth: true; implicitHeight: 24; color: Qt.rgba(1,1,1,0.04); radius: 4
-                        Label { anchors.centerIn: parent; text: i18n("Season Comparison"); font.pixelSize: 11; font.bold: true; opacity: 0.6 }
-                    }
-                    Repeater {
-                        model: controller ? controller.det.teamComparison : []
-                        delegate: ColumnLayout {
-                            Layout.fillWidth: true; spacing: 2
-                            Label {
-                                text: {
-                                    if (modelData.label === "ppPctg") return i18n("Power Play %")
-                                    if (modelData.label === "pkPctg") return i18n("Penalty Kill %")
-                                    if (modelData.label === "faceoffWinPctg") return i18n("Faceoffs %")
-                                    if (modelData.label === "goalsForPerGame") return i18n("GF/G")
-                                    if (modelData.label === "goalsAgainstPerGame") return i18n("GA/G")
-                                    return modelData.label
-                                }
-                                font.pixelSize: 10; opacity: 0.7; Layout.alignment: Qt.AlignHCenter
-                            }
-                            RowLayout {
-                                Layout.fillWidth: true; spacing: 8
-                                Label {
-                                    text: {
-                                        var val = modelData.away
-                                        if (modelData.label.indexOf('Pct') !== -1) return (val <= 1.0 ? (val * 100).toFixed(1) : Number(val).toFixed(1)) + "%"
-                                        return Number(val).toFixed(2)
-                                    }
-                                    font.bold: true; font.pixelSize: 12; color: controller.teamColorAdapted(controller.det.away, controller.det.home, true, true)
-                                    Layout.preferredWidth: 50; horizontalAlignment: Text.AlignRight
-                                }
-                                Rectangle {
-                                    Layout.fillWidth: true; height: 6; radius: 3; color: Qt.rgba(1,1,1,0.1)
-                                    Row {
-                                        anchors.fill: parent
-                                        Rectangle { height: parent.height; radius: 3; color: controller.teamColorAdapted(controller.det.away, controller.det.home, true, true)
-                                                    width: (parseFloat(modelData.away) + parseFloat(modelData.home)) > 0 ? (parent.width * (parseFloat(modelData.away) / (parseFloat(modelData.away) + parseFloat(modelData.home)))) : parent.width/2 }
-                                        Rectangle { height: parent.height; radius: 3; color: controller.teamColorAdapted(controller.det.home, controller.det.away, false, true)
-                                                    width: (parseFloat(modelData.away) + parseFloat(modelData.home)) > 0 ? (parent.width * (parseFloat(modelData.home) / (parseFloat(modelData.away) + parseFloat(modelData.home)))) : parent.width/2 }
-                                    }
-                                }
-                                Label {
-                                    text: {
-                                        var val = modelData.home
-                                        if (modelData.label.indexOf('Pct') !== -1) return (val <= 1.0 ? (val * 100).toFixed(1) : Number(val).toFixed(1)) + "%"
-                                        return Number(val).toFixed(2)
-                                    }
-                                    font.bold: true; font.pixelSize: 12; color: controller.teamColorAdapted(controller.det.home, controller.det.away, false, true)
-                                    Layout.preferredWidth: 50; horizontalAlignment: Text.AlignLeft
-                                }
-                            }
-                        }
-                    }
-                }
-
-                // 2. Série saison (H2H)
-                ColumnLayout {
-                    visible: (controller.det.isPlayoff && (controller.det.seriesAway > 0 || controller.det.seriesHome > 0)) || (controller.det.h2hGames && controller.det.h2hGames.length > 0)
-                    Layout.fillWidth: true
-                    spacing: 6
-                    Rectangle {
-                        Layout.fillWidth: true; implicitHeight: 24; color: Qt.rgba(1,1,1,0.04); radius: 4
-                        Label { anchors.centerIn: parent; text: i18n("Season series"); font.pixelSize: 11; font.bold: true; opacity: 0.6 }
-                    }
-                    // Info Playoff
-                    ColumnLayout {
-                        visible: controller.det.isPlayoff && (controller.det.seriesAway > 0 || controller.det.seriesHome > 0)
-                        Layout.alignment: Qt.AlignHCenter; spacing: 4
-                        Label { Layout.alignment: Qt.AlignHCenter; text: controller.det.seriesRound; font.pixelSize: 12; font.bold: true; opacity: 0.8 }
-                        RowLayout {
-                            Layout.alignment: Qt.AlignHCenter; spacing: 8
-                            Label { text: controller.det.seriesAway > controller.det.seriesHome ? controller.det.away + " mène" : controller.det.seriesHome > controller.det.seriesAway ? controller.det.home + " mène" : "Égalité"; font.pixelSize: 13 }
-                            Label { text: controller.det.seriesAway + " – " + controller.det.seriesHome; font.pixelSize: 22; font.bold: true }
-                            Button { text: "🏆"; flat: true; onClicked: controller.openPlayoffBracket() }
-                        }
-                    }
-                    // Matchs H2H
-                    Repeater {
-                        model: controller.det.h2hGames || []
-                        delegate: RowLayout {
-                            Layout.fillWidth: true; spacing: 8
-                            Label { text: modelData.date ? Qt.formatDate(new Date(modelData.date), "d MMM") : ''; font.pixelSize: 11; opacity: 0.6; Layout.preferredWidth: 40 }
-                            Item { Layout.fillWidth: true }
-                            Item {
-                                width: 34; height: 18; Layout.alignment: Qt.AlignVCenter
-                                Rectangle {
-                                    visible: !controller.showLogos
-                                    anchors.fill: parent; radius: 3; color: Logic.getTeamColor(modelData.away)
-                                    Label { anchors.centerIn: parent; text: modelData.away; color: Logic.getTeamTextColor(modelData.away); font.bold: true; font.pixelSize: 10 }
-                                }
-                                Image {
-                                    visible: controller.showLogos
-                                    anchors.fill: parent
-                                    source: controller.showLogos ? controller.teamLogoUrl(modelData.away) : ""
-                                    sourceSize.width: width * 2
-                                    sourceSize.height: height * 2
-                                    fillMode: Image.PreserveAspectFit; smooth: true
-                                }
-                            }
-                            Label { text: modelData.final ? modelData.awayScore + " – " + modelData.homeScore : "@"; font.bold: modelData.final; Layout.preferredWidth: 40; horizontalAlignment: Text.AlignHCenter }
-                            Item {
-                                width: 34; height: 18; Layout.alignment: Qt.AlignVCenter
-                                Rectangle {
-                                    visible: !controller.showLogos
-                                    anchors.fill: parent; radius: 3; color: Logic.getTeamColor(modelData.home)
-                                    Label { anchors.centerIn: parent; text: modelData.home; color: Logic.getTeamTextColor(modelData.home); font.bold: true; font.pixelSize: 10 }
-                                }
-                                Image {
-                                    visible: controller.showLogos
-                                    anchors.fill: parent
-                                    source: controller.showLogos ? controller.teamLogoUrl(modelData.home) : ""
-                                    sourceSize.width: width * 2
-                                    sourceSize.height: height * 2
-                                    fillMode: Image.PreserveAspectFit; smooth: true
-                                }
-                            }
-                            Item { Layout.fillWidth: true }
-                        }
-                    }
-                }
-
-                // 3. Meneurs de points
-                ColumnLayout {
-                    visible: (controller.det.awayLeaders || []).length > 0
-                    Layout.fillWidth: true
-                    spacing: 6
-                    Rectangle {
-                        Layout.fillWidth: true; implicitHeight: 24; color: Qt.rgba(1,1,1,0.04); radius: 4
-                        Label { anchors.centerIn: parent; text: i18n("Points leaders (last 5 games)"); font.pixelSize: 11; font.bold: true; opacity: 0.6 }
-                    }
-                    RowLayout {
-                        Layout.fillWidth: true; spacing: 10
-                        ColumnLayout {
-                            Layout.fillWidth: true; spacing: 2
-                            Repeater {
-                                model: controller.det.awayLeaders || []
-                                delegate: Label {
-                                    text: modelData.name + " (" + modelData.value + ")"
-                                    font.pixelSize: 12; color: controller.teamColorAdapted(controller.det.away, controller.det.home, true, true); elide: Text.ElideRight; Layout.fillWidth: true
-                                }
-                            }
-                        }
-                        Rectangle { width: 1; Layout.fillHeight: true; color: Kirigami.Theme.textColor; opacity: 0.1 }
-                        ColumnLayout {
-                            Layout.fillWidth: true; spacing: 2
-                            Repeater {
-                                model: controller.det.homeLeaders || []
-                                delegate: Label {
-                                    text: modelData.name + " (" + modelData.value + ")"
-                                    font.pixelSize: 12; color: controller.teamColorAdapted(controller.det.home, controller.det.away, false, true); elide: Text.ElideRight; Layout.fillWidth: true; horizontalAlignment: Text.AlignRight
-                                }
-                            }
-                        }
-                    }
-                }
-
-                // 4. Gardiens probables
-                ColumnLayout {
-                    visible: controller.det.awayGoalie !== null || controller.det.homeGoalie !== null
-                    Layout.fillWidth: true
-                    spacing: 6
-                    Rectangle {
-                        Layout.fillWidth: true; implicitHeight: 24; color: Qt.rgba(1,1,1,0.04); radius: 4
-                        Label { anchors.centerIn: parent; text: i18n("Probable goalies"); font.pixelSize: 11; font.bold: true; opacity: 0.6 }
-                    }
-                    RowLayout {
-                        Layout.alignment: Qt.AlignHCenter; spacing: 40
-                        ColumnLayout {
-                            spacing: 0; Layout.alignment: Qt.AlignHCenter
-                            Label { text: controller.det.awayGoalie ? controller.det.awayGoalie.name : '–'; font.bold: true; color: controller.teamColorAdapted(controller.det.away, controller.det.home, true, true); Layout.alignment: Qt.AlignHCenter }
-                            Label { text: controller.det.awayGoalie ? controller.det.awayGoalie.record : ''; font.pixelSize: 10; opacity: 0.7; Layout.alignment: Qt.AlignHCenter }
-                        }
-                        ColumnLayout {
-                            spacing: 0; Layout.alignment: Qt.AlignHCenter
-                            Label { text: controller.det.homeGoalie ? controller.det.homeGoalie.name : '–'; font.bold: true; color: controller.teamColorAdapted(controller.det.home, controller.det.away, false, true); Layout.alignment: Qt.AlignHCenter }
-                            Label { text: controller.det.homeGoalie ? controller.det.homeGoalie.record : ''; font.pixelSize: 10; opacity: 0.7; Layout.alignment: Qt.AlignHCenter }
-                        }
-                    }
-                }
+                controller: detailRoot.controller
             }
 
             // Date du match (Matchs terminés ou en direct)
@@ -529,221 +123,11 @@ ScrollView {
                 topMargin: 10
             }
 
-            Rectangle {
-                id: ppBanner
-                Layout.alignment: Qt.AlignHCenter
-                property var sit: controller ? controller.parseSituation(controller.det.sitCode, controller.det.away, controller.det.home) : null
-                visible: !!sit && (sit.isSpecial || sit.emptyNet)
-                width:  ppBannerContent.implicitWidth + 20
-                height: ppBannerContent.implicitHeight + 10
-                radius: 6
-                color: {
-                    if (sit && sit.ppTeam && controller) {
-                        var isAw = (sit.ppTeam === controller.det.away);
-                        var op = isAw ? controller.det.home : controller.det.away;
-                        return controller.teamColorAdapted(sit.ppTeam, op, isAw, false);
-                    }
-                    return (sit && (sit.emptyNet || sit.isSpecial) ? "#444" : Kirigami.Theme.highlightColor);
-                }
-                border.color: "white"
-                border.width: (sit && sit.isSpecial) ? 1 : 0
-                Column {
-                    id: ppBannerContent
-                    anchors.centerIn: parent
-                    spacing: 2
-                    Row {
-                        anchors.horizontalCenter: parent.horizontalCenter
-                        spacing: 6
-                        Text {
-                            text: ppBanner.sit ? ppBanner.sit.ppType : ''
-                            font.pixelSize: 14
-                            font.bold: true
-                            color: 'white'
-                        }
-                        Text {
-                            visible: ppBanner.sit && !ppBanner.sit.even
-                            text: ppBanner.sit ? ((ppBanner.sit.ppTeam || '') + '  ' + ppBanner.sit.awaySkaters + 'v' + ppBanner.sit.homeSkaters) : ''
-                            font.pixelSize: 14
-                            color: 'white'
-                        }
-                    }
-                    Row {
-                        anchors.horizontalCenter: parent.horizontalCenter
-                        spacing: 4
-                        visible: ppBanner.sit !== null && ppBanner.sit.emptyNet
-                        Text {
-                            text: '🥅'
-                            font.pixelSize: 13
-                        }
-                        Text {
-                            text: ppBanner.sit && ppBanner.sit.enTeam ? ppBanner.sit.enTeam : ''
-                            font.pixelSize: 13
-                            font.bold: true
-                            color: 'white'
-                        }
-                    }
-                }
-            }
-
-            // ── Tirs au but ───────────────────────────────────────────────────
-            RowLayout {
-                visible: controller && !controller.det.loading && controller.det.status !== 'UPCOMING' && controller.det.stats['sog'] !== undefined
+            // ── Stats du match (Tirs, PP, etc.) ──────────────────────────────
+            Detail.MatchStats {
+                visible: controller && !controller.det.loading && controller.det.status !== 'UPCOMING'
                 Layout.fillWidth: true
-                spacing: 0
-                Label {
-                    text: (controller && controller.det.stats['sog']) ? String(controller.det.stats['sog'].away) : ''
-                    font.pixelSize: 25
-                    font.bold: true
-                    color: controller ? controller.teamColorAdapted(controller.det.away, controller.det.home, true, true) : "gray"
-                    Layout.preferredWidth: 70
-                    horizontalAlignment: Text.AlignHCenter
-                }
-                Label {
-                    text: i18n('Shots on Goal')
-                    font.pixelSize: 14
-                    color: Kirigami.Theme.disabledTextColor
-                    Layout.fillWidth: true
-                    horizontalAlignment: Text.AlignHCenter
-                }
-                Label {
-                    text: (controller && controller.det.stats['sog']) ? String(controller.det.stats['sog'].home) : ''
-                    font.pixelSize: 25
-                    font.bold: true
-                    color: controller ? controller.teamColorAdapted(controller.det.home, controller.det.away, false, true) : "gray"
-                    Layout.preferredWidth: 70
-                    horizontalAlignment: Text.AlignHCenter
-                }
-            }
-
-            Rectangle {
-                visible: controller && !controller.det.loading && controller.det.status !== 'UPCOMING' && Object.keys(controller.det.stats).length > 0
-                Layout.fillWidth: true
-                height: 1
-                radius: 1
-                gradient: Gradient {
-                    orientation: Gradient.Horizontal
-                    GradientStop {
-                        position: 0.0
-                        color: controller ? Logic.getTeamColor(controller.det.away) : "gray"
-                    }
-                    GradientStop {
-                        position: 1.0
-                        color: controller ? Logic.getTeamColor(controller.det.home) : "gray"
-                    }
-                }
-                opacity: 0.6
-            }
-
-            ColumnLayout {
-                visible: controller && !controller.det.loading && controller.det.status !== 'UPCOMING' && Object.keys(controller.det.stats).length > 0
-                Layout.fillWidth: true
-                spacing: 2
-
-                Repeater {
-                    model: {
-                        if (!controller) return []
-                        let order = ['faceoffWinningPctg','powerPlay','pim','hits','blockedShots','giveaways','takeaways']
-                        let labels = { 'faceoffWinningPctg': i18n('Faceoffs %'), 'powerPlay': i18n('Power Play'), 'hits': i18n('Hits'), 'blockedShots': i18n('Blocks'), 'giveaways': i18n('Giveaways'), 'takeaways': i18n('Takeaways'), 'pim': i18n('PIM') }
-                        let rows = []
-                        for (let i = 0; i < order.length; i++) {
-                            let k = order[i]; let entry = controller.det.stats[k]
-                            if (entry === undefined) continue
-                            let av = entry.away; let hv = entry.home; let avRaw = 0, hvRaw = 0; let avSub = '', hvSub = ''
-                            if (k === 'powerPlay' && av !== null && typeof av === 'object') {
-                                let ho = entry.home
-                                avRaw = av.opportunities > 0 ? av.goals / av.opportunities : 0
-                                hvRaw = ho.opportunities > 0 ? ho.goals / ho.opportunities : 0
-                                avSub = av.opportunities > 0 ? (avRaw*100).toFixed(1) + '%' : '—'
-                                hvSub = ho.opportunities > 0 ? (hvRaw*100).toFixed(1) + '%' : '—'
-                                av = (av.goals||0) + '/' + (av.opportunities||0); hv = (ho.goals||0) + '/' + (ho.opportunities||0)
-                            } else if (k === 'faceoffWinningPctg') {
-                                avRaw = typeof av === 'number' ? av / 100 : 0; hvRaw = typeof hv === 'number' ? hv / 100 : 0
-                                av = typeof av === 'number' ? av.toFixed(1) + '%' : String(av); hv = typeof hv === 'number' ? hv.toFixed(1) + '%' : String(hv)
-                            } else {
-                                let total = (parseFloat(av)||0) + (parseFloat(hv)||0)
-                                avRaw = total > 0 ? (parseFloat(av)||0) / total : 0.5; hvRaw = total > 0 ? (parseFloat(hv)||0) / total : 0.5
-                                av = String(av); hv = String(hv)
-                            }
-                            rows.push({ label: labels[k] || k, away: av, home: hv, awayRaw: avRaw, homeRaw: hvRaw, awaySub: avSub, homeSub: hvSub })
-                        }
-                        return rows
-                    }
-                    delegate: ColumnLayout {
-                        Layout.fillWidth: true
-                        spacing: 2
-                        RowLayout {
-                            Layout.fillWidth: true
-                            spacing: 4
-                            Label {
-                                text: modelData.away
-                                font.pixelSize: 16
-                                font.bold: true
-                                color: controller.teamColorAdapted(controller.det.away, controller.det.home, true, true)
-                                Layout.preferredWidth: 65
-                                horizontalAlignment: Text.AlignLeft
-                            }
-                            Label {
-                                text: modelData.label
-                                font.pixelSize: 12
-                                color: Kirigami.Theme.disabledTextColor
-                                Layout.fillWidth: true
-                                horizontalAlignment: Text.AlignHCenter
-                                wrapMode: Text.WordWrap
-                            }
-                            Label {
-                                text: modelData.home
-                                font.pixelSize: 16
-                                font.bold: true
-                                color: controller.teamColorAdapted(controller.det.home, controller.det.away, false, true)
-                                Layout.preferredWidth: 65
-                                horizontalAlignment: Text.AlignRight
-                            }
-                        }
-                        Item {
-                            Layout.fillWidth: true
-                            height: 4
-                            Rectangle {
-                                anchors.left: parent.left
-                                anchors.top: parent.top
-                                anchors.bottom: parent.bottom
-                                width: parent.width * modelData.awayRaw
-                                color: Logic.getTeamColor(controller.det.away)
-                                radius: 2
-                            }
-                            Rectangle {
-                                anchors.right: parent.right
-                                anchors.top: parent.top
-                                anchors.bottom: parent.bottom
-                                width: parent.width * modelData.homeRaw
-                                color: Logic.getTeamColor(controller.det.home)
-                                radius: 2
-                            }
-                        }
-                        RowLayout {
-                            Layout.fillWidth: true
-                            visible: modelData.awaySub !== '' || modelData.homeSub !== ''
-                            Label {
-                                text: modelData.awaySub
-                                font.pixelSize: 11
-                                opacity: 0.55
-                                color: Kirigami.Theme.disabledTextColor
-                                Layout.preferredWidth: 65
-                                horizontalAlignment: Text.AlignLeft
-                            }
-                            Item {
-                                Layout.fillWidth: true
-                            }
-                            Label {
-                                text: modelData.homeSub
-                                font.pixelSize: 11
-                                opacity: 0.55
-                                color: Kirigami.Theme.disabledTextColor
-                                Layout.preferredWidth: 65
-                                horizontalAlignment: Text.AlignRight
-                            }
-                        }
-                    }
-                }
+                controller: detailRoot.controller
             }
 
             // ── Onglets ────────────────────────────────────────────────────────
@@ -758,18 +142,9 @@ ScrollView {
                     color: controller.det.view === 'goals' ? Kirigami.Theme.textColor : Kirigami.Theme.disabledTextColor
                     opacity: font.bold ? 1.0 : 0.45
                     HoverHandler { cursorShape: Qt.PointingHandCursor }
-                    TapHandler {
-                        onTapped: {
-                            controller.det.view = 'goals'
-                        }
-                    }
+                    TapHandler { onTapped: controller.det.view = 'goals' }
                 }
-                Label {
-                    text: "·"
-                    font.pixelSize: 14
-                    opacity: 0.3
-                    visible: controller && controller.det.penalties.length > 0
-                }
+                Label { text: "·"; font.pixelSize: 14; opacity: 0.3; visible: controller && controller.det.penalties.length > 0 }
                 Label {
                     visible: controller && controller.det.penalties.length > 0
                     text: i18n("Penalties")
@@ -778,18 +153,9 @@ ScrollView {
                     color: controller.det.view === 'penalties' ? Kirigami.Theme.textColor : Kirigami.Theme.disabledTextColor
                     opacity: font.bold ? 1.0 : 0.45
                     HoverHandler { cursorShape: Qt.PointingHandCursor }
-                    TapHandler {
-                        onTapped: {
-                            controller.det.view = 'penalties'
-                        }
-                    }
+                    TapHandler { onTapped: controller.det.view = 'penalties' }
                 }
-                Label {
-                    text: "·"
-                    font.pixelSize: 14
-                    opacity: 0.3
-                    visible: controller && controller.det.threeStars.length > 0
-                }
+                Label { text: "·"; font.pixelSize: 14; opacity: 0.3; visible: controller && controller.det.threeStars.length > 0 }
                 Label {
                     visible: controller && controller.det.threeStars.length > 0
                     text: "⭐ " + i18n("Stars")
@@ -798,247 +164,27 @@ ScrollView {
                     color: controller.det.view === 'stars' ? Kirigami.Theme.textColor : Kirigami.Theme.disabledTextColor
                     opacity: font.bold ? 1.0 : 0.45
                     HoverHandler { cursorShape: Qt.PointingHandCursor }
-                    TapHandler {
-                        onTapped: {
-                            controller.det.view = 'stars'
-                        }
-                    }
+                    TapHandler { onTapped: controller.det.view = 'stars' }
                 }
             }
 
             // ── Listes (Buts / Pénalités / Étoiles) ───────────────────────────
-            ColumnLayout {
-                Layout.fillWidth: true
-                visible: controller && controller.det.view === 'goals'
-                spacing: 4
-                Repeater {
-                    model: controller ? controller.det.goalsByPeriod : []
-                    delegate: ColumnLayout {
-                        Layout.fillWidth: true
-                        spacing: 4
-                        RowLayout {
-                            visible: !!modelData.isPeriodHeader
-                            Rectangle {
-                                height: 1
-                                Layout.fillWidth: true
-                                color: Kirigami.Theme.textColor
-                                opacity: 0.1
-                            }
-                            Label {
-                                text: modelData.label || ""
-                                font.bold: true
-                                font.pixelSize: 11
-                                opacity: 0.5
-                            }
-                            Rectangle {
-                                height: 1
-                                Layout.fillWidth: true
-                                color: Kirigami.Theme.textColor
-                                opacity: 0.1
-                            }
-                        }
-                        RowLayout {
-                            visible: !modelData.isPeriodHeader && !modelData.isEmpty
-                            spacing: 8
-                            Label {
-                                text: modelData.time || ""
-                                Layout.preferredWidth: 40
-                                font.pixelSize: 11
-                                opacity: 0.7
-                            }
-                            Components.TeamBadge {
-                                code: modelData.team || ""
-                                opponentCode: (code === controller.det.away) ? controller.det.home : controller.det.away
-                                teamSide: (code === controller.det.away) ? 'away' : 'home'
-                                sz: 12
-                                showScore: false
-                                controller: root
-                            }
-                            ColumnLayout {
-                                spacing: 0
-                                Label {
-                                    text: (modelData.goalsToDate > 0 ? (modelData.scorer || "") + " (" + modelData.goalsToDate + ")" : (modelData.scorer || "")) + (modelData.ppg ? " PP" : "") + (modelData.shg ? " SH" : "") + (modelData.en ? " EN" : "")
-                                    font.bold: true
-                                    color: controller.teamColorAdapted(modelData.team || "", (modelData.team === controller.det.away ? controller.det.home : controller.det.away), modelData.team === controller.det.away, true)
-                                    HoverHandler { cursorShape: Qt.PointingHandCursor }
-                                    TapHandler {
-                                        onTapped: {
-                                            controller.openPlayer(modelData.scorerId, 'detail')
-                                        }
-                                    }
-                                }
-                                Flow {
-                                    Layout.fillWidth: true
-                                    spacing: 4
-                                    visible: !!modelData.assists && modelData.assists.length > 0
-                                    Label {
-                                        text: i18n("Assists: ")
-                                        font.pixelSize: 11
-                                        opacity: 0.7
-                                    }
-                                    Repeater {
-                                        model: modelData.assists || []
-                                        delegate: Label {
-                                            text: (modelData.name || "") + (modelData.assistsToDate > 0 ? " (" + modelData.assistsToDate + ")" : "") + (index < (modelData.parentModelCount - 1) ? "," : "")
-                                            font.pixelSize: 11
-                                            color: controller.teamColorAdapted(modelData.team || "", (modelData.team === controller.det.away ? controller.det.home : controller.det.away), modelData.team === controller.det.away, true)
-                                            opacity: 0.9
-                                            HoverHandler { cursorShape: Qt.PointingHandCursor }
-                                            TapHandler {
-                                                onTapped: {
-                                                    controller.openPlayer(modelData.id, 'detail')
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                                Label {
-                                    visible: !modelData.assists || modelData.assists.length === 0
-                                    text: i18n("unassisted")
-                                    font.pixelSize: 11
-                                    font.italic: true
-                                    opacity: 0.5
-                                }
-                            }
-                            Item { Layout.fillWidth: true }
-                            Button {
-                                visible: !!modelData.highlightId && modelData.highlightId !== 0
-                                icon.name: "media-playback-start"
-                                flat: true
-                                ToolTip.text: i18n("Watch goal highlight")
-                                ToolTip.visible: hovered
-                                onClicked: {
-                                    Qt.openUrlExternally("https://players.brightcove.net/6415718365001/EXtG1xJ7H_default/index.html?videoId=" + modelData.highlightId)
-                                }
-                            }
-                        }
-                        Label {
-                            visible: !!modelData.isEmpty
-                            text: modelData.label || ""
-                            Layout.fillWidth: true
-                            horizontalAlignment: Text.AlignHCenter
-                            opacity: 0.4
-                            font.italic: true
-                        }
-                    }
-                }
+            Detail.GoalsList {
+                visible: controller && controller.det.view === 'goals' && !controller.det.loading
+                controller: detailRoot.controller
             }
 
-            ColumnLayout {
-                Layout.fillWidth: true
-                visible: controller && controller.det.view === 'penalties'
-                spacing: 4
-                Repeater {
-                    model: controller ? controller.det.penaltiesByPeriod : []
-                    delegate: ColumnLayout {
-                        Layout.fillWidth: true
-                        spacing: 4
-                        RowLayout {
-                            visible: !!modelData.isPeriodHeader
-                            Rectangle {
-                                height: 1
-                                Layout.fillWidth: true
-                                color: Kirigami.Theme.textColor
-                                opacity: 0.1
-                            }
-                            Label {
-                                text: modelData.label || ""
-                                font.bold: true
-                                font.pixelSize: 11
-                                opacity: 0.5
-                            }
-                            Rectangle {
-                                height: 1
-                                Layout.fillWidth: true
-                                color: Kirigami.Theme.textColor
-                                opacity: 0.1
-                            }
-                        }
-                        RowLayout {
-                            visible: !modelData.isPeriodHeader
-                            spacing: 8
-                            Components.TeamBadge {
-                                code: modelData.team || ""
-                                opponentCode: (code === controller.det.away) ? controller.det.home : controller.det.away
-                                teamSide: (code === controller.det.away) ? 'away' : 'home'
-                                sz: 12
-                                showScore: false
-                                controller: root
-                            }
-                            Label {
-                                text: modelData.time || ""
-                                Layout.preferredWidth: 40
-                                font.pixelSize: 11
-                                opacity: 0.7
-                            }
-                            ColumnLayout {
-                                spacing: 0
-                                Label {
-                                    text: (modelData.player || "") + (modelData.number > 0 ? " #" + modelData.number : "")
-                                    font.bold: true
-                                    color: controller.teamColorAdapted(modelData.team || "", (modelData.team === controller.det.away ? controller.det.home : controller.det.away), modelData.team === controller.det.away, true)
-                                    HoverHandler { cursorShape: Qt.PointingHandCursor }
-                                    TapHandler {
-                                        onTapped: {
-                                            controller.openPlayer(modelData.playerId, 'detail')
-                                        }
-                                    }
-                                }
-                                Label {
-                                    text: (controller ? controller.penaltyDesc(modelData.descKey || "") : "") + " (" + (modelData.duration || 0) + " min)"
-                                    font.pixelSize: 11
-                                    opacity: 0.7
-                                }
-                            }
-                        }
-                    }
-                }
+            Detail.PenaltiesList {
+                visible: controller && controller.det.view === 'penalties' && !controller.det.loading
+                controller: detailRoot.controller
             }
 
-            ColumnLayout {
-                Layout.fillWidth: true
-                visible: controller && controller.det.view === 'stars'
-                spacing: 8
-                Repeater {
-                    model: controller ? controller.det.threeStars : []
-                    delegate: RowLayout {
-                        spacing: 12
-                        Label {
-                            text: (modelData.star === 1 ? "🥇" : (modelData.star === 2 ? "🥈" : "🥉"))
-                            font.pixelSize: 20
-                        }
-                        Components.TeamBadge {
-                            code: modelData.team || ""
-                            opponentCode: (code === controller.det.away) ? controller.det.home : controller.det.away
-                            teamSide: (code === controller.det.away) ? 'away' : 'home'
-                            sz: 12
-                            showScore: false
-                            controller: root
-                        }
-                        Label {
-                            text: modelData.name || ""
-                            font.bold: true
-                            Layout.fillWidth: true
-                            color: controller.teamColorAdapted(modelData.team || "", (modelData.team === controller.det.away ? controller.det.home : controller.det.away), modelData.team === controller.det.away, true)
-                            HoverHandler { cursorShape: Qt.PointingHandCursor }
-                            TapHandler {
-                                onTapped: {
-                                    controller.openPlayer(modelData.id, 'detail')
-                                }
-                            }
-                        }
-                        Label {
-                            text: (modelData.goals >= 0 ? modelData.goals + "B " + modelData.assists + "A" : (modelData.toi || ""))
-                            font.pixelSize: 12
-                            opacity: 0.7
-                        }
-                    }
-                }
+            Detail.StarsList {
+                visible: controller && controller.det.view === 'stars' && !controller.det.loading
+                controller: detailRoot.controller
             }
             
-            Item {
-                Layout.preferredHeight: 20
-            }
+            Item { Layout.preferredHeight: 20 }
         }
     }
 }

@@ -1,10 +1,18 @@
-# German translations for nhl-scores-plasmoid
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
 msgid ""
 msgstr ""
-"Project-Id-Version: nhl-scores-plasmoid 5.3\n"
+"Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2026-04-12 08:49-0400\n"
-"Language: de\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -13,13 +21,13 @@ msgstr ""
 #: ../contents/ui/views/BracketView.qml:44
 #: ../contents/ui/CompactRepresentation.qml:41
 msgid "Loading…"
-msgstr "Laden…"
+msgstr ""
 
 #: ../contents/ui/views/FranchiseLeadersView.qml:26
 #: ../contents/ui/views/ScheduleView.qml:36
 #: ../contents/ui/views/StandingsView.qml:31
 msgid "‹ Team"
-msgstr "‹ Team"
+msgstr ""
 
 #: ../contents/ui/views/FranchiseLeadersView.qml:38
 #: ../contents/ui/views/TeamHubView.qml:207
@@ -29,7 +37,7 @@ msgstr ""
 #: ../contents/ui/views/FranchiseLeadersView.qml:80
 #: ../contents/ui/views/LeadersView.qml:182
 msgid "Points"
-msgstr "Punkte"
+msgstr ""
 
 #: ../contents/ui/views/FranchiseLeadersView.qml:97
 #: ../contents/ui/views/PlayerView.qml:328
@@ -37,14 +45,14 @@ msgstr "Punkte"
 #: ../contents/ui/views/DetailView.qml:139
 #: ../contents/ui/views/LeadersView.qml:187
 msgid "Goals"
-msgstr "Tore"
+msgstr ""
 
 #: ../contents/ui/views/FranchiseLeadersView.qml:114
 #: ../contents/ui/views/PlayerView.qml:329
 #: ../contents/ui/views/PlayerView.qml:383
 #: ../contents/ui/views/LeadersView.qml:192
 msgid "Assists"
-msgstr "Vorlagen"
+msgstr ""
 
 #: ../contents/ui/views/FranchiseLeadersView.qml:128
 msgid "Active player"
@@ -56,7 +64,7 @@ msgstr ""
 #: ../contents/ui/views/TeamHubView.qml:28
 #: ../contents/ui/views/BracketView.qml:24
 msgid "‹ Back"
-msgstr "‹ Zurück"
+msgstr ""
 
 #: ../contents/ui/views/CalendarView.qml:72
 #: ../contents/ui/views/TeamHubView.qml:242 ../contents/ui/main.qml:777
@@ -70,9 +78,8 @@ msgstr ""
 
 #: ../contents/ui/views/CalendarView.qml:72
 #: ../contents/ui/views/TeamHubView.qml:242 ../contents/ui/main.qml:777
-#, fuzzy
 msgid "March"
-msgstr "Suche"
+msgstr ""
 
 #: ../contents/ui/views/CalendarView.qml:72
 #: ../contents/ui/views/TeamHubView.qml:242 ../contents/ui/main.qml:777
@@ -81,9 +88,8 @@ msgstr ""
 
 #: ../contents/ui/views/CalendarView.qml:73
 #: ../contents/ui/views/TeamHubView.qml:242 ../contents/ui/main.qml:778
-#, fuzzy
 msgid "May"
-msgstr "Montag"
+msgstr ""
 
 #: ../contents/ui/views/CalendarView.qml:73
 #: ../contents/ui/views/TeamHubView.qml:242 ../contents/ui/main.qml:778
@@ -122,7 +128,7 @@ msgstr ""
 
 #: ../contents/ui/views/CalendarView.qml:105
 msgid "Today"
-msgstr "Heute"
+msgstr ""
 
 #: ../contents/ui/views/CalendarView.qml:120
 #: ../contents/ui/views/TeamHubView.qml:259
@@ -141,9 +147,8 @@ msgstr ""
 
 #: ../contents/ui/views/CalendarView.qml:120
 #: ../contents/ui/views/TeamHubView.qml:259
-#, fuzzy
 msgid "We"
-msgstr "S"
+msgstr ""
 
 #: ../contents/ui/views/CalendarView.qml:120
 #: ../contents/ui/views/TeamHubView.qml:259
@@ -162,11 +167,11 @@ msgstr ""
 
 #: ../contents/ui/views/PlayerView.qml:116
 msgid "‹ Search"
-msgstr "‹ Suche"
+msgstr ""
 
 #: ../contents/ui/views/PlayerView.qml:117
 msgid "‹ Stats"
-msgstr "‹ Statistiken"
+msgstr ""
 
 #: ../contents/ui/views/PlayerView.qml:118
 #: ../contents/ui/views/LeadersView.qml:25
@@ -175,25 +180,24 @@ msgstr "‹ Statistiken"
 #: ../contents/ui/views/BracketView.qml:24
 #: ../contents/ui/views/SearchView.qml:29
 msgid "‹ Match"
-msgstr "‹ Spiel"
+msgstr ""
 
 #: ../contents/ui/views/PlayerView.qml:119
 msgid "‹ History"
-msgstr "‹ Geschichte"
+msgstr ""
 
 #: ../contents/ui/views/PlayerView.qml:120
-#, fuzzy
 msgid "‹ Leaders"
-msgstr "Top-Scorer"
+msgstr ""
 
 #: ../contents/ui/views/PlayerView.qml:141
 #: ../contents/ui/views/PlayerView.qml:378
 msgid "Season"
-msgstr "Saison"
+msgstr ""
 
 #: ../contents/ui/views/PlayerView.qml:149 ../contents/ui/main.qml:1765
 msgid "Playoffs"
-msgstr "Playoffs"
+msgstr ""
 
 #: ../contents/ui/views/PlayerView.qml:251
 msgid "years"
@@ -217,11 +221,11 @@ msgstr ""
 
 #: ../contents/ui/views/PlayerView.qml:304
 msgid "Season stats"
-msgstr "Saisonstatistik"
+msgstr ""
 
 #: ../contents/ui/views/PlayerView.qml:304
 msgid "Playoff stats"
-msgstr "Playoffstatistik"
+msgstr ""
 
 #: ../contents/ui/views/PlayerView.qml:321
 #: ../contents/ui/views/PlayerView.qml:327
@@ -229,55 +233,55 @@ msgstr "Playoffstatistik"
 #: ../contents/ui/views/ScheduleView.qml:260
 #: ../contents/ui/views/ScheduleView.qml:318
 msgid "PJ"
-msgstr "Sp"
+msgstr ""
 
 #: ../contents/ui/views/PlayerView.qml:322
 #: ../contents/ui/views/PlayerView.qml:382
 #: ../contents/ui/views/ScheduleView.qml:319
 msgid "W"
-msgstr "S"
+msgstr ""
 
 #: ../contents/ui/views/PlayerView.qml:323
 #: ../contents/ui/views/PlayerView.qml:384
 #: ../contents/ui/views/ScheduleView.qml:321
 #: ../contents/ui/views/LeadersView.qml:216
 msgid "GAA"
-msgstr "GAA"
+msgstr ""
 
 #: ../contents/ui/views/PlayerView.qml:324
 #: ../contents/ui/views/PlayerView.qml:385
 #: ../contents/ui/views/ScheduleView.qml:322
 #: ../contents/ui/views/LeadersView.qml:221
 msgid "SV%"
-msgstr "SVS%"
+msgstr ""
 
 #: ../contents/ui/views/PlayerView.qml:325
 msgid "SHO"
-msgstr "SO"
+msgstr ""
 
 #: ../contents/ui/views/PlayerView.qml:330
 #: ../contents/ui/views/PlayerView.qml:384
 #: ../contents/ui/views/ScheduleView.qml:263
 msgid "PTS"
-msgstr "Pkt"
+msgstr ""
 
 #: ../contents/ui/views/PlayerView.qml:366
 msgid "Season history"
-msgstr "Saisongeschichte"
+msgstr ""
 
 #: ../contents/ui/views/PlayerView.qml:366
 msgid "Playoff history"
-msgstr "Playoffgeschichte"
+msgstr ""
 
 #: ../contents/ui/views/PlayerView.qml:380
 #: ../contents/ui/views/StandingsView.qml:191
 msgid "Team"
-msgstr "Team"
+msgstr ""
 
 #: ../contents/ui/views/PlayerView.qml:383
 #: ../contents/ui/views/ScheduleView.qml:320
 msgid "L"
-msgstr "N"
+msgstr ""
 
 #: ../contents/ui/views/PlayerView.qml:385
 #: ../contents/ui/views/ScheduleView.qml:264
@@ -286,37 +290,34 @@ msgstr ""
 
 #: ../contents/ui/views/PlayerView.qml:489
 #: ../contents/ui/views/TeamHubView.qml:140
-#, fuzzy
 msgid "Last games"
-msgstr "Keine Spiele"
+msgstr ""
 
 #: ../contents/ui/views/DetailView.qml:46
 #: ../contents/ui/views/StandingsView.qml:42
 #: ../contents/ui/views/DesktopRepresentation.qml:110
 msgid "Standings"
-msgstr "Tabelle"
+msgstr ""
 
 #: ../contents/ui/views/DetailView.qml:53
 #: ../contents/ui/views/LeadersView.qml:31
 #: ../contents/ui/views/DesktopRepresentation.qml:116
 msgid "Leaders"
-msgstr "Top-Scorer"
+msgstr ""
 
 #: ../contents/ui/views/DetailView.qml:61
-#, fuzzy
 msgid "2026 Playoffs"
-msgstr "Playoffs"
+msgstr ""
 
 #: ../contents/ui/views/DetailView.qml:69
 #: ../contents/ui/views/SearchView.qml:38
 #: ../contents/ui/views/SearchView.qml:77
 msgid "Search"
-msgstr "Suche"
+msgstr ""
 
 #: ../contents/ui/views/DetailView.qml:150
-#, fuzzy
 msgid "Penalties"
-msgstr "Unterzahl %"
+msgstr ""
 
 #: ../contents/ui/views/DetailView.qml:161
 msgid "Stars"
@@ -326,12 +327,12 @@ msgstr ""
 #: ../contents/ui/views/ScheduleView.qml:73
 #: ../contents/ui/views/TeamHubView.qml:213
 msgid "Stats"
-msgstr "Statistiken"
+msgstr ""
 
 #: ../contents/ui/views/ScheduleView.qml:62
 #: ../contents/ui/views/ScheduleView.qml:73
 msgid "Schedule"
-msgstr "Spielplan"
+msgstr ""
 
 #: ../contents/ui/views/ScheduleView.qml:138
 #: ../contents/ui/views/TeamHubView.qml:164
@@ -346,18 +347,18 @@ msgstr ""
 
 #: ../contents/ui/views/ScheduleView.qml:173
 msgid "LIVE"
-msgstr "LIVE"
+msgstr ""
 
 #: ../contents/ui/views/ScheduleView.qml:215
 #: ../contents/ui/views/DayView.qml:73
 #: ../contents/ui/CompactRepresentation.qml:41 ../contents/ui/main.qml:411
 msgid "No games"
-msgstr "Keine Spiele"
+msgstr ""
 
 #: ../contents/ui/views/ScheduleView.qml:259
 #: ../contents/ui/views/ScheduleView.qml:317
 msgid "Player"
-msgstr "Spieler"
+msgstr ""
 
 #: ../contents/ui/views/ScheduleView.qml:261
 msgid "B"
@@ -370,7 +371,7 @@ msgstr ""
 #: ../contents/ui/views/ScheduleView.qml:303
 #: ../contents/ui/views/LeadersView.qml:202
 msgid "Goalies"
-msgstr "Torhüter"
+msgstr ""
 
 #: ../contents/ui/views/LeadersView.qml:46
 msgid "Fwd"
@@ -381,61 +382,59 @@ msgid "Def"
 msgstr ""
 
 #: ../contents/ui/views/LeadersView.qml:48
-#, fuzzy
 msgid "Goal"
-msgstr "Tore"
+msgstr ""
 
 #: ../contents/ui/views/LeadersView.qml:197
 #: ../contents/ui/views/detail/MatchStats.qml:110
 msgid "PIM"
-msgstr "STR"
+msgstr ""
 
 #: ../contents/ui/views/LeadersView.qml:206
 #: ../contents/ui/views/detail/MatchPreview.qml:90
 msgid "Wins"
-msgstr "Siege"
+msgstr ""
 
 #: ../contents/ui/views/LeadersView.qml:211
 msgid "Shutouts"
-msgstr "Shutouts"
+msgstr ""
 
 #: ../contents/ui/views/StandingsView.qml:55 ../contents/ui/main.qml:2773
 msgid "Wild Card"
-msgstr "Wild Card"
+msgstr ""
 
 #: ../contents/ui/views/StandingsView.qml:68
 msgid "Divisions"
-msgstr "Divisionen"
+msgstr ""
 
 #: ../contents/ui/views/StandingsView.qml:81
 msgid "League"
-msgstr "Liga"
+msgstr ""
 
 #: ../contents/ui/views/StandingsView.qml:348
 msgid "Clinched Playoff Spot"
-msgstr "Playoff-Platz gesichert"
+msgstr ""
 
 #: ../contents/ui/views/StandingsView.qml:348
 msgid "Clinched Division"
-msgstr "Divisions-Titel gesichert"
+msgstr ""
 
 #: ../contents/ui/views/StandingsView.qml:348
 msgid "Clinched Conference"
-msgstr "Conference-Titel gesichert"
+msgstr ""
 
 #: ../contents/ui/views/StandingsView.qml:353
 msgid "Eliminated from Playoffs"
-msgstr "Aus den Playoffs ausgeschieden"
+msgstr ""
 
 #: ../contents/ui/views/TeamHubView.qml:28
 msgid "‹ Standings"
-msgstr "‹ Tabelle"
+msgstr ""
 
 #: ../contents/ui/views/TeamHubView.qml:47
 #: ../contents/ui/views/TeamHubView.qml:201
-#, fuzzy
 msgid "Season Calendar"
-msgstr "Kalender"
+msgstr ""
 
 #: ../contents/ui/views/TeamHubView.qml:367
 msgid "Home"
@@ -449,12 +448,12 @@ msgstr ""
 #: ../contents/ui/views/DayView.qml:168 ../contents/ui/configDisplay.qml:181
 #: ../contents/ui/main.qml:431 ../contents/ui/main.qml:952
 msgid "Final"
-msgstr "Endstand"
+msgstr ""
 
 #: ../contents/ui/views/DesktopRepresentation.qml:89 ../contents/ui/main.qml:16
 #: ../contents/ui/main.qml:409
 msgid "NHL Scores"
-msgstr "NHL-Ergebnisse"
+msgstr ""
 
 #: ../contents/ui/views/DesktopRepresentation.qml:103
 msgid "just now"
@@ -470,12 +469,11 @@ msgstr ""
 
 #: ../contents/ui/views/DesktopRepresentation.qml:302
 msgid "No games today"
-msgstr "Heute keine Spiele"
+msgstr ""
 
 #: ../contents/ui/views/DesktopRepresentation.qml:328
-#, fuzzy
 msgid "No games for your team"
-msgstr "Heute keine Spiele"
+msgstr ""
 
 #: ../contents/ui/views/DesktopRepresentation.qml:328
 msgid "No favorite team set"
@@ -487,7 +485,7 @@ msgstr ""
 
 #: ../contents/ui/views/DayView.qml:57
 msgid "Calendar"
-msgstr "Kalender"
+msgstr ""
 
 #: ../contents/ui/views/DayView.qml:166
 msgid "arena"
@@ -498,9 +496,8 @@ msgid "local"
 msgstr ""
 
 #: ../contents/ui/views/SearchView.qml:56
-#, fuzzy
 msgid "Player name…"
-msgstr "Spieler"
+msgstr ""
 
 #: ../contents/ui/views/SearchView.qml:96
 msgid "Searching players…"
@@ -512,48 +509,48 @@ msgstr ""
 
 #: ../contents/ui/views/detail/MatchPreview.qml:24
 msgid "Season Comparison"
-msgstr "Saisonvergleich"
+msgstr ""
 
 #: ../contents/ui/views/detail/MatchPreview.qml:31
 msgid "Power Play %"
-msgstr "Überzahl %"
+msgstr ""
 
 #: ../contents/ui/views/detail/MatchPreview.qml:32
 msgid "Penalty Kill %"
-msgstr "Unterzahl %"
+msgstr ""
 
 #: ../contents/ui/views/detail/MatchPreview.qml:33
 #: ../contents/ui/views/detail/MatchStats.qml:110
 msgid "Faceoffs %"
-msgstr "Bullies %"
+msgstr ""
 
 #: ../contents/ui/views/detail/MatchPreview.qml:34
 msgid "GF/G"
-msgstr "T/S"
+msgstr ""
 
 #: ../contents/ui/views/detail/MatchPreview.qml:35
 msgid "GA/G"
-msgstr "GT/S"
+msgstr ""
 
 #: ../contents/ui/views/detail/MatchPreview.qml:64
 msgid "Season series"
-msgstr "Saisonserie"
+msgstr ""
 
 #: ../contents/ui/views/detail/MatchPreview.qml:180
 msgid "Points leaders (last 5 games)"
-msgstr "Top-Scorer (letzte 5 Spiele)"
+msgstr ""
 
 #: ../contents/ui/views/detail/MatchPreview.qml:227
 msgid "Probable goalies"
-msgstr "Voraussichtliche Torhüter"
+msgstr ""
 
 #: ../contents/ui/views/detail/MatchStats.qml:73
 msgid "Shots on Goal"
-msgstr "Schüsse aufs Tor"
+msgstr ""
 
 #: ../contents/ui/views/detail/MatchStats.qml:110
 msgid "Power Play"
-msgstr "Überzahl"
+msgstr ""
 
 #: ../contents/ui/views/detail/MatchStats.qml:110
 msgid "Hits"
@@ -572,9 +569,8 @@ msgid "Takeaways"
 msgstr ""
 
 #: ../contents/ui/views/detail/GoalsList.qml:85
-#, fuzzy
 msgid "Assists: "
-msgstr "Vorlagen"
+msgstr ""
 
 #: ../contents/ui/views/detail/GoalsList.qml:111
 msgid "unassisted"
@@ -582,7 +578,7 @@ msgstr ""
 
 #: ../contents/ui/views/detail/GoalsList.qml:122
 msgid "Watch goal highlight"
-msgstr "Tor-Highlight ansehen"
+msgstr ""
 
 #: ../contents/ui/views/detail/DetailHeader.qml:67
 #: ../contents/ui/views/detail/DetailHeader.qml:197
@@ -599,17 +595,15 @@ msgstr ""
 
 #: ../contents/ui/configGeneral.qml:433 ../contents/config/config.qml:7
 msgid "Display"
-msgstr "Anzeige"
+msgstr ""
 
 #: ../contents/ui/configGeneral.qml:439
-#, fuzzy
 msgid "Max games to display:"
-msgstr "Heute keine Spiele"
+msgstr ""
 
 #: ../contents/ui/configGeneral.qml:447
-#, fuzzy
 msgid "Leaders limit:"
-msgstr "Top-Scorer"
+msgstr ""
 
 #: ../contents/ui/configGeneral.qml:460
 msgid "Franchise leaders limit:"
@@ -640,9 +634,8 @@ msgid "Notifications"
 msgstr ""
 
 #: ../contents/ui/configGeneral.qml:570
-#, fuzzy
 msgid "Refresh interval:"
-msgstr "Jetzt aktualisieren"
+msgstr ""
 
 #: ../contents/ui/configGeneral.qml:582
 msgid " sec"
@@ -673,9 +666,8 @@ msgid "Status badge colors"
 msgstr ""
 
 #: ../contents/ui/configDisplay.qml:90
-#, fuzzy
 msgid "LIVE:"
-msgstr "LIVE"
+msgstr ""
 
 #: ../contents/ui/configDisplay.qml:95
 msgid "Choose LIVE color"
@@ -687,9 +679,8 @@ msgid "Reset to default"
 msgstr ""
 
 #: ../contents/ui/configDisplay.qml:127
-#, fuzzy
 msgid "Upcoming:"
-msgstr "Anstehend"
+msgstr ""
 
 #: ../contents/ui/configDisplay.qml:132
 msgid "Choose Upcoming color"
@@ -697,12 +688,11 @@ msgstr ""
 
 #: ../contents/ui/configDisplay.qml:144 ../contents/ui/main.qml:954
 msgid "Upcoming"
-msgstr "Anstehend"
+msgstr ""
 
 #: ../contents/ui/configDisplay.qml:164
-#, fuzzy
 msgid "Final:"
-msgstr "Endstand"
+msgstr ""
 
 #: ../contents/ui/configDisplay.qml:169
 msgid "Choose Final color"
@@ -722,23 +712,23 @@ msgstr ""
 
 #: ../contents/ui/configDisplay.qml:217
 msgid "Team display"
-msgstr "Teamanzeige"
+msgstr ""
 
 #: ../contents/ui/configDisplay.qml:220
 msgid "Icon style:"
-msgstr "Symbolstil:"
+msgstr ""
 
 #: ../contents/ui/configDisplay.qml:223
 msgid "Pastilles"
-msgstr "Abzeichen"
+msgstr ""
 
 #: ../contents/ui/configDisplay.qml:228
 msgid "Logos"
-msgstr "Logos"
+msgstr ""
 
 #: ../contents/ui/configDisplay.qml:236
 msgid "Layout"
-msgstr "Layout"
+msgstr ""
 
 #: ../contents/ui/configDisplay.qml:239
 msgid "Desktop:"
@@ -790,28 +780,28 @@ msgstr ""
 
 #: ../contents/ui/main.qml:287 ../contents/ui/main.qml:337
 msgid "Shootout"
-msgstr "Penaltyschießen"
+msgstr ""
 
 #: ../contents/ui/main.qml:288 ../contents/ui/main.qml:289
 #: ../contents/ui/main.qml:338 ../contents/ui/main.qml:339
 msgid "Overtime"
-msgstr "Verlängerung"
+msgstr ""
 
 #: ../contents/ui/main.qml:290 ../contents/ui/main.qml:340
 msgid "1st period"
-msgstr "1. Drittel"
+msgstr ""
 
 #: ../contents/ui/main.qml:291 ../contents/ui/main.qml:341
 msgid "2nd period"
-msgstr "2. Drittel"
+msgstr ""
 
 #: ../contents/ui/main.qml:292 ../contents/ui/main.qml:342
 msgid "3rd period"
-msgstr "3. Drittel"
+msgstr ""
 
 #: ../contents/ui/main.qml:293 ../contents/ui/main.qml:343
 msgid "Period"
-msgstr "Drittel"
+msgstr ""
 
 #: ../contents/ui/main.qml:312
 msgid "No goals recorded."
@@ -819,66 +809,64 @@ msgstr ""
 
 #: ../contents/ui/main.qml:390
 msgid "Refresh now"
-msgstr "Jetzt aktualisieren"
+msgstr ""
 
 #: ../contents/ui/main.qml:551
-#, fuzzy
 msgid "GOAL!"
-msgstr "TOR"
+msgstr ""
 
 #: ../contents/ui/main.qml:552
-#, fuzzy
 msgid "GOAL: %1"
-msgstr "TOR"
+msgstr ""
 
 #: ../contents/ui/main.qml:775
 msgid "Sunday"
-msgstr "Sonntag"
+msgstr ""
 
 #: ../contents/ui/main.qml:775
 msgid "Monday"
-msgstr "Montag"
+msgstr ""
 
 #: ../contents/ui/main.qml:775
 msgid "Tuesday"
-msgstr "Dienstag"
+msgstr ""
 
 #: ../contents/ui/main.qml:775
 msgid "Wednesday"
-msgstr "Mittwoch"
+msgstr ""
 
 #: ../contents/ui/main.qml:776
 msgid "Thursday"
-msgstr "Donnerstag"
+msgstr ""
 
 #: ../contents/ui/main.qml:776
 msgid "Friday"
-msgstr "Freitag"
+msgstr ""
 
 #: ../contents/ui/main.qml:776
 msgid "Saturday"
-msgstr "Samstag"
+msgstr ""
 
 #: ../contents/ui/main.qml:916
 msgid "OT"
-msgstr "Verl."
+msgstr ""
 
 #: ../contents/ui/main.qml:916 ../contents/ui/main.qml:921
 #: ../contents/ui/main.qml:927 ../contents/ui/main.qml:965
 msgid "SO"
-msgstr "PS"
+msgstr ""
 
 #: ../contents/ui/main.qml:921 ../contents/ui/main.qml:928
 msgid "1st"
-msgstr "1."
+msgstr ""
 
 #: ../contents/ui/main.qml:921 ../contents/ui/main.qml:929
 msgid "2nd"
-msgstr "2."
+msgstr ""
 
 #: ../contents/ui/main.qml:921 ../contents/ui/main.qml:930
 msgid "3rd"
-msgstr "3."
+msgstr ""
 
 #: ../contents/ui/main.qml:1147
 msgid "Standings not available for simulation"
@@ -905,9 +893,8 @@ msgid "Tripping"
 msgstr ""
 
 #: ../contents/ui/main.qml:1298
-#, fuzzy
 msgid "Interference"
-msgstr "Eastern Conference"
+msgstr ""
 
 #: ../contents/ui/main.qml:1299
 msgid "Holding"
@@ -926,9 +913,8 @@ msgid "Charging"
 msgstr ""
 
 #: ../contents/ui/main.qml:1303
-#, fuzzy
 msgid "Boarding"
-msgstr "Laden…"
+msgstr ""
 
 #: ../contents/ui/main.qml:1304
 msgid "Cross-checking"
@@ -947,9 +933,8 @@ msgid "Too many men"
 msgstr ""
 
 #: ../contents/ui/main.qml:1308
-#, fuzzy
 msgid "Goalie interference"
-msgstr "Conference-Titel gesichert"
+msgstr ""
 
 #: ../contents/ui/main.qml:1309
 msgid "Misconduct"
@@ -968,9 +953,8 @@ msgid "Instigating"
 msgstr ""
 
 #: ../contents/ui/main.qml:1313
-#, fuzzy
 msgid "Diving"
-msgstr "Divisionen"
+msgstr ""
 
 #: ../contents/ui/main.qml:1314
 msgid "Embellishment"
@@ -985,9 +969,8 @@ msgid "Spearing"
 msgstr ""
 
 #: ../contents/ui/main.qml:1317
-#, fuzzy
 msgid "Butt-ending"
-msgstr "Tabelle"
+msgstr ""
 
 #: ../contents/ui/main.qml:1318
 msgid "Checking from behind"
@@ -1007,65 +990,44 @@ msgstr ""
 
 #: ../contents/ui/main.qml:1761
 msgid "First Round"
-msgstr "Erste Runde"
+msgstr ""
 
 #: ../contents/ui/main.qml:1762
 msgid "Second Round"
-msgstr "Zweite Runde"
+msgstr ""
 
 #: ../contents/ui/main.qml:1763
 msgid "Conference Finals"
-msgstr "Konferenz-Finale"
+msgstr ""
 
 #: ../contents/ui/main.qml:1764
 msgid "Stanley Cup Final"
-msgstr "Stanley Cup Finale"
+msgstr ""
 
 #: ../contents/ui/main.qml:2772
 msgid "Atlantic"
-msgstr "Atlantik"
+msgstr ""
 
 #: ../contents/ui/main.qml:2772
 msgid "Metropolitan"
-msgstr "Metropol"
+msgstr ""
 
 #: ../contents/ui/main.qml:2772
 msgid "Central"
-msgstr "Zentraler"
+msgstr ""
 
 #: ../contents/ui/main.qml:2772
 msgid "Pacific"
-msgstr "Pazifik"
+msgstr ""
 
 #: ../contents/ui/main.qml:2773
 msgid "Eastern Conference"
-msgstr "Eastern Conference"
+msgstr ""
 
 #: ../contents/ui/main.qml:2773
 msgid "Western Conference"
-msgstr "Western Conference"
+msgstr ""
 
 #: ../contents/config/config.qml:6
 msgid "General"
 msgstr ""
-
-#~ msgid "Intermission"
-#~ msgstr "Drittelpause"
-
-#~ msgid "Losses"
-#~ msgstr "Niederlagen"
-
-#~ msgid "WESTERN CONFERENCE"
-#~ msgstr "WESTERN CONFERENCE"
-
-#~ msgid "EASTERN CONFERENCE"
-#~ msgstr "EASTERN CONFERENCE"
-
-#~ msgid "STANLEY CUP FINALS"
-#~ msgstr "STANLEY CUP FINALE"
-
-#~ msgid "FINALS"
-#~ msgstr "FINALE"
-
-#~ msgid "Séries 2026"
-#~ msgstr "Playoffs 2026"

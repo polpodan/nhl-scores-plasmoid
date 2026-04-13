@@ -1,0 +1,353 @@
+// logic.js
+.pragma library
+
+const teamColors = {
+    'ANA': { p: '#F47A38', s: '#B9975B' },
+    'UTA': { p: '#6E2B62', s: '#000000' },
+    'BOS': { p: '#FFB81C', s: '#000000' },
+    'BUF': { p: '#003087', s: '#FFB81C' },
+    'CAR': { p: '#CC0000', s: '#000000' },
+    'CBJ': { p: '#002654', s: '#CE1126' },
+    'CGY': { p: '#C8102E', s: '#F1BE48' },
+    'CHI': { p: '#CF0A2C', s: '#FFD100' },
+    'COL': { p: '#6F263D', s: '#236192' },
+    'DAL': { p: '#006847', s: '#8F8F8C' },
+    'DET': { p: '#CE1126', s: '#FFFFFF' },
+    'EDM': { p: '#FF4C00', s: '#041E42' },
+    'FLA': { p: '#C8102E', s: '#041E42' },
+    'LAK': { p: '#111111', s: '#A2AAAD' },
+    'MIN': { p: '#154734', s: '#A6192E' },
+    'MTL': { p: '#AF1E2D', s: '#192168' },
+    'NJD': { p: '#CE1126', s: '#111111' },
+    'NSH': { p: '#FFB81C', s: '#041E42' },
+    'NYI': { p: '#00539B', s: '#F47D30' },
+    'NYR': { p: '#0038A8', s: '#CE1126' },
+    'OTT': { p: '#C52032', s: '#C69214' },
+    'PHI': { p: '#F74902', s: '#000000' },
+    'PIT': { p: '#FFB81C', s: '#000000' },
+    'SEA': { p: '#99D9D9', s: '#001628' },
+    'SJS': { p: '#006D75', s: '#EA7208' },
+    'STL': { p: '#002F87', s: '#FCB514' },
+    'TBL': { p: '#002868', s: '#FFFFFF' },
+    'TOR': { p: '#00205B', s: '#FFFFFF' },
+    'VAN': { p: '#00205B', s: '#00843D' },
+    'VGK': { p: '#B4975A', s: '#333F42' },
+    'WPG': { p: '#041E42', s: '#AC162C' },
+    'WSH': { p: '#C8102E', s: '#041E42' },
+    'ARI': { p: '#8C2633', s: '#E2D6B5' }
+};
+
+// --- Cache & Persistence Service ---
+let _cache = {};
+let _configRef = null;
+
+function initCache(configObject) {
+    _configRef = configObject;
+    try {
+        _cache = JSON.parse(_configRef.cacheData || "{}");
+    } catch(e) {
+        _cache = {};
+    }
+}
+
+function saveToCache(key, data) {
+    _cache[key] = {
+        timestamp: new Date().getTime(),
+        content: data
+    };
+    if (_configRef) {
+        _configRef.cacheData = JSON.stringify(_cache);
+    }
+}
+
+function getFromCache(key, maxAgeMs) {
+    let entry = _cache[key];
+    if (!entry) return null;
+    
+    // Si maxAgeMs est fourni, on vérifie la validité
+    if (maxAgeMs !== undefined) {
+        let now = new Date().getTime();
+        if (now - entry.timestamp > maxAgeMs) return null;
+    }
+    return entry.content;
+}
+
+function pad2(n) { return (n < 10 ? "0" : "") + n; }
+function dateISO(d) { return d.getFullYear() + "-" + pad2(d.getMonth() + 1) + "-" + pad2(d.getDate()); }
+
+function teamLogoUrl(code) {
+    if (!code) return "";
+    return "https://assets.nhle.com/logos/nhl/svg/" + String(code).toUpperCase() + "_light.svg";
+}
+
+function getTeamColor(code, fallback) {
+    var entry = teamColors[String(code || '').toUpperCase()];
+    if (entry) return entry.p;
+    return (fallback !== undefined && fallback !== null) ? fallback : "#888888";
+}
+
+function isSameDay(a, b) { return a.getFullYear()===b.getFullYear() && a.getMonth()===b.getMonth() && a.getDate()===b.getDate(); }
+
+// --- Timezone & Venue helpers ---
+function getTeamZone(code) {
+    switch(String(code||'')){
+        case 'BOS': case 'BUF': case 'CAR': case 'CBJ': case 'DET': case 'FLA': case 'MTL': case 'NJD': case 'NYI': case 'NYR': case 'OTT': case 'PHI': case 'PIT': case 'TBL': case 'TOR': case 'WSH':
+            return 'ET';
+        case 'CHI': case 'DAL': case 'MIN': case 'NSH': case 'STL': case 'WPG':
+            return 'CT';
+        case 'COL': case 'CGY': case 'EDM': case 'UTA':
+            return 'MT';
+        case 'ANA': case 'LAK': case 'SEA': case 'SJS': case 'VAN': case 'VGK':
+            return 'PT';
+        default:
+            return 'ET';
+    }
+}
+
+function zoneBaseOffsetHours(zone){
+    if(zone==='ET') return -5;
+    if(zone==='CT') return -6;
+    if(zone==='MT') return -7;
+    if(zone==='PT') return -8;
+    return -5;
+}
+
+function nthSundayOfMonth(year, month0, n){
+    var d = new Date(Date.UTC(year, month0, 1));
+    var dow = d.getUTCDay();
+    var firstSunday = 1 + ((7 - dow) % 7);
+    return firstSunday + 7*(n-1);
+}
+
+function firstSundayNovember(year){ return nthSundayOfMonth(year, 10, 1); }
+function secondSundayMarch(year){ return nthSundayOfMonth(year, 2, 2); }
+
+function isDstDateLocalLike(year, month0, day, zone){
+    var dStart = secondSundayMarch(year);
+    var dEnd = firstSundayNovember(year);
+    if(month0>2 && month0<10) return true;
+    if(month0<2 || month0>10) return false;
+    if(month0===2) return day>=dStart;
+    if(month0===10) return day<dEnd;
+    return false;
+}
+
+function venueTimeStr(msUTC, homeTeam) {
+    if(!msUTC || !homeTeam) return "";
+    var d = new Date(msUTC);
+    var zone = getTeamZone(homeTeam);
+    var baseOff = zoneBaseOffsetHours(zone);
+    var isDst = isDstDateLocalLike(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), zone);
+    var totalOff = baseOff + (isDst ? 1 : 0);
+    var local = new Date(d.getTime() + totalOff * 3600000);
+    var h = local.getUTCHours();
+    var m = local.getUTCMinutes();
+    return (h<10?'0':'')+h+':'+(m<10?'0':'')+m;
+}
+
+function localTimeStr(msUTC) {
+    if(!msUTC) return "";
+    var d = new Date(msUTC);
+    var h = d.getHours();
+    var m = d.getMinutes();
+    return (h<10?'0':'')+h+':'+(m<10?'0':'')+m;
+}
+
+function httpGet(url, cb) {
+    var xhr = new XMLHttpRequest();
+    xhr.onreadystatechange = function() {
+        if (xhr.readyState === XMLHttpRequest.DONE) {
+            if (xhr.status === 200) {
+                try {
+                    var res = JSON.parse(xhr.responseText);
+                    cb(null, res);
+                } catch(e) {
+                    cb(e, null);
+                }
+            } else {
+                cb(new Error("HTTP " + xhr.status), null);
+            }
+        }
+    };
+    xhr.open("GET", url);
+    xhr.send();
+}
+
+function getFranchiseId(code) {
+    var table = {
+        'NJD': 1, 'NYI': 2, 'NYR': 3, 'PHI': 4, 'PIT': 5, 'BOS': 6, 'BUF': 7, 'MTL': 8, 'OTT': 9,
+        'TOR': 10, 'CAR': 12, 'FLA': 13, 'TBL': 14, 'WSH': 15, 'CHI': 16, 'DET': 17, 'NSH': 18,
+        'STL': 19, 'CGY': 20, 'COL': 21, 'EDM': 22, 'VAN': 23, 'ANA': 24, 'DAL': 25, 'LAK': 26,
+        'SJS': 28, 'CBJ': 29, 'MIN': 30, 'WPG': 35, 'VGK': 37, 'ARI': 27, 'SEA': 39, 'UTA': 40
+    };
+    return table[String(code || '').toUpperCase()] || 0;
+}
+
+const ApiService = {
+    BASE_URL: "https://api-web.nhle.com/v1",
+    STATS_BASE_URL: "https://api.nhle.com/stats/rest/en",
+    SEARCH_URL: "https://search.d3.nhle.com/api/v1",
+
+    getScoreboard: function(date, cb) {
+        var self = this;
+        httpGet(this.BASE_URL + "/scoreboard/" + date, function(err, data) {
+            if (err) {
+                let cached = getFromCache("scoreboard_" + date);
+                if (cached) cb(null, cached, true); // true = isOffline
+                else cb(err, null);
+            } else {
+                saveToCache("scoreboard_" + date, data);
+                cb(null, data, false);
+            }
+        });
+    },
+    getScoreboardNow: function(teamCode, cb) {
+        var self = this;
+        httpGet(this.BASE_URL + "/scoreboard/" + teamCode + "/now", function(err, data) {
+            if (err) {
+                let cached = getFromCache("scoreboard_now_" + teamCode);
+                if (cached) cb(null, cached, true);
+                else cb(err, null);
+            } else {
+                saveToCache("scoreboard_now_" + teamCode, data);
+                cb(null, data, false);
+            }
+        });
+    },
+    getSchedule: function(date, cb) {
+        httpGet(this.BASE_URL + "/schedule/" + date, cb);
+    },
+    getScore: function(date, cb) {
+        httpGet(this.BASE_URL + "/score/" + date, cb);
+    },
+    getStandings: function(cb) {
+        var self = this;
+        httpGet(this.BASE_URL + "/standings/now", function(err, data) {
+            if (err) {
+                let cached = getFromCache("standings");
+                if (cached) cb(null, cached, true);
+                else cb(err, null);
+            } else {
+                saveToCache("standings", data);
+                cb(null, data, false);
+            }
+        });
+    },
+    getGameClock: function(gameId, cb) {
+        httpGet(this.BASE_URL + "/gamecenter/" + gameId + "/play-by-play", cb);
+    },
+    getGameLanding: function(gameId, cb) {
+        var self = this;
+        httpGet(this.BASE_URL + "/gamecenter/" + gameId + "/landing", function(err, data) {
+            if (err) {
+                let cached = getFromCache("game_" + gameId);
+                if (cached) cb(null, cached, true);
+                else cb(err, null);
+            } else {
+                saveToCache("game_" + gameId, data);
+                cb(null, data, false);
+            }
+        });
+    },
+    getGameRightRail: function(gameId, cb) {
+        httpGet(this.BASE_URL + "/gamecenter/" + gameId + "/right-rail", cb);
+    },
+    getGameBoxscore: function(gameId, cb) {
+        httpGet(this.BASE_URL + "/gamecenter/" + gameId + "/boxscore", cb);
+    },
+    getSkaterLeaders: function(limit, isRookie, category, cb) {
+        var rookiePart = isRookie ? '&isRookie=1' : '';
+        httpGet(this.BASE_URL + "/skater-stats-leaders/current?limit=" + limit + rookiePart + "&categories=" + category, cb);
+    },
+    getGoalieLeaders: function(limit, isRookie, categories, cb) {
+        var rookiePart = isRookie ? '&isRookie=1' : '';
+        httpGet(this.BASE_URL + "/goalie-stats-leaders/current?categories=" + categories + "&limit=" + limit + rookiePart, cb);
+    },
+    getPlayerLanding: function(playerId, cb) {
+        var self = this;
+        httpGet(this.BASE_URL + "/player/" + playerId + "/landing", function(err, data) {
+            if (err) {
+                let cached = getFromCache("player_" + playerId);
+                if (cached) cb(null, cached, true);
+                else cb(err, null);
+            } else {
+                saveToCache("player_" + playerId, data);
+                cb(null, data, false);
+            }
+        });
+    },
+    getPlayoffBracket: function(cb) {
+        httpGet(this.BASE_URL + "/playoff-bracket/now", cb);
+    },
+    getTeamSchedule: function(teamCode, cb) {
+        httpGet(this.BASE_URL + "/club-schedule-season/" + teamCode + "/now", cb);
+    },
+    getTeamStats: function(teamCode, cb) {
+        httpGet(this.BASE_URL + "/club-stats/" + teamCode + "/now", cb);
+    },
+    getFranchiseLeaders: function(teamCode, category, limit, activeOnly, cb) {
+        var fid = getFranchiseId(teamCode);
+        if (fid === 0) { cb(new Error("Unknown franchise ID for " + teamCode), null); return; }
+        var cayenne = "franchiseId=" + fid;
+        if (activeOnly) cayenne += " and active=1";
+        
+        var url = this.STATS_BASE_URL + "/skater/summary" 
+                + "?isAggregate=true&isGame=false"
+                + "&sort=[{\"property\":\"" + category + "\",\"direction\":\"DESC\"}]"
+                + "&start=0&limit=" + limit
+                + "&cayenneExp=" + encodeURIComponent(cayenne);
+        httpGet(url, cb);
+    },
+    searchPlayers: function(query, cb) {
+        var self = this;
+        var url = this.SEARCH_URL + "/search/player?q=" + encodeURIComponent(query) + "&culture=en-US&limit=20";
+        
+        httpGet(url, function(err, data) {
+            if (!err && data && data.length > 0) {
+                cb(null, data);
+                return;
+            }
+            var results = [];
+            var pending = 2;
+            function done() {
+                pending--;
+                if (pending <= 0) {
+                    if (results.length > 0) cb(null, results);
+                    else cb(new Error("No results"), null);
+                }
+            }
+            var skaterUrl = self.STATS_BASE_URL + "/skater/summary?isAggregate=true&isGame=false&limit=20&cayenneExp=skaterFullName%20like%20%27%25" + encodeURIComponent(query) + "%25%27";
+            httpGet(skaterUrl, function(e1, d1) {
+                if (!e1 && d1 && d1.data) {
+                    d1.data.forEach(function(p) {
+                        results.push({
+                            playerId: p.playerId,
+                            name: p.skaterFullName,
+                            lastName: p.lastName,
+                            teamAbbrev: p.teamAbbrevs || "",
+                            positionCode: p.positionCode
+                        });
+                    });
+                }
+                done();
+            });
+            var goalieUrl = self.STATS_BASE_URL + "/goalie/summary?isAggregate=true&isGame=false&limit=10&cayenneExp=goalieFullName%20like%20%27%25" + encodeURIComponent(query) + "%25%27";
+            httpGet(goalieUrl, function(e2, d2) {
+                if (!e2 && d2 && d2.data) {
+                    d2.data.forEach(function(p) {
+                        results.push({
+                            playerId: p.playerId,
+                            name: p.goalieFullName,
+                            lastName: p.lastName,
+                            teamAbbrev: p.teamAbbrevs || "",
+                            positionCode: "G"
+                        });
+                    });
+                }
+                done();
+            });
+        });
+    }
+};
+
+// ... rest of file (transformation helpers) ...

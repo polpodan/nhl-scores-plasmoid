@@ -141,11 +141,11 @@ Item {
                                     id: ldrBadge
                                     visible: !controller.showLogos
                                     radius: 2
-                                    color: Logic.getTeamColor(modelData.team || '')
+                                    color: Logic.getTeamColorAdapted(modelData.team || '', "", false, false, Kirigami.Theme.backgroundColor)
                                     width: 38; height: 18
                                     Label { 
                                         anchors.centerIn: parent; text: modelData.team || ''
-                                        color: Logic.getTeamTextColor(modelData.team || '')
+                                        color: Logic.getContrastColor(ldrBadge.color)
                                         font.pixelSize: s.fonts.tiny + 1; font.bold: true; font.family: "monospace" 
                                     }
                                 }

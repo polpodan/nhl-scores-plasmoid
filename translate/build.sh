@@ -16,8 +16,8 @@ mkdir -p "$LOCALE_DIR"
 
 for L in "${LANGS[@]}"; do
   PO_FILE="$ROOT_DIR/translate/$L.po"
-  # Support pour fr.po mappé sur fr
-  if [[ "$L" == "fr" && ! -f "$PO_FILE" && -f "$ROOT_DIR/translate/fr.po" ]]; then
+  # Support pour fr.po mappé sur fr et fr_CA
+  if [[ ("$L" == "fr" || "$L" == "fr_CA") && ! -f "$PO_FILE" && -f "$ROOT_DIR/translate/fr.po" ]]; then
      PO_FILE="$ROOT_DIR/translate/fr.po"
   fi
 

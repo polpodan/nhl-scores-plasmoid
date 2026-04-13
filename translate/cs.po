@@ -2,322 +2,1070 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: nhl-scores-plasmoid 5.3\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-04-12 08:49-0400\n"
 "Language: cs\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-msgid "NHL Scores"
-msgstr "Výsledky NHL"
-
-msgid "No games"
-msgstr "Žádné zápasy"
-
-msgid "No games today"
-msgstr "Dnes se nehrají žádné zápasy"
-
-msgid "Refresh now"
-msgstr "Obnovit nyní"
-
+#: ../contents/ui/components/StateLayer.qml:11
+#: ../contents/ui/views/BracketView.qml:44
+#: ../contents/ui/CompactRepresentation.qml:41
 msgid "Loading…"
 msgstr "Načítání…"
 
-msgid "‹ Back"
-msgstr "‹ Zpět"
-
-msgid "‹ Match"
-msgstr "‹ Zápas"
-
-msgid "‹ Standings"
-msgstr "‹ Tabulka"
-
+#: ../contents/ui/views/FranchiseLeadersView.qml:26
+#: ../contents/ui/views/ScheduleView.qml:36
+#: ../contents/ui/views/StandingsView.qml:31
 msgid "‹ Team"
 msgstr "‹ Tým"
 
-msgid "‹ Search"
-msgstr "‹ Hledat"
+#: ../contents/ui/views/FranchiseLeadersView.qml:38
+#: ../contents/ui/views/TeamHubView.qml:207
+msgid "Franchise Leaders"
+msgstr ""
 
-msgid "‹ Stats"
-msgstr "‹ Statistiky"
-
-msgid "‹ History"
-msgstr "‹ Historie"
-
-msgid "Final"
-msgstr "Konec"
-
-msgid "Upcoming"
-msgstr "Nadcházející"
-
-msgid "LIVE"
-msgstr "ŽIVĚ"
-
-msgid "Overtime"
-msgstr "Prodloužení"
-
-msgid "Shootout"
-msgstr "Nájezdy"
-
-msgid "Intermission"
-msgstr "Přestávka"
-
-msgid "Period"
-msgstr "Třetina"
-
-msgid "1st"
-msgstr "1."
-
-msgid "2nd"
-msgstr "2."
-
-msgid "3rd"
-msgstr "3."
-
-msgid "SO"
-msgstr "SN"
-
-msgid "OT"
-msgstr "PP"
-
-msgid "1st period"
-msgstr "1. třetina"
-
-msgid "2nd period"
-msgstr "2. třetina"
-
-msgid "3rd period"
-msgstr "3. třetina"
-
-msgid "Power Play"
-msgstr "Přesilovka"
-
-msgid "Standings"
-msgstr "Tabulka"
-
-msgid "Leaders"
-msgstr "Lídři"
-
-msgid "Season series"
-msgstr "Série v sezóně"
-
-msgid "Probable goalies"
-msgstr "Předpokládaní brankáři"
-
-msgid "Points leaders (last 5 games)"
-msgstr "Lídři bodování (posledních 5 zápasů)"
-
-msgid "Shots on Goal"
-msgstr "Střely na branku"
-
-msgid "GOAL"
-msgstr "GÓL"
-
-msgid "Goals"
-msgstr "Branky"
-
-msgid "Assists"
-msgstr "Asistence"
-
+#: ../contents/ui/views/FranchiseLeadersView.qml:80
+#: ../contents/ui/views/LeadersView.qml:182
 msgid "Points"
 msgstr "Body"
 
-msgid "PTS"
-msgstr "B"
+#: ../contents/ui/views/FranchiseLeadersView.qml:97
+#: ../contents/ui/views/PlayerView.qml:328
+#: ../contents/ui/views/PlayerView.qml:382
+#: ../contents/ui/views/DetailView.qml:139
+#: ../contents/ui/views/LeadersView.qml:187
+msgid "Goals"
+msgstr "Branky"
 
-msgid "W"
-msgstr "V"
+#: ../contents/ui/views/FranchiseLeadersView.qml:114
+#: ../contents/ui/views/PlayerView.qml:329
+#: ../contents/ui/views/PlayerView.qml:383
+#: ../contents/ui/views/LeadersView.qml:192
+msgid "Assists"
+msgstr "Asistence"
 
-msgid "L"
-msgstr "P"
+#: ../contents/ui/views/FranchiseLeadersView.qml:128
+msgid "Active player"
+msgstr ""
 
-msgid "PIM"
-msgstr "TM"
+#: ../contents/ui/views/CalendarView.qml:55
+#: ../contents/ui/views/ScheduleView.qml:36
+#: ../contents/ui/views/StandingsView.qml:33
+#: ../contents/ui/views/TeamHubView.qml:28
+#: ../contents/ui/views/BracketView.qml:24
+msgid "‹ Back"
+msgstr "‹ Zpět"
 
-msgid "PJ"
-msgstr "Z"
+#: ../contents/ui/views/CalendarView.qml:72
+#: ../contents/ui/views/TeamHubView.qml:242 ../contents/ui/main.qml:777
+msgid "January"
+msgstr ""
 
-msgid "Player"
-msgstr "Hráč"
+#: ../contents/ui/views/CalendarView.qml:72
+#: ../contents/ui/views/TeamHubView.qml:242 ../contents/ui/main.qml:777
+msgid "February"
+msgstr ""
 
-msgid "Team"
-msgstr "Tým"
-
-msgid "Goalies"
-msgstr "Brankáři"
-
-msgid "Wild Card"
-msgstr "Wild Card"
-
-msgid "Eastern Conference"
-msgstr "Východní konference"
-
-msgid "Western Conference"
-msgstr "Západní konference"
-
-msgid "Playoffs"
-msgstr "Play-off"
-
-msgid "Wins"
-msgstr "Výhry"
-
-msgid "Losses"
-msgstr "Prohry"
-
-msgid "Shutouts"
-msgstr "Čistá konta"
-
-msgid "SHO"
-msgstr "SO"
-
-msgid "GAA"
-msgstr "Pru"
-
-msgid "SV%"
-msgstr "Úsp%"
-
-msgid "Schedule"
-msgstr "Rozpis"
-
-msgid "Stats"
-msgstr "Statistiky"
-
-msgid "Monday"
-msgstr "Pondělí"
-
-msgid "Tuesday"
-msgstr "Úterý"
-
-msgid "Wednesday"
-msgstr "Středa"
-
-msgid "Thursday"
-msgstr "Čtvrtek"
-
-msgid "Friday"
-msgstr "Pátek"
-
-msgid "Saturday"
-msgstr "Sobota"
-
-msgid "Sunday"
-msgstr "Neděle"
-
-msgid "Display"
-msgstr "Zobrazení"
-
-msgid "Layout"
-msgstr "Rozvržení"
-
-msgid "Search"
+#: ../contents/ui/views/CalendarView.qml:72
+#: ../contents/ui/views/TeamHubView.qml:242 ../contents/ui/main.qml:777
+#, fuzzy
+msgid "March"
 msgstr "Hledat"
 
-msgid "Calendar"
-msgstr "Kalendář"
+#: ../contents/ui/views/CalendarView.qml:72
+#: ../contents/ui/views/TeamHubView.qml:242 ../contents/ui/main.qml:777
+msgid "April"
+msgstr ""
 
+#: ../contents/ui/views/CalendarView.qml:73
+#: ../contents/ui/views/TeamHubView.qml:242 ../contents/ui/main.qml:778
+#, fuzzy
+msgid "May"
+msgstr "Pondělí"
+
+#: ../contents/ui/views/CalendarView.qml:73
+#: ../contents/ui/views/TeamHubView.qml:242 ../contents/ui/main.qml:778
+msgid "June"
+msgstr ""
+
+#: ../contents/ui/views/CalendarView.qml:73
+#: ../contents/ui/views/TeamHubView.qml:242 ../contents/ui/main.qml:778
+msgid "July"
+msgstr ""
+
+#: ../contents/ui/views/CalendarView.qml:73
+#: ../contents/ui/views/TeamHubView.qml:242 ../contents/ui/main.qml:778
+msgid "August"
+msgstr ""
+
+#: ../contents/ui/views/CalendarView.qml:74
+#: ../contents/ui/views/TeamHubView.qml:242 ../contents/ui/main.qml:779
+msgid "September"
+msgstr ""
+
+#: ../contents/ui/views/CalendarView.qml:74
+#: ../contents/ui/views/TeamHubView.qml:242 ../contents/ui/main.qml:779
+msgid "October"
+msgstr ""
+
+#: ../contents/ui/views/CalendarView.qml:74
+#: ../contents/ui/views/TeamHubView.qml:242 ../contents/ui/main.qml:779
+msgid "November"
+msgstr ""
+
+#: ../contents/ui/views/CalendarView.qml:74
+#: ../contents/ui/views/TeamHubView.qml:242 ../contents/ui/main.qml:779
+msgid "December"
+msgstr ""
+
+#: ../contents/ui/views/CalendarView.qml:105
 msgid "Today"
 msgstr "Dnes"
 
-msgid "Atlantic"
-msgstr "Atlantická"
+#: ../contents/ui/views/CalendarView.qml:120
+#: ../contents/ui/views/TeamHubView.qml:259
+msgid "Su"
+msgstr ""
 
-msgid "Metropolitan"
-msgstr "Metropolitní"
+#: ../contents/ui/views/CalendarView.qml:120
+#: ../contents/ui/views/TeamHubView.qml:259
+msgid "Mo"
+msgstr ""
 
-msgid "Central"
-msgstr "Centrální"
+#: ../contents/ui/views/CalendarView.qml:120
+#: ../contents/ui/views/TeamHubView.qml:259
+msgid "Tu"
+msgstr ""
 
-msgid "Pacific"
-msgstr "Pacifická"
+#: ../contents/ui/views/CalendarView.qml:120
+#: ../contents/ui/views/TeamHubView.qml:259
+#, fuzzy
+msgid "We"
+msgstr "V"
 
-msgid "First Round"
-msgstr "První kolo"
+#: ../contents/ui/views/CalendarView.qml:120
+#: ../contents/ui/views/TeamHubView.qml:259
+msgid "Th"
+msgstr ""
 
-msgid "Second Round"
-msgstr "Druhé kolo"
+#: ../contents/ui/views/CalendarView.qml:120
+#: ../contents/ui/views/TeamHubView.qml:259
+msgid "Fr"
+msgstr ""
 
-msgid "Conference Finals"
-msgstr "Finále konferencí"
+#: ../contents/ui/views/CalendarView.qml:120
+#: ../contents/ui/views/TeamHubView.qml:259
+msgid "Sa"
+msgstr ""
 
-msgid "Stanley Cup Final"
-msgstr "Finále Stanley Cupu"
+#: ../contents/ui/views/PlayerView.qml:116
+msgid "‹ Search"
+msgstr "‹ Hledat"
 
-msgid "Team display"
-msgstr "Zobrazení týmů"
+#: ../contents/ui/views/PlayerView.qml:117
+msgid "‹ Stats"
+msgstr "‹ Statistiky"
 
-msgid "Icon style:"
-msgstr "Styl ikon:"
+#: ../contents/ui/views/PlayerView.qml:118
+#: ../contents/ui/views/LeadersView.qml:25
+#: ../contents/ui/views/StandingsView.qml:32
+#: ../contents/ui/views/TeamHubView.qml:28
+#: ../contents/ui/views/BracketView.qml:24
+#: ../contents/ui/views/SearchView.qml:29
+msgid "‹ Match"
+msgstr "‹ Zápas"
 
-msgid "Pastilles"
-msgstr "Známky"
+#: ../contents/ui/views/PlayerView.qml:119
+msgid "‹ History"
+msgstr "‹ Historie"
 
-msgid "Logos"
-msgstr "Loga"
+#: ../contents/ui/views/PlayerView.qml:120
+#, fuzzy
+msgid "‹ Leaders"
+msgstr "Lídři"
 
-msgid "Season Comparison"
-msgstr "Srovnání v sezóně"
-
-msgid "Power Play %"
-msgstr "Přesilovka %"
-
-msgid "Penalty Kill %"
-msgstr "Oslabení %"
-
-msgid "Faceoffs %"
-msgstr "Vhazování %"
-
-msgid "GF/G"
-msgstr "VST/Z"
-
-msgid "GA/G"
-msgstr "OBDR/Z"
-
-msgid "Watch goal highlight"
-msgstr "Sledovat sestřih gólu"
-
-msgid "Divisions"
-msgstr "Divize"
-
-msgid "League"
-msgstr "Liga"
-
-msgid "Clinched Playoff Spot"
-msgstr "Místo v play-off zajištěno"
-
-msgid "Clinched Division"
-msgstr "Divizní titul zajištěn"
-
-msgid "Clinched Conference"
-msgstr "Konferenční titul zajištěn"
-
-msgid "Eliminated from Playoffs"
-msgstr "Vyřazen z play-off"
-
+#: ../contents/ui/views/PlayerView.qml:141
+#: ../contents/ui/views/PlayerView.qml:378
 msgid "Season"
 msgstr "Sezóna"
 
-msgid "Season history"
-msgstr "Historie sezóny"
+#: ../contents/ui/views/PlayerView.qml:149 ../contents/ui/main.qml:1765
+msgid "Playoffs"
+msgstr "Play-off"
 
-msgid "Playoff history"
-msgstr "Historie play-off"
+#: ../contents/ui/views/PlayerView.qml:251
+msgid "years"
+msgstr ""
 
+#: ../contents/ui/views/PlayerView.qml:262
+msgid "Height:"
+msgstr ""
+
+#: ../contents/ui/views/PlayerView.qml:262
+msgid "Weight:"
+msgstr ""
+
+#: ../contents/ui/views/PlayerView.qml:271
+msgid "Born:"
+msgstr ""
+
+#: ../contents/ui/views/PlayerView.qml:286
+msgid "Birthplace:"
+msgstr ""
+
+#: ../contents/ui/views/PlayerView.qml:304
 msgid "Season stats"
 msgstr "Statistiky sezóny"
 
+#: ../contents/ui/views/PlayerView.qml:304
 msgid "Playoff stats"
 msgstr "Statistiky play-off"
 
-msgid "WESTERN CONFERENCE"
-msgstr "ZÁPADNÍ KONFERENCE"
+#: ../contents/ui/views/PlayerView.qml:321
+#: ../contents/ui/views/PlayerView.qml:327
+#: ../contents/ui/views/PlayerView.qml:381
+#: ../contents/ui/views/ScheduleView.qml:260
+#: ../contents/ui/views/ScheduleView.qml:318
+msgid "PJ"
+msgstr "Z"
 
-msgid "EASTERN CONFERENCE"
-msgstr "VÝCHODNÍ KONFERENCE"
+#: ../contents/ui/views/PlayerView.qml:322
+#: ../contents/ui/views/PlayerView.qml:382
+#: ../contents/ui/views/ScheduleView.qml:319
+msgid "W"
+msgstr "V"
 
-msgid "STANLEY CUP FINALS"
-msgstr "FINÁLE STANLEY CUPU"
+#: ../contents/ui/views/PlayerView.qml:323
+#: ../contents/ui/views/PlayerView.qml:384
+#: ../contents/ui/views/ScheduleView.qml:321
+#: ../contents/ui/views/LeadersView.qml:216
+msgid "GAA"
+msgstr "Pru"
 
-msgid "FINALS"
-msgstr "FINÁLE"
+#: ../contents/ui/views/PlayerView.qml:324
+#: ../contents/ui/views/PlayerView.qml:385
+#: ../contents/ui/views/ScheduleView.qml:322
+#: ../contents/ui/views/LeadersView.qml:221
+msgid "SV%"
+msgstr "Úsp%"
 
-msgid "Séries 2026"
-msgstr "Play-off 2026"
+#: ../contents/ui/views/PlayerView.qml:325
+msgid "SHO"
+msgstr "SO"
+
+#: ../contents/ui/views/PlayerView.qml:330
+#: ../contents/ui/views/PlayerView.qml:384
+#: ../contents/ui/views/ScheduleView.qml:263
+msgid "PTS"
+msgstr "B"
+
+#: ../contents/ui/views/PlayerView.qml:366
+msgid "Season history"
+msgstr "Historie sezóny"
+
+#: ../contents/ui/views/PlayerView.qml:366
+msgid "Playoff history"
+msgstr "Historie play-off"
+
+#: ../contents/ui/views/PlayerView.qml:380
+#: ../contents/ui/views/StandingsView.qml:191
+msgid "Team"
+msgstr "Tým"
+
+#: ../contents/ui/views/PlayerView.qml:383
+#: ../contents/ui/views/ScheduleView.qml:320
+msgid "L"
+msgstr "P"
+
+#: ../contents/ui/views/PlayerView.qml:385
+#: ../contents/ui/views/ScheduleView.qml:264
+msgid "+/-"
+msgstr ""
+
+#: ../contents/ui/views/PlayerView.qml:489
+#: ../contents/ui/views/TeamHubView.qml:140
+#, fuzzy
+msgid "Last games"
+msgstr "Žádné zápasy"
+
+#: ../contents/ui/views/DetailView.qml:46
+#: ../contents/ui/views/StandingsView.qml:42
+#: ../contents/ui/views/DesktopRepresentation.qml:110
+msgid "Standings"
+msgstr "Tabulka"
+
+#: ../contents/ui/views/DetailView.qml:53
+#: ../contents/ui/views/LeadersView.qml:31
+#: ../contents/ui/views/DesktopRepresentation.qml:116
+msgid "Leaders"
+msgstr "Lídři"
+
+#: ../contents/ui/views/DetailView.qml:61
+#, fuzzy
+msgid "2026 Playoffs"
+msgstr "Play-off"
+
+#: ../contents/ui/views/DetailView.qml:69
+#: ../contents/ui/views/SearchView.qml:38
+#: ../contents/ui/views/SearchView.qml:77
+msgid "Search"
+msgstr "Hledat"
+
+#: ../contents/ui/views/DetailView.qml:150
+#, fuzzy
+msgid "Penalties"
+msgstr "Oslabení %"
+
+#: ../contents/ui/views/DetailView.qml:161
+msgid "Stars"
+msgstr ""
+
+#: ../contents/ui/views/ScheduleView.qml:62
+#: ../contents/ui/views/ScheduleView.qml:73
+#: ../contents/ui/views/TeamHubView.qml:213
+msgid "Stats"
+msgstr "Statistiky"
+
+#: ../contents/ui/views/ScheduleView.qml:62
+#: ../contents/ui/views/ScheduleView.qml:73
+msgid "Schedule"
+msgstr "Rozpis"
+
+#: ../contents/ui/views/ScheduleView.qml:138
+#: ../contents/ui/views/TeamHubView.qml:164
+#: ../contents/ui/views/detail/MatchPreview.qml:136
+msgid "vs"
+msgstr ""
+
+#: ../contents/ui/views/ScheduleView.qml:138
+#: ../contents/ui/views/TeamHubView.qml:164
+msgid "@"
+msgstr ""
+
+#: ../contents/ui/views/ScheduleView.qml:173
+msgid "LIVE"
+msgstr "ŽIVĚ"
+
+#: ../contents/ui/views/ScheduleView.qml:215
+#: ../contents/ui/views/DayView.qml:73
+#: ../contents/ui/CompactRepresentation.qml:41 ../contents/ui/main.qml:411
+msgid "No games"
+msgstr "Žádné zápasy"
+
+#: ../contents/ui/views/ScheduleView.qml:259
+#: ../contents/ui/views/ScheduleView.qml:317
+msgid "Player"
+msgstr "Hráč"
+
+#: ../contents/ui/views/ScheduleView.qml:261
+msgid "B"
+msgstr ""
+
+#: ../contents/ui/views/ScheduleView.qml:262
+msgid "A"
+msgstr ""
+
+#: ../contents/ui/views/ScheduleView.qml:303
+#: ../contents/ui/views/LeadersView.qml:202
+msgid "Goalies"
+msgstr "Brankáři"
+
+#: ../contents/ui/views/LeadersView.qml:46
+msgid "Fwd"
+msgstr ""
+
+#: ../contents/ui/views/LeadersView.qml:47
+msgid "Def"
+msgstr ""
+
+#: ../contents/ui/views/LeadersView.qml:48
+#, fuzzy
+msgid "Goal"
+msgstr "Branky"
+
+#: ../contents/ui/views/LeadersView.qml:197
+#: ../contents/ui/views/detail/MatchStats.qml:110
+msgid "PIM"
+msgstr "TM"
+
+#: ../contents/ui/views/LeadersView.qml:206
+#: ../contents/ui/views/detail/MatchPreview.qml:90
+msgid "Wins"
+msgstr "Výhry"
+
+#: ../contents/ui/views/LeadersView.qml:211
+msgid "Shutouts"
+msgstr "Čistá konta"
+
+#: ../contents/ui/views/StandingsView.qml:55 ../contents/ui/main.qml:2773
+msgid "Wild Card"
+msgstr "Wild Card"
+
+#: ../contents/ui/views/StandingsView.qml:68
+msgid "Divisions"
+msgstr "Divize"
+
+#: ../contents/ui/views/StandingsView.qml:81
+msgid "League"
+msgstr "Liga"
+
+#: ../contents/ui/views/StandingsView.qml:348
+msgid "Clinched Playoff Spot"
+msgstr "Místo v play-off zajištěno"
+
+#: ../contents/ui/views/StandingsView.qml:348
+msgid "Clinched Division"
+msgstr "Divizní titul zajištěn"
+
+#: ../contents/ui/views/StandingsView.qml:348
+msgid "Clinched Conference"
+msgstr "Konferenční titul zajištěn"
+
+#: ../contents/ui/views/StandingsView.qml:353
+msgid "Eliminated from Playoffs"
+msgstr "Vyřazen z play-off"
+
+#: ../contents/ui/views/TeamHubView.qml:28
+msgid "‹ Standings"
+msgstr "‹ Tabulka"
+
+#: ../contents/ui/views/TeamHubView.qml:47
+#: ../contents/ui/views/TeamHubView.qml:201
+#, fuzzy
+msgid "Season Calendar"
+msgstr "Kalendář"
+
+#: ../contents/ui/views/TeamHubView.qml:367
+msgid "Home"
+msgstr ""
+
+#: ../contents/ui/views/TeamHubView.qml:372
+msgid "Away"
+msgstr ""
+
+#: ../contents/ui/views/DesktopRepresentation.qml:40
+#: ../contents/ui/views/DayView.qml:168 ../contents/ui/configDisplay.qml:181
+#: ../contents/ui/main.qml:431 ../contents/ui/main.qml:952
+msgid "Final"
+msgstr "Konec"
+
+#: ../contents/ui/views/DesktopRepresentation.qml:89 ../contents/ui/main.qml:16
+#: ../contents/ui/main.qml:409
+msgid "NHL Scores"
+msgstr "Výsledky NHL"
+
+#: ../contents/ui/views/DesktopRepresentation.qml:103
+msgid "just now"
+msgstr ""
+
+#: ../contents/ui/views/DesktopRepresentation.qml:104
+msgid "1 min ago"
+msgstr ""
+
+#: ../contents/ui/views/DesktopRepresentation.qml:105
+msgid "min ago"
+msgstr ""
+
+#: ../contents/ui/views/DesktopRepresentation.qml:302
+msgid "No games today"
+msgstr "Dnes se nehrají žádné zápasy"
+
+#: ../contents/ui/views/DesktopRepresentation.qml:328
+#, fuzzy
+msgid "No games for your team"
+msgstr "Dnes se nehrají žádné zápasy"
+
+#: ../contents/ui/views/DesktopRepresentation.qml:328
+msgid "No favorite team set"
+msgstr ""
+
+#: ../contents/ui/views/DayView.qml:26
+msgid "✕"
+msgstr ""
+
+#: ../contents/ui/views/DayView.qml:57
+msgid "Calendar"
+msgstr "Kalendář"
+
+#: ../contents/ui/views/DayView.qml:166
+msgid "arena"
+msgstr ""
+
+#: ../contents/ui/views/DayView.qml:166
+msgid "local"
+msgstr ""
+
+#: ../contents/ui/views/SearchView.qml:56
+#, fuzzy
+msgid "Player name…"
+msgstr "Hráč"
+
+#: ../contents/ui/views/SearchView.qml:96
+msgid "Searching players…"
+msgstr ""
+
+#: ../contents/ui/views/SearchView.qml:163
+msgid "Retired"
+msgstr ""
+
+#: ../contents/ui/views/detail/MatchPreview.qml:24
+msgid "Season Comparison"
+msgstr "Srovnání v sezóně"
+
+#: ../contents/ui/views/detail/MatchPreview.qml:31
+msgid "Power Play %"
+msgstr "Přesilovka %"
+
+#: ../contents/ui/views/detail/MatchPreview.qml:32
+msgid "Penalty Kill %"
+msgstr "Oslabení %"
+
+#: ../contents/ui/views/detail/MatchPreview.qml:33
+#: ../contents/ui/views/detail/MatchStats.qml:110
+msgid "Faceoffs %"
+msgstr "Vhazování %"
+
+#: ../contents/ui/views/detail/MatchPreview.qml:34
+msgid "GF/G"
+msgstr "VST/Z"
+
+#: ../contents/ui/views/detail/MatchPreview.qml:35
+msgid "GA/G"
+msgstr "OBDR/Z"
+
+#: ../contents/ui/views/detail/MatchPreview.qml:64
+msgid "Season series"
+msgstr "Série v sezóně"
+
+#: ../contents/ui/views/detail/MatchPreview.qml:180
+msgid "Points leaders (last 5 games)"
+msgstr "Lídři bodování (posledních 5 zápasů)"
+
+#: ../contents/ui/views/detail/MatchPreview.qml:227
+msgid "Probable goalies"
+msgstr "Předpokládaní brankáři"
+
+#: ../contents/ui/views/detail/MatchStats.qml:73
+msgid "Shots on Goal"
+msgstr "Střely na branku"
+
+#: ../contents/ui/views/detail/MatchStats.qml:110
+msgid "Power Play"
+msgstr "Přesilovka"
+
+#: ../contents/ui/views/detail/MatchStats.qml:110
+msgid "Hits"
+msgstr ""
+
+#: ../contents/ui/views/detail/MatchStats.qml:110
+msgid "Blocks"
+msgstr ""
+
+#: ../contents/ui/views/detail/MatchStats.qml:110
+msgid "Giveaways"
+msgstr ""
+
+#: ../contents/ui/views/detail/MatchStats.qml:110
+msgid "Takeaways"
+msgstr ""
+
+#: ../contents/ui/views/detail/GoalsList.qml:85
+#, fuzzy
+msgid "Assists: "
+msgstr "Asistence"
+
+#: ../contents/ui/views/detail/GoalsList.qml:111
+msgid "unassisted"
+msgstr ""
+
+#: ../contents/ui/views/detail/GoalsList.qml:122
+msgid "Watch goal highlight"
+msgstr "Sledovat sestřih gólu"
+
+#: ../contents/ui/views/detail/DetailHeader.qml:67
+#: ../contents/ui/views/detail/DetailHeader.qml:197
+msgid "Record"
+msgstr ""
+
+#: ../contents/ui/configGeneral.qml:350
+msgid "Favorite teams"
+msgstr ""
+
+#: ../contents/ui/configGeneral.qml:368
+msgid "Select / deselect all teams"
+msgstr ""
+
+#: ../contents/ui/configGeneral.qml:433 ../contents/config/config.qml:7
+msgid "Display"
+msgstr "Zobrazení"
+
+#: ../contents/ui/configGeneral.qml:439
+#, fuzzy
+msgid "Max games to display:"
+msgstr "Dnes se nehrají žádné zápasy"
+
+#: ../contents/ui/configGeneral.qml:447
+#, fuzzy
+msgid "Leaders limit:"
+msgstr "Lídři"
+
+#: ../contents/ui/configGeneral.qml:460
+msgid "Franchise leaders limit:"
+msgstr ""
+
+#: ../contents/ui/configGeneral.qml:483
+msgid "Match display interval (hours relative to now)"
+msgstr ""
+
+#: ../contents/ui/configGeneral.qml:522
+msgid "Past (-%1h)"
+msgstr ""
+
+#: ../contents/ui/configGeneral.qml:532
+msgid "Now"
+msgstr ""
+
+#: ../contents/ui/configGeneral.qml:541
+msgid "Future (+%1h)"
+msgstr ""
+
+#: ../contents/ui/configGeneral.qml:558
+msgid "Showing games from <b>%1h</b> to <b>+%2h</b>"
+msgstr ""
+
+#: ../contents/ui/configGeneral.qml:564
+msgid "Notifications"
+msgstr ""
+
+#: ../contents/ui/configGeneral.qml:570
+#, fuzzy
+msgid "Refresh interval:"
+msgstr "Obnovit nyní"
+
+#: ../contents/ui/configGeneral.qml:582
+msgid " sec"
+msgstr ""
+
+#: ../contents/ui/configGeneral.qml:584
+msgid "Enable system notifications:"
+msgstr ""
+
+#: ../contents/ui/configGeneral.qml:589
+msgid "For all teams:"
+msgstr ""
+
+#: ../contents/ui/configGeneral.qml:595
+msgid "Goal blink duration:"
+msgstr ""
+
+#: ../contents/ui/configGeneral.qml:604
+msgid "sec."
+msgstr ""
+
+#: ../contents/ui/configGeneral.qml:606
+msgid "Goal sound volume:"
+msgstr ""
+
+#: ../contents/ui/configDisplay.qml:86
+msgid "Status badge colors"
+msgstr ""
+
+#: ../contents/ui/configDisplay.qml:90
+#, fuzzy
+msgid "LIVE:"
+msgstr "ŽIVĚ"
+
+#: ../contents/ui/configDisplay.qml:95
+msgid "Choose LIVE color"
+msgstr ""
+
+#: ../contents/ui/configDisplay.qml:121 ../contents/ui/configDisplay.qml:158
+#: ../contents/ui/configDisplay.qml:195
+msgid "Reset to default"
+msgstr ""
+
+#: ../contents/ui/configDisplay.qml:127
+#, fuzzy
+msgid "Upcoming:"
+msgstr "Nadcházející"
+
+#: ../contents/ui/configDisplay.qml:132
+msgid "Choose Upcoming color"
+msgstr ""
+
+#: ../contents/ui/configDisplay.qml:144 ../contents/ui/main.qml:954
+msgid "Upcoming"
+msgstr "Nadcházející"
+
+#: ../contents/ui/configDisplay.qml:164
+#, fuzzy
+msgid "Final:"
+msgstr "Konec"
+
+#: ../contents/ui/configDisplay.qml:169
+msgid "Choose Final color"
+msgstr ""
+
+#: ../contents/ui/configDisplay.qml:202
+msgid "Badge options"
+msgstr ""
+
+#: ../contents/ui/configDisplay.qml:205
+msgid "Show OT/SO suffix in badge"
+msgstr ""
+
+#: ../contents/ui/configDisplay.qml:210
+msgid "Show upcoming game time under badge"
+msgstr ""
+
+#: ../contents/ui/configDisplay.qml:217
+msgid "Team display"
+msgstr "Zobrazení týmů"
+
+#: ../contents/ui/configDisplay.qml:220
+msgid "Icon style:"
+msgstr "Styl ikon:"
+
+#: ../contents/ui/configDisplay.qml:223
+msgid "Pastilles"
+msgstr "Známky"
+
+#: ../contents/ui/configDisplay.qml:228
+msgid "Logos"
+msgstr "Loga"
+
+#: ../contents/ui/configDisplay.qml:236
+msgid "Layout"
+msgstr "Rozvržení"
+
+#: ../contents/ui/configDisplay.qml:239
+msgid "Desktop:"
+msgstr ""
+
+#: ../contents/ui/configDisplay.qml:240
+msgid "Compact desktop mode (favorite team only)"
+msgstr ""
+
+#: ../contents/ui/configDisplay.qml:247
+msgid "Score layout:"
+msgstr ""
+
+#: ../contents/ui/configDisplay.qml:248
+msgid "Score below (column)"
+msgstr ""
+
+#: ../contents/ui/configDisplay.qml:248
+msgid "Score next to name (row)"
+msgstr ""
+
+#: ../contents/ui/configDisplay.qml:248
+msgid "Ultra-compact (dots + score)"
+msgstr ""
+
+#: ../contents/ui/configDisplay.qml:264
+msgid "N/A (desktop widget)"
+msgstr ""
+
+#: ../contents/ui/configDisplay.qml:264
+msgid "Fixed (vertical panel)"
+msgstr ""
+
+#: ../contents/ui/configDisplay.qml:270
+msgid "Spacing between games:"
+msgstr ""
+
+#: ../contents/ui/configDisplay.qml:283
+msgid "Date mode:"
+msgstr ""
+
+#: ../contents/ui/configDisplay.qml:284
+msgid "Local timezone (computer)"
+msgstr ""
+
+#: ../contents/ui/configDisplay.qml:284
+msgid "Venue timezone (arena)"
+msgstr ""
+
+#: ../contents/ui/main.qml:287 ../contents/ui/main.qml:337
+msgid "Shootout"
+msgstr "Nájezdy"
+
+#: ../contents/ui/main.qml:288 ../contents/ui/main.qml:289
+#: ../contents/ui/main.qml:338 ../contents/ui/main.qml:339
+msgid "Overtime"
+msgstr "Prodloužení"
+
+#: ../contents/ui/main.qml:290 ../contents/ui/main.qml:340
+msgid "1st period"
+msgstr "1. třetina"
+
+#: ../contents/ui/main.qml:291 ../contents/ui/main.qml:341
+msgid "2nd period"
+msgstr "2. třetina"
+
+#: ../contents/ui/main.qml:292 ../contents/ui/main.qml:342
+msgid "3rd period"
+msgstr "3. třetina"
+
+#: ../contents/ui/main.qml:293 ../contents/ui/main.qml:343
+msgid "Period"
+msgstr "Třetina"
+
+#: ../contents/ui/main.qml:312
+msgid "No goals recorded."
+msgstr ""
+
+#: ../contents/ui/main.qml:390
+msgid "Refresh now"
+msgstr "Obnovit nyní"
+
+#: ../contents/ui/main.qml:551
+#, fuzzy
+msgid "GOAL!"
+msgstr "GÓL"
+
+#: ../contents/ui/main.qml:552
+#, fuzzy
+msgid "GOAL: %1"
+msgstr "GÓL"
+
+#: ../contents/ui/main.qml:775
+msgid "Sunday"
+msgstr "Neděle"
+
+#: ../contents/ui/main.qml:775
+msgid "Monday"
+msgstr "Pondělí"
+
+#: ../contents/ui/main.qml:775
+msgid "Tuesday"
+msgstr "Úterý"
+
+#: ../contents/ui/main.qml:775
+msgid "Wednesday"
+msgstr "Středa"
+
+#: ../contents/ui/main.qml:776
+msgid "Thursday"
+msgstr "Čtvrtek"
+
+#: ../contents/ui/main.qml:776
+msgid "Friday"
+msgstr "Pátek"
+
+#: ../contents/ui/main.qml:776
+msgid "Saturday"
+msgstr "Sobota"
+
+#: ../contents/ui/main.qml:916
+msgid "OT"
+msgstr "PP"
+
+#: ../contents/ui/main.qml:916 ../contents/ui/main.qml:921
+#: ../contents/ui/main.qml:927 ../contents/ui/main.qml:965
+msgid "SO"
+msgstr "SN"
+
+#: ../contents/ui/main.qml:921 ../contents/ui/main.qml:928
+msgid "1st"
+msgstr "1."
+
+#: ../contents/ui/main.qml:921 ../contents/ui/main.qml:929
+msgid "2nd"
+msgstr "2."
+
+#: ../contents/ui/main.qml:921 ../contents/ui/main.qml:930
+msgid "3rd"
+msgstr "3."
+
+#: ../contents/ui/main.qml:1147
+msgid "Standings not available for simulation"
+msgstr ""
+
+#: ../contents/ui/main.qml:1293
+msgid "Slashing"
+msgstr ""
+
+#: ../contents/ui/main.qml:1294
+msgid "Hooking"
+msgstr ""
+
+#: ../contents/ui/main.qml:1295
+msgid "Roughing"
+msgstr ""
+
+#: ../contents/ui/main.qml:1296
+msgid "High sticking"
+msgstr ""
+
+#: ../contents/ui/main.qml:1297
+msgid "Tripping"
+msgstr ""
+
+#: ../contents/ui/main.qml:1298
+#, fuzzy
+msgid "Interference"
+msgstr "Východní konference"
+
+#: ../contents/ui/main.qml:1299
+msgid "Holding"
+msgstr ""
+
+#: ../contents/ui/main.qml:1300
+msgid "Holding the stick"
+msgstr ""
+
+#: ../contents/ui/main.qml:1301
+msgid "Elbowing"
+msgstr ""
+
+#: ../contents/ui/main.qml:1302
+msgid "Charging"
+msgstr ""
+
+#: ../contents/ui/main.qml:1303
+#, fuzzy
+msgid "Boarding"
+msgstr "Načítání…"
+
+#: ../contents/ui/main.qml:1304
+msgid "Cross-checking"
+msgstr ""
+
+#: ../contents/ui/main.qml:1305
+msgid "Delay of game"
+msgstr ""
+
+#: ../contents/ui/main.qml:1306
+msgid "Unsportsmanlike conduct"
+msgstr ""
+
+#: ../contents/ui/main.qml:1307
+msgid "Too many men"
+msgstr ""
+
+#: ../contents/ui/main.qml:1308
+#, fuzzy
+msgid "Goalie interference"
+msgstr "Konferenční titul zajištěn"
+
+#: ../contents/ui/main.qml:1309
+msgid "Misconduct"
+msgstr ""
+
+#: ../contents/ui/main.qml:1310
+msgid "Game misconduct"
+msgstr ""
+
+#: ../contents/ui/main.qml:1311
+msgid "Fighting"
+msgstr ""
+
+#: ../contents/ui/main.qml:1312
+msgid "Instigating"
+msgstr ""
+
+#: ../contents/ui/main.qml:1313
+#, fuzzy
+msgid "Diving"
+msgstr "Divize"
+
+#: ../contents/ui/main.qml:1314
+msgid "Embellishment"
+msgstr ""
+
+#: ../contents/ui/main.qml:1315
+msgid "Kneeing"
+msgstr ""
+
+#: ../contents/ui/main.qml:1316
+msgid "Spearing"
+msgstr ""
+
+#: ../contents/ui/main.qml:1317
+#, fuzzy
+msgid "Butt-ending"
+msgstr "Tabulka"
+
+#: ../contents/ui/main.qml:1318
+msgid "Checking from behind"
+msgstr ""
+
+#: ../contents/ui/main.qml:1319
+msgid "Head contact"
+msgstr ""
+
+#: ../contents/ui/main.qml:1320
+msgid "Match penalty"
+msgstr ""
+
+#: ../contents/ui/main.qml:1396 ../contents/ui/main.qml:1408
+msgid "No results"
+msgstr ""
+
+#: ../contents/ui/main.qml:1761
+msgid "First Round"
+msgstr "První kolo"
+
+#: ../contents/ui/main.qml:1762
+msgid "Second Round"
+msgstr "Druhé kolo"
+
+#: ../contents/ui/main.qml:1763
+msgid "Conference Finals"
+msgstr "Finále konferencí"
+
+#: ../contents/ui/main.qml:1764
+msgid "Stanley Cup Final"
+msgstr "Finále Stanley Cupu"
+
+#: ../contents/ui/main.qml:2772
+msgid "Atlantic"
+msgstr "Atlantická"
+
+#: ../contents/ui/main.qml:2772
+msgid "Metropolitan"
+msgstr "Metropolitní"
+
+#: ../contents/ui/main.qml:2772
+msgid "Central"
+msgstr "Centrální"
+
+#: ../contents/ui/main.qml:2772
+msgid "Pacific"
+msgstr "Pacifická"
+
+#: ../contents/ui/main.qml:2773
+msgid "Eastern Conference"
+msgstr "Východní konference"
+
+#: ../contents/ui/main.qml:2773
+msgid "Western Conference"
+msgstr "Západní konference"
+
+#: ../contents/config/config.qml:6
+msgid "General"
+msgstr ""
+
+#~ msgid "Intermission"
+#~ msgstr "Přestávka"
+
+#~ msgid "Losses"
+#~ msgstr "Prohry"
+
+#~ msgid "WESTERN CONFERENCE"
+#~ msgstr "ZÁPADNÍ KONFERENCE"
+
+#~ msgid "EASTERN CONFERENCE"
+#~ msgstr "VÝCHODNÍ KONFERENCE"
+
+#~ msgid "STANLEY CUP FINALS"
+#~ msgstr "FINÁLE STANLEY CUPU"
+
+#~ msgid "FINALS"
+#~ msgstr "FINÁLE"
+
+#~ msgid "Séries 2026"
+#~ msgstr "Play-off 2026"

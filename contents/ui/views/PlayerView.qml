@@ -229,7 +229,7 @@ Item {
                         anchors.horizontalCenter: parent.horizontalCenter
                         Rectangle {
                             radius: 3
-                            color: p ? Logic.getTeamColor(p.currentTeamAbbrev) : "gray"
+                            color: p ? Logic.getTeamColor(p.currentTeamAbbrev, Kirigami.Theme.backgroundColor) : "gray"
                             width: teamCodeLbl.contentWidth + 16
                             height: teamCodeLbl.contentHeight + 6
                             anchors.verticalCenter: parent.verticalCenter
@@ -237,7 +237,7 @@ Item {
                                 id: teamCodeLbl
                                 anchors.centerIn: parent
                                 text: p ? (p.currentTeamAbbrev || "???") : ""
-                                color: p ? Logic.getTeamTextColor(p.currentTeamAbbrev) : "white"
+                                color: Logic.getContrastColor(parent.color)
                                 font.bold: true
                                 font.family: "monospace"
                                 font.pixelSize: 13
@@ -394,6 +394,22 @@ Item {
                                 color: index % 2 === 0 ? "transparent" : Qt.rgba(1, 1, 1, 0.05)
                                 readonly property bool isNHLRow: modelData.leagueAbbrev === "NHL" || modelData.leagueName === "National Hockey League"
                                 
+                                // Détermination robuste de l'abréviation
+                                readonly property string rAbbrev: {
+                                    if (!isNHLRow) return ""
+                                    if (modelData.teamAbbrev) {
+                                        if (typeof modelData.teamAbbrev === 'string') return modelData.teamAbbrev
+                                        if (modelData.teamAbbrev.default) return String(modelData.teamAbbrev.default)
+                                    }
+                                    var name = ""
+                                    if (modelData.teamCommonName) {
+                                        name = typeof modelData.teamCommonName === 'string' ? modelData.teamCommonName : (modelData.teamCommonName.default || "")
+                                    } else if (modelData.teamName) {
+                                        name = typeof modelData.teamName === 'string' ? modelData.teamName : (modelData.teamName.default || "")
+                                    }
+                                    return Logic.resolveNHLAbbrev(name)
+                                }
+
                                 Row {
                                     anchors.fill: parent
                                     Label {
@@ -424,12 +440,12 @@ Item {
                                         Rectangle {
                                             anchors.centerIn: parent
                                             radius: 2; width: 28; height: 14
-                                            color: (modelData.leagueAbbrev === "NHL" || modelData.leagueName === "National Hockey League") ? Logic.getTeamColor(Logic.resolveNHLAbbrev(modelData.teamCommonName)) : "transparent"
+                                            color: zebraRow.isNHLRow ? Logic.getTeamColorAdapted(zebraRow.rAbbrev, "", false, false, Kirigami.Theme.backgroundColor) : "transparent"
                                             Label {
                                                 anchors.centerIn: parent
-                                                text: (modelData.leagueAbbrev === "NHL" || modelData.leagueName === "National Hockey League") ? Logic.resolveNHLAbbrev(modelData.teamCommonName) : (modelData.teamName ? (modelData.teamName.default || "").substring(0,3).toUpperCase() : "???")
+                                                text: zebraRow.isNHLRow ? (zebraRow.rAbbrev || "???") : (modelData.teamName ? (modelData.teamName.default || "").substring(0,3).toUpperCase() : "???")
                                                 font.pixelSize: 9; font.bold: true; font.family: "monospace"
-                                                color: (modelData.leagueAbbrev === "NHL" || modelData.leagueName === "National Hockey League") ? Logic.getTeamTextColor(Logic.resolveNHLAbbrev(modelData.teamCommonName)) : Kirigami.Theme.disabledTextColor
+                                                color: zebraRow.isNHLRow ? Logic.getContrastColor(parent.color) : Kirigami.Theme.disabledTextColor
                                             }
                                         }
                                     }
@@ -510,10 +526,10 @@ Item {
                                     font.pixelSize: 11; opacity: 0.6; width: 40; color: Kirigami.Theme.textColor; anchors.verticalCenter: parent.verticalCenter
                                 }
                                 Rectangle {
-                                    radius: 3; color: Logic.getTeamColor(modelData.opponentAbbrev)
+                                    radius: 3; color: Logic.getTeamColor(modelData.opponentAbbrev, Kirigami.Theme.backgroundColor)
                                     width: 32; height: 18
                                     anchors.verticalCenter: parent.verticalCenter
-                                    Label { anchors.centerIn: parent; text: modelData.opponentAbbrev || "?"; color: Logic.getTeamTextColor(modelData.opponentAbbrev); font.bold: true; font.pixelSize: 10; font.family: "monospace" }
+                                    Label { anchors.centerIn: parent; text: modelData.opponentAbbrev || "?"; color: Logic.getContrastColor(parent.color); font.bold: true; font.pixelSize: 10; font.family: "monospace" }
                                 }
                                 Label { 
                                     text: isG ? (modelData.decision === 'W' ? 'W' : (modelData.decision === 'L' ? 'L' : '–')) : ((modelData.goals || 0) + "G " + (modelData.assists || 0) + "A")

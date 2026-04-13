@@ -121,13 +121,13 @@ Item {
                                     id: awayBadge
                                     visible: !controller.showLogos
                                     radius: 3
-                                    color: Logic.getTeamColor(modelData.away)
+                                    color: Logic.getTeamColorAdapted(modelData.away, modelData.home, true, false, Kirigami.Theme.backgroundColor)
                                     width: 42
                                     height: 24
                                     Label {
                                         anchors.centerIn: parent
                                         text: modelData.away
-                                        color: Logic.getTeamTextColor(modelData.away)
+                                        color: Logic.getContrastColor(awayBadge.color)
                                         font.bold: true
                                         font.pixelSize: 13
                                         font.family: "monospace"
@@ -183,13 +183,13 @@ Item {
                                     id: homeBadge
                                     visible: !controller.showLogos
                                     radius: 3
-                                    color: Logic.getTeamColor(modelData.home)
+                                    color: Logic.getTeamColorAdapted(modelData.home, modelData.away, false, false, Kirigami.Theme.backgroundColor)
                                     width: 42
                                     height: 24
                                     Label {
                                         anchors.centerIn: parent
                                         text: modelData.home
-                                        color: Logic.getTeamTextColor(modelData.home)
+                                        color: Logic.getContrastColor(homeBadge.color)
                                         font.bold: true
                                         font.pixelSize: 13
                                         font.family: "monospace"

@@ -10,12 +10,14 @@ Item {
     id: compactRoot
     property var controller
 
-    readonly property int pad: 4
-    readonly property int baseSz: (controller && controller.isVertical) ? 14 : Math.min(20, Math.max(8, Math.round(height * 0.38)))
-    readonly property int sz: (controller && controller.showLogos) ? 22 : baseSz
-    readonly property bool forceInline: controller ? (!controller.isVertical && baseSz < 13.5) : false
+    readonly property QtObject dims: QtObject {
+        readonly property int pad: 4
+        readonly property int baseSz: (controller && controller.isVertical) ? 14 : Math.min(20, Math.max(8, Math.round(height * 0.38)))
+        readonly property int sz: (controller && controller.showLogos) ? 22 : baseSz
+        readonly property bool forceInline: controller ? (!controller.isVertical && baseSz < 13.5) : false
+    }
 
-    implicitWidth: (controller && controller.isVertical) ? parent.width : Math.max(hRow.implicitWidth + pad, emptyMsg.implicitWidth + pad)
+    implicitWidth: (controller && controller.isVertical) ? parent.width : Math.max(hRow.implicitWidth + dims.pad, emptyMsg.implicitWidth + dims.pad)
     implicitHeight: (controller && controller.isVertical) ? Math.max(vCol.implicitHeight, emptyMsg.implicitHeight + 2) : Math.max(hRow.implicitHeight + 2, emptyMsg.implicitHeight + 2)
 
     Layout.preferredWidth: implicitWidth
@@ -37,8 +39,21 @@ Item {
         anchors.centerIn: parent
         visible: controller && controller.todayGamesModel && controller.todayGamesModel.count === 0
         text: (controller && controller.glob.initialLoading) ? i18n("Loading…") : i18n("No games")
-        font.pixelSize: Math.max(9, baseSz * 0.7)
+        font.pixelSize: Math.max(9, dims.baseSz * 0.7)
         opacity: 0.5
+    }
+
+    // Indicateur Hors-ligne
+    Label {
+        anchors.bottom: parent.bottom
+        anchors.right: parent.right
+        visible: controller && controller.glob.isOffline
+        text: "󰖪" // Icône wifi-off ou texte
+        font.pixelSize: Math.max(8, dims.baseSz * 0.5)
+        opacity: 0.4
+        ToolTip.text: i18n("Offline - Cached data")
+        ToolTip.visible: mouseOffline.hovered
+        HoverHandler { id: mouseOffline }
     }
 
     // ── MODE HORIZONTAL ──
@@ -57,7 +72,7 @@ Item {
                 spacing: hRow.spacing
                 
                 readonly property bool isDateSep: model.statusRole === 'DATE_SEP'
-                readonly property real csz: compactRoot.baseSz * 0.88
+                readonly property real csz: compactRoot.dims.baseSz * 0.88
                 readonly property var currentModel: model
 
                 Item {
@@ -81,7 +96,7 @@ Item {
                         Row {
                             id: dateSepContent; visible: hDelegateWrapper.isDateSep; spacing: 0
                             Rectangle { width: 1; height: delegateItemH.height * 0.6; anchors.verticalCenter: parent.verticalCenter; color: Kirigami.Theme.textColor; opacity: 0.25 }
-                            Text { anchors.verticalCenter: parent.verticalCenter; leftPadding: 3; rightPadding: 3; text: compactRoot.formatDate(hDelegateWrapper.currentModel.start); font.pixelSize: Math.max(8, compactRoot.baseSz * 0.65); font.bold: true; color: Kirigami.Theme.textColor; opacity: 0.5 }
+                            Text { anchors.verticalCenter: parent.verticalCenter; leftPadding: 3; rightPadding: 3; text: compactRoot.formatDate(hDelegateWrapper.currentModel.start); font.pixelSize: Math.max(8, compactRoot.dims.baseSz * 0.65); font.bold: true; color: Kirigami.Theme.textColor; opacity: 0.5 }
                             Rectangle { width: 1; height: delegateItemH.height * 0.6; anchors.verticalCenter: parent.verticalCenter; color: Kirigami.Theme.textColor; opacity: 0.25 }
                         }
 
@@ -252,7 +267,7 @@ Item {
                         anchors.verticalCenter: parent.verticalCenter
                         property string awayCode: hDelegateWrapper.currentModel.away; property string homeCode: hDelegateWrapper.currentModel.home
                         property int agScore: hDelegateWrapper.currentModel.ag; property int hgScore: hDelegateWrapper.currentModel.hg
-                        property int sz: compactRoot.baseSz; property string gameId: String(hDelegateWrapper.currentModel.gameId || '')
+                        property int sz: compactRoot.dims.baseSz; property string gameId: String(hDelegateWrapper.currentModel.gameId || '')
                         property string line1: controller.badgeLine1(hDelegateWrapper.currentModel.statusRole, hDelegateWrapper.currentModel.rawState, hDelegateWrapper.currentModel.periodType, hDelegateWrapper.currentModel.period, hDelegateWrapper.currentModel.liveRemain, hDelegateWrapper.currentModel.start, hDelegateWrapper.currentModel.home, hDelegateWrapper.currentModel.inIntermission)
                         property string line2: controller.badgeLine2(hDelegateWrapper.currentModel.statusRole, hDelegateWrapper.currentModel.start, hDelegateWrapper.currentModel.home, hDelegateWrapper.currentModel.periodType, hDelegateWrapper.currentModel.period, hDelegateWrapper.currentModel.liveRemain, hDelegateWrapper.currentModel.inIntermission, hDelegateWrapper.currentModel.intermissionRemain)
                         property color bgColor: controller.statusColor(hDelegateWrapper.currentModel.statusRole)

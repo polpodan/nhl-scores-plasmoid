@@ -1,4 +1,4 @@
-// logic.js
+// logic.js - Version 5.4.8 (COMPLETE RECOVERY - 2026-04-12)
 .pragma library
 
 const teamColors = {
@@ -37,686 +37,353 @@ const teamColors = {
     'ARI': { p: '#8C2633', s: '#E2D6B5' }
 };
 
+let _cache = {};
+let _configRef = null;
+
+function initializeCache(configObject) {
+    _configRef = configObject;
+    try { _cache = JSON.parse(_configRef.cacheData || "{}"); } catch(e) { _cache = {}; }
+}
+
+function saveToCache(key, data) {
+    let now = new Date().getTime();
+
+    // Nettoyage avant insertion
+    pruneCache(now);
+
+    _cache[key] = {
+        timestamp: now,
+        content: data
+    };
+
+    if (_configRef) {
+        _configRef.cacheData = JSON.stringify(_cache);
+    }
+}
+
+function pruneCache(now) {
+    let keys = Object.keys(_cache);
+
+    // 1. Suppression par expiration
+    for (let i = 0; i < keys.length; i++) {
+        let k = keys[i];
+        let entry = _cache[k];
+        let age = now - entry.timestamp;
+
+        // Scores : expirent après 48h (172 800 000 ms)
+        if (k.indexOf("scoreboard") === 0 && age > 172800000) {
+            delete _cache[k];
+            continue;
+        }
+        // Joueurs : expirent après 7 jours (604 800 000 ms)
+        if (k.indexOf("player") === 0 && age > 604800000) {
+            delete _cache[k];
+            continue;
+        }
+        // Sécurité globale : rien ne reste plus de 15 jours
+        if (age > 1296000000) {
+            delete _cache[k];
+        }
+    }
+
+    // 2. Limitation du nombre total (Max 100 entrées)
+    keys = Object.keys(_cache);
+    if (keys.length > 100) {
+        // On trie par timestamp pour supprimer les plus vieux
+        keys.sort(function(a, b) {
+            return _cache[a].timestamp - _cache[b].timestamp;
+        });
+        let toRemove = keys.length - 100;
+        for (let j = 0; j < toRemove; j++) {
+            delete _cache[keys[j]];
+        }
+    }
+}
+
+
+function getFromCache(key, maxAgeMs) {
+    let entry = _cache[key]; if (!entry) return null;
+    if (maxAgeMs !== undefined) { let now = new Date().getTime(); if (now - entry.timestamp > maxAgeMs) return null; }
+    return entry.content;
+}
+
 function pad2(n) { return (n < 10 ? "0" : "") + n; }
 function dateISO(d) { return d.getFullYear() + "-" + pad2(d.getMonth() + 1) + "-" + pad2(d.getDate()); }
+function teamLogoUrl(code) { return "https://assets.nhle.com/logos/nhl/svg/" + String(code).toUpperCase() + "_light.svg"; }
 
-function teamLogoUrl(code) {
-    if (!code) return "";
-    return "https://assets.nhle.com/logos/nhl/svg/" + String(code).toUpperCase() + "_light.svg";
+function getLuminance(hex) {
+    if (!hex) return 0;
+    var s = String(hex).replace('#', '');
+    if (s.length === 3) s = s[0]+s[0]+s[1]+s[1]+s[2]+s[2];
+    var r = parseInt(s.substring(0, 2), 16) / 255;
+    var g = parseInt(s.substring(2, 4), 16) / 255;
+    var b = parseInt(s.substring(4, 6), 16) / 255;
+    r = (r <= 0.03928) ? r / 12.92 : Math.pow((r + 0.055) / 1.055, 2.4);
+    g = (g <= 0.03928) ? g / 12.92 : Math.pow((g + 0.055) / 1.055, 2.4);
+    b = (b <= 0.03928) ? b / 12.92 : Math.pow((b + 0.055) / 1.055, 2.4);
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
 }
 
-function getTeamColor(code, fallback) {
+function getContrast(L1, L2) {
+    var b = Math.max(L1, L2); var d = Math.min(L1, L2);
+    return (b + 0.05) / (d + 0.05);
+}
+
+function shadeColor(hex, percent) {
+    var s = String(hex).replace('#', '');
+    var r = parseInt(s.substring(0, 2), 16);
+    var g = parseInt(s.substring(2, 4), 16);
+    var b = parseInt(s.substring(4, 6), 16);
+    r = Math.min(255, Math.max(0, parseInt(r * (100 + percent) / 100)));
+    g = Math.min(255, Math.max(0, parseInt(g * (100 + percent) / 100)));
+    b = Math.min(255, Math.max(0, parseInt(b * (100 + percent) / 100)));
+    return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+}
+
+function getTeamColor(code, variant) {
     var entry = teamColors[String(code || '').toUpperCase()];
-    if (entry) return entry.p;
-    return (fallback !== undefined && fallback !== null) ? fallback : "#888888";
+    if (!entry) return "#888888";
+    return (variant === 's') ? (entry.s || entry.p) : entry.p;
 }
 
-function isSameDay(a, b) { return a.getFullYear()===b.getFullYear() && a.getMonth()===b.getMonth() && a.getDate()===b.getDate(); }
+function getContrastColor(hex) { return getLuminance(hex) > 0.52 ? "#000000" : "#ffffff"; }
+function getTeamBadgeTextColor(teamCode) { return getContrastColor(getTeamColor(teamCode)); }
 
-// --- Timezone & Venue helpers ---
-function getTeamZone(code) {
-    switch(String(code||'')){
-        case 'BOS': case 'BUF': case 'CAR': case 'CBJ': case 'DET': case 'FLA': case 'MTL': case 'NJD': case 'NYI': case 'NYR': case 'OTT': case 'PHI': case 'PIT': case 'TBL': case 'TOR': case 'WSH':
-            return 'ET';
-        case 'CHI': case 'DAL': case 'MIN': case 'NSH': case 'STL': case 'WPG':
-            return 'CT';
-        case 'COL': case 'CGY': case 'EDM': case 'UTA':
-            return 'MT';
-        case 'ANA': case 'LAK': case 'SEA': case 'SJS': case 'VAN': case 'VGK':
-            return 'PT';
-        default:
-            return 'ET';
+function getTeamColorAdapted(teamCode, opponentCode, isAway, forText, bgColor) {
+    var t = String(teamCode || '').toUpperCase();
+    var o = String(opponentCode || '').toUpperCase();
+    var entry = teamColors[t]; if (!entry) return "#888888";
+    var bgHex = bgColor ? bgColor.toString() : "#ffffff"; var Lbg = getLuminance(bgHex);
+    var primary = entry.p; var secondary = entry.s || entry.p;
+    var targetContrast = forText ? 4.5 : 2.0;
+    var finalColor = primary;
+
+    if ((t === 'TOR' && o === 'TBL') || (t === 'TBL' && o === 'TOR')) {
+        if (Lbg < 0.5) { if (isAway) return "#00AFFF"; return "#FFFFFF"; }
+        else { if (isAway) return "#00205B"; return "#005FFF"; }
     }
-}
 
-function zoneBaseOffsetHours(zone){
-    if(zone==='ET') return -5;
-    if(zone==='CT') return -6;
-    if(zone==='MT') return -7;
-    if(zone==='PT') return -8;
-    return -5;
-}
-
-function nthSundayOfMonth(year, month0, n){
-    var d = new Date(Date.UTC(year, month0, 1));
-    var dow = d.getUTCDay();
-    var firstSunday = 1 + ((7 - dow) % 7);
-    return firstSunday + 7*(n-1);
-}
-
-function firstSundayNovember(year){ return nthSundayOfMonth(year, 10, 1); }
-function secondSundayMarch(year){ return nthSundayOfMonth(year, 2, 2); }
-
-function isDstDateLocalLike(year, month0, day, zone){
-    var dStart = secondSundayMarch(year);
-    var dEnd = firstSundayNovember(year);
-    if(month0>2 && month0<10) return true;
-    if(month0<2 || month0>10) return false;
-    if(month0===2) return day>=dStart;
-    if(month0===10) return day<dEnd;
-    return false;
-}
-
-function venueTimeStr(msUTC, homeTeam) {
-    var zone = getTeamZone(homeTeam);
-    var dStd = new Date(msUTC + zoneBaseOffsetHours(zone)*3600*1000);
-    var dst  = isDstDateLocalLike(dStd.getUTCFullYear(), dStd.getUTCMonth(), dStd.getUTCDate(), zone);
-    var off  = zoneBaseOffsetHours(zone) + (dst ? 1 : 0);
-    var shifted = new Date(msUTC + off*3600*1000);
-    var h = shifted.getUTCHours();
-    var m = shifted.getUTCMinutes();
-    return pad2(h) + ':' + pad2(m);
-}
-
-function getDayViewTimeLabel(msUTC, homeTeam, dateMode) {
-    if (dateMode === 'venue') return venueTimeStr(msUTC, homeTeam);
-    var d = new Date(msUTC);
-    return pad2(d.getHours()) + ':' + pad2(d.getMinutes());
-}
-
-// --- Logic de match ---
-function isScoreSet(g) {
-    return g && g.homeTeam && g.awayTeam && g.homeTeam.score !== undefined && g.awayTeam.score !== undefined;
-}
-
-function getStatusFromGame(g) {
-    var s = (g && g.gameState) ? String(g.gameState).toUpperCase() : '';
-    if (s==='LIVE' || s==='IN_PROGRESS') return 'LIVE';
-    if (s==='FINAL' || s==='FINAL_OT' || s==='FINAL_SO') return 'FINAL';
-    if (s==='PRE' || s==='FUT' || s==='SCHEDULED' || s==='PREGAME') return 'UPCOMING';
-    if (s==='OFF') {
-        var start = new Date(g.startTimeUTC || new Date());
-        var now = new Date();
-        if (isScoreSet(g) && (now.getTime() - start.getTime()) > 30*60000) return 'FINAL';
-        return 'UPCOMING';
+    if (getContrast(getLuminance(primary), Lbg) < targetContrast) {
+        if (getContrast(getLuminance(secondary), Lbg) > getContrast(getLuminance(primary), Lbg)) {
+            finalColor = secondary;
+        }
     }
-    var pd = g && g.periodDescriptor ? (g.periodDescriptor.periodType || '').toUpperCase() : '';
-    if (pd==='FINAL') return 'FINAL';
-    var outcome = g && g.gameOutcome ? String(g.gameOutcome).toUpperCase() : '';
-    if (outcome && outcome !== 'UNDEFINED') return 'FINAL';
-    var st = new Date(g.startTimeUTC || new Date());
-    var now2 = new Date();
-    if (st.getTime() > now2.getTime() + 5*60000) return 'UPCOMING';
-    if (isScoreSet(g)) return 'LIVE';
-    return 'UPCOMING';
+
+    if (opponentCode) {
+        var oppEntry = teamColors[o];
+        if (oppEntry) {
+            var oppFinal = (getContrast(getLuminance(oppEntry.p), Lbg) < targetContrast && oppEntry.s) ? oppEntry.s : oppEntry.p;
+            if (getContrast(getLuminance(finalColor), getLuminance(oppFinal)) < 1.35) {
+                if (isAway) {
+                    var alt = (finalColor === primary) ? secondary : primary;
+                    if (getContrast(getLuminance(alt), getLuminance(oppFinal)) > 1.35) finalColor = alt;
+                }
+            }
+        }
+    }
+
+    if (getContrast(getLuminance(finalColor), Lbg) < 1.4) {
+        finalColor = (Lbg > 0.5) ? shadeColor(finalColor, -40) : shadeColor(finalColor, 40);
+    }
+    return finalColor;
 }
 
-function getStatusSuffix(rawState, periodType, showOvertimeSuffix, labels) {
-    if (!showOvertimeSuffix) return '';
-    var s = (rawState || '').toUpperCase();
-    var pd = (periodType || '').toUpperCase();
-    if (s.indexOf('OT') >= 0 || pd === 'OT') return ' ' + (labels.OT || 'OT');
-    if (s.indexOf('SO') >= 0 || pd === 'SO') return ' ' + (labels.SO || 'SO');
-    return '';
+function getTeamTextColor(teamCode, opponentCode, isAway, bgColor) { 
+    return getTeamColorAdapted(teamCode, opponentCode, isAway, true, bgColor); 
 }
 
-function getLiveClockText(periodType, period, timeRemaining, labels) {
-    if (!timeRemaining) { return ""; }
-    if (periodType === "OT") { return "OT " + timeRemaining; }
-    if (periodType === "SO") { return "SO"; }
-    if (period === 1) { return (labels.first || "1st") + " " + timeRemaining; }
-    if (period === 2) { return (labels.second || "2nd") + " " + timeRemaining; }
-    if (period === 3) { return (labels.third || "3rd") + " " + timeRemaining; }
-    return (period > 3 ? (period - 3) + "OT" : "") + " " + timeRemaining;
+function isScoreSet(g) { if (!g) return false; var st = getStatusFromGame(g); return st === 'LIVE' || st === 'FINAL'; }
+function getStatusFromGame(g) { if (!g) return 'UPCOMING'; var state = g.gameState || ''; if (state === 'LIVE' || state === 'CRIT') return 'LIVE'; if (state === 'FINAL' || state === 'OFF' || state === 'OFFICIAL') return 'FINAL'; return 'UPCOMING'; }
+function getStatusSuffix(rawState, periodType, showOT, labels) { 
+    if (!showOT) return ""; 
+    if (periodType === 'SO') return " " + (labels.SO || "SO"); 
+    if (periodType === 'OT') return " " + (labels.OT || "OT"); 
+    return ""; 
 }
-
-function getLivePeriodText(periodType, period, labels) {
-    if (periodType === "SO") return labels.SO || "SO";
-    if (periodType === "OT") return "OT";
-    if (period === 1) return labels.first || "1st";
-    if (period === 2) return labels.second || "2nd";
-    if (period === 3) return labels.third || "3rd";
-    if (period > 3)   return (period - 3) + "OT";
+function getLiveClockText(periodType, period, timeRemaining, labels) { if (periodType === 'SO') return labels.SO || "SO"; var pText = getLivePeriodText(periodType, period, labels); return pText + (timeRemaining ? " " + timeRemaining : ""); }
+function getLivePeriodText(periodType, period, labels) { if (periodType === 'SO') return labels.SO || "SO"; if (period === 1) return labels.first || "1st"; if (period === 2) return labels.second || "2nd"; if (period === 3) return labels.third || "3rd"; if (period > 3) return (period - 3) + (labels.OT || "OT"); return ""; }
+function parseSituation(code, away, home) { if (!code || code === "1551" || code.length !== 4) return null; var aG = code[0] === '1', aS = parseInt(code[1]), hS = parseInt(code[2]), hG = code[3] === '1'; var res = { even: (aS === hS), empty_Net: (!aG || !hG), enTeam: (!aG ? away : (!hG ? home : '')), ppTeam: (aS > hS ? away : (hS > aS ? home : '')), awaySkaters: aS, homeSkaters: hS, isSpecial: (aS !== hS || !aG || !hG) }; if (aS > hS) res.ppType = (aS - hS > 1) ? "5v3 PP" : "PP"; else if (hS > aS) res.ppType = (hS - aS > 1) ? "5v3 PP" : "PP"; else res.ppType = ""; return res; }
+function resolveNHLAbbrev(commonName) {
+    if (!commonName) return "";
+    var name = String(commonName).normalize("NFD").replace(/[\u0300-\u036f]/g, ""); // Supprimer les accents
+    var map = { 
+        "Leafs": "TOR", "Toronto": "TOR", "Canadiens": "MTL", "Montreal": "MTL", "Canucks": "VAN", "Vancouver": "VAN",
+        "Senators": "OTT", "Ottawa": "OTT", "Jets": "WPG", "Winnipeg": "WPG", "Oilers": "EDM", "Edmonton": "EDM",
+        "Flames": "CGY", "Calgary": "CGY", "Bruins": "BOS", "Boston": "BOS", "Sabres": "BUF", "Buffalo": "BUF",
+        "Red Wings": "DET", "Detroit": "DET", "Panthers": "FLA", "Florida": "FLA", "Lightning": "TBL", "Tampa": "TBL",
+        "Hurricanes": "CAR", "Carolina": "CAR", "Blue Jackets": "CBJ", "Columbus": "CBJ", "Devils": "NJD", "Jersey": "NJD",
+        "Islanders": "NYI", "Rangers": "NYR", "Flyers": "PHI", "Philadelphia": "PHI", "Penguins": "PIT", "Pittsburgh": "PIT",
+        "Capitals": "WSH", "Washington": "WSH", "Blackhawks": "CHI", "Chicago": "CHI", "Avalanche": "COL", "Colorado": "COL",
+        "Stars": "DAL", "Dallas": "DAL", "Wild": "MIN", "Minnesota": "MIN", "Predators": "NSH", "Nashville": "NSH",
+        "Blues": "STL", "Louis": "STL", "Ducks": "ANA", "Anaheim": "ANA", "Kings": "LAK", "Angeles": "LAK",
+        "Sharks": "SJS", "Jose": "SJS", "Kraken": "SEA", "Seattle": "SEA", "Golden Knights": "VGK", "Vegas": "VGK",
+        "Coyotes": "ARI", "Arizona": "ARI", "Utah": "UTA", "HC": "UTA" 
+    };
+    for (var key in map) { if (name.indexOf(key) !== -1) return map[key]; }
     return "";
 }
 
-// Calcule la distance entre deux couleurs (simple approximation Euclidienne en RGB)
-function colorDistance(c1, c2) {
-    function hexToRgb(hex) {
-        var result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-        return result ? { r: parseInt(result[1], 16), g: parseInt(result[2], 16), b: parseInt(result[3], 16) } : {r:0,g:0,b:0};
-    }
-    var rgb1 = hexToRgb(c1);
-    var rgb2 = hexToRgb(c2);
-    if (!rgb1 || !rgb2) return 1000;
-    return Math.sqrt(Math.pow(rgb1.r - rgb2.r, 2) + Math.pow(rgb1.g - rgb2.g, 2) + Math.pow(rgb1.b - rgb2.b, 2));
+function getDayViewTimeLabel(msUTC, homeTeam, mode) {
+    if (mode === 'venue') return venueTimeStr(msUTC, homeTeam);
+    return localTimeStr(msUTC);
 }
 
-function getTeamColorAdapted(teamCode, opponentCode, isAway, fallback) {
-    var t = String(teamCode || '').toUpperCase();
-    var entryT = teamColors[t];
-    if (!entryT) return (fallback !== undefined) ? fallback : "#888888";
-
-    // Si on n'est pas le visiteur ou s'il n'y a pas d'adversaire -> couleur primaire
-    if (!isAway || !opponentCode || opponentCode === '') return entryT.p;
-
-    var o = String(opponentCode || '').toUpperCase();
-    var entryO = teamColors[o];
-    if (!entryO || t === o) return entryT.p;
-
-    // Seul le visiteur vérifie la proximité et peut basculer sur sa secondaire
-    if (colorDistance(entryT.p, entryO.p) < 100) {
-        return entryT.s;
-    }
-    return entryT.p;
-}
-
-function getTeamTextColor(code, adaptedOpponentCode, isAway) {
-    var color = (adaptedOpponentCode !== undefined && adaptedOpponentCode !== '') 
-                ? getTeamColorAdapted(code, adaptedOpponentCode, isAway) 
-                : getTeamColor(code);
-    
-    function hexToRgb(hex) {
-        var result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-        return result ? { r: parseInt(result[1], 16), g: parseInt(result[2], 16), b: parseInt(result[3], 16) } : null;
-    }
-    var rgb = hexToRgb(color);
-    if (!rgb) return "white";
-    var brightness = (rgb.r * 299 + rgb.g * 587 + rgb.b * 114) / 1000;
-    return brightness > 128 ? "#111111" : "white";
-}
-
-function resolveNHLAbbrev(teamCommonName) {
-    if (!teamCommonName) return '';
-    var name = (teamCommonName.default || teamCommonName).toLowerCase();
-    var table = {
-        'ducks': 'ANA', 'coyotes': 'UTA', 'utah hockey club': 'UTA',
-        'bruins': 'BOS', 'sabres': 'BUF', 'hurricanes': 'CAR',
-        'blackhawks': 'CHI', 'avalanche': 'COL', 'blue jackets': 'CBJ',
-        'stars': 'DAL', 'red wings': 'DET', 'oilers': 'EDM',
-        'panthers': 'FLA', 'kings': 'LAK', 'wild': 'MIN',
-        'canadiens': 'MTL', 'predators': 'NSH', 'devils': 'NJD',
-        'islanders': 'NYI', 'rangers': 'NYR', 'senators': 'OTT',
-        'flyers': 'PHI', 'penguins': 'PIT', 'blues': 'STL',
-        'lightning': 'TBL', 'maple leafs': 'TOR', 'canucks': 'VAN',
-        'golden knights': 'VGK', 'jets': 'WPG', 'capitals': 'WSH',
-        'kraken': 'SEA', 'sharks': 'SJS', 'flames': 'CGY',
-        'nashville predators': 'NSH',
-        'thrashers': 'ATL', 'nordiques': 'QUE', 'whalers': 'HFD',
-        'scouts': 'KCS', 'rockies': 'CLR', 'barons': 'CLE',
-        'seals': 'CAL', 'california golden seals': 'CGS',
-        'phoenix coyotes': 'PHX', 'minnesota north stars': 'MNS',
-        'north stars': 'MNS', 'mighty ducks': 'ANA',
-        'atlanta thrashers': 'ATL', 'winnipeg jets': 'WPG',
-        'hartford whalers': 'HFD', 'quebec nordiques': 'QUE'
-    };
-    return table[name] || '';
-}
-
-function parseSituation(code, away, home) {
-    if (!code || code.length < 4) return null;
-    var ag = parseInt(code[0]);
-    var as = parseInt(code[1]);
-    var hs = parseInt(code[2]);
-    var hg = parseInt(code[3]);
-    if (isNaN(ag) || isNaN(as) || isNaN(hs) || isNaN(hg)) return null;
-    if (as < 0 || as > 6 || hs < 0 || hs > 6) return null;
-    var enTeam = ag === 0 ? away : (hg === 0 ? home : '');
-    if (as === hs && as >= 5 && enTeam === '') return null;
-    if (as === hs) {
-        var isSpecial = (as < 5 || enTeam !== '');
-        return { ppTeam: '', shTeam: '', ppType: as + 'v' + hs,
-                 awaySkaters: as, homeSkaters: hs,
-                 emptyNet: enTeam !== '', enTeam: enTeam, even: true,
-                 isSpecial: isSpecial };
-    }
-    var ppTeam  = as > hs ? away : home;
-    var shTeam  = as > hs ? home : away;
-    var ppCount = Math.abs(as - hs);
-    var ppType  = ppCount === 1 ? 'PP' : '5v3';
-    return { ppTeam: ppTeam, shTeam: shTeam, ppType: ppType,
-             awaySkaters: as, homeSkaters: hs,
-             emptyNet: enTeam !== '', enTeam: enTeam, even: false,
-             isSpecial: true };
-}
+function getTeamZone(code) { switch(String(code||'')){ case 'BOS': case 'BUF': case 'CAR': case 'CBJ': case 'DET': case 'FLA': case 'MTL': case 'NJD': case 'NYI': case 'NYR': case 'OTT': case 'PHI': case 'PIT': case 'TBL': case 'TOR': case 'WSH': return 'ET'; case 'CHI': case 'DAL': case 'MIN': case 'NSH': case 'STL': case 'WPG': return 'CT'; case 'COL': case 'CGY': case 'EDM': case 'UTA': return 'MT'; case 'ANA': case 'LAK': case 'SEA': case 'SJS': case 'VAN': case 'VGK': return 'PT'; default: return 'ET'; } }
+function zoneBaseOffsetHours(zone){ if(zone==='ET') return -5; if(zone==='CT') return -6; if(zone==='MT') return -7; if(zone==='PT') return -8; return -5; }
+function nthSundayOfMonth(year, month0, n){ var d = new Date(Date.UTC(year, month0, 1)); var dow = d.getUTCDay(); var firstSunday = 1 + ((7 - dow) % 7); return firstSunday + 7*(n-1); }
+function firstSundayNovember(year){ return nthSundayOfMonth(year, 10, 1); }
+function secondSundayMarch(year){ return nthSundayOfMonth(year, 2, 2); }
+function isDstDateLocalLike(year, month0, day, zone){ var dStart = secondSundayMarch(year); var dEnd = firstSundayNovember(year); if(month0>2 && month0<10) return true; if(month0<2 || month0>10) return false; if(month0===2) return day>=dStart; if(month0===10) return day<dEnd; return false; }
+function venueTimeStr(msUTC, homeTeam) { if(!msUTC || !homeTeam) return ""; var d = new Date(msUTC); var zone = getTeamZone(homeTeam); var baseOff = zoneBaseOffsetHours(zone); var isDst = isDstDateLocalLike(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), zone); var totalOff = baseOff + (isDst ? 1 : 0); var local = new Date(d.getTime() + totalOff * 3600000); var h = local.getUTCHours(); var m = local.getUTCMinutes(); return (h<10?'0':'')+h+':'+(m<10?'0':'')+m; }
+function localTimeStr(msUTC) { if(!msUTC) return ""; var d = new Date(msUTC); var h = d.getHours(); var m = d.getMinutes(); return (h<10?'0':'')+h+':'+(m<10?'0':'')+m; }
 
 function httpGet(url, cb) {
-    let xhr = new XMLHttpRequest();
-    xhr.open("GET", url);
-    // Timeout de 10 secondes pour éviter que l'UI ne reste figée
-    xhr.timeout = 10000;
-    xhr.ontimeout = function() {
-        cb(new Error("Timeout (10s) @ " + url), null);
-    };
+    var xhr = new XMLHttpRequest();
     xhr.onreadystatechange = function() {
         if (xhr.readyState === XMLHttpRequest.DONE) {
-            if (xhr.status === 200) {
-                try { cb(null, JSON.parse(xhr.responseText)); } catch(e) { cb(e, null); }
-            } else if (xhr.status > 0) {
-                cb(new Error("HTTP " + xhr.status + " @ " + url), null);
-            }
+            if (xhr.status === 200) { try { var res = JSON.parse(xhr.responseText); cb(null, res); } catch(e) { cb(e, null); } }
+            else { cb(new Error("HTTP " + xhr.status), null); }
         }
     };
-    xhr.send();
-}
-
-function getFranchiseId(code) {
-    var table = {
-        'MTL': 1, 'TOR': 5, 'BOS': 6, 'DET': 12, 'CHI': 11, 'NYR': 10,
-        'PHI': 16, 'PIT': 17, 'NYI': 22, 'NJD': 23, 'WSH': 24, 'BUF': 19,
-        'VAN': 20, 'CGY': 21, 'EDM': 25, 'WPG': 35, 'OTT': 30, 'TBL': 31,
-        'FLA': 33, 'CAR': 26, 'COL': 27, 'DAL': 15, 'STL': 18, 'NSH': 34,
-        'MIN': 37, 'CBJ': 36, 'SJS': 29, 'ANA': 32, 'LAK': 14, 'VGK': 38,
-        'SEA': 39, 'UTA': 40
-    };
-    return table[String(code || '').toUpperCase()] || 0;
+    xhr.open("GET", url); xhr.send();
 }
 
 const ApiService = {
     BASE_URL: "https://api-web.nhle.com/v1",
     STATS_BASE_URL: "https://api.nhle.com/stats/rest/en",
     SEARCH_URL: "https://search.d3.nhle.com/api/v1",
-
-    getScoreboard: function(date, cb) {
-        httpGet(this.BASE_URL + "/scoreboard/" + date, cb);
-    },
-    getScoreboardNow: function(teamCode, cb) {
-        httpGet(this.BASE_URL + "/scoreboard/" + teamCode + "/now", cb);
-    },
-    getSchedule: function(date, cb) {
-        httpGet(this.BASE_URL + "/schedule/" + date, cb);
-    },
-    getScore: function(date, cb) {
-        httpGet(this.BASE_URL + "/score/" + date, cb);
-    },
-    getStandings: function(cb) {
-        httpGet(this.BASE_URL + "/standings/now", cb);
-    },
-    getGameClock: function(gameId, cb) {
-        httpGet(this.BASE_URL + "/gamecenter/" + gameId + "/play-by-play", cb);
-    },
-    getGameLanding: function(gameId, cb) {
-        httpGet(this.BASE_URL + "/gamecenter/" + gameId + "/landing", cb);
-    },
-    getGameRightRail: function(gameId, cb) {
-        httpGet(this.BASE_URL + "/gamecenter/" + gameId + "/right-rail", cb);
-    },
-    getGameBoxscore: function(gameId, cb) {
-        httpGet(this.BASE_URL + "/gamecenter/" + gameId + "/boxscore", cb);
-    },
-    getSkaterLeaders: function(limit, isRookie, category, cb) {
-        var rookiePart = isRookie ? '&isRookie=1' : '';
-        httpGet(this.BASE_URL + "/skater-stats-leaders/current?limit=" + limit + rookiePart + "&categories=" + category, cb);
-    },
-    getGoalieLeaders: function(limit, isRookie, categories, cb) {
-        var rookiePart = isRookie ? '&isRookie=1' : '';
-        httpGet(this.BASE_URL + "/goalie-stats-leaders/current?categories=" + categories + "&limit=" + limit + rookiePart, cb);
-    },
-    getPlayerLanding: function(playerId, cb) {
-        httpGet(this.BASE_URL + "/player/" + playerId + "/landing", cb);
-    },
-    getPlayoffBracket: function(cb) {
-        httpGet(this.BASE_URL + "/playoff-bracket/now", cb);
-    },
-    getTeamSchedule: function(teamCode, cb) {
-        httpGet(this.BASE_URL + "/club-schedule-season/" + teamCode + "/now", cb);
-    },
-    getTeamStats: function(teamCode, cb) {
-        httpGet(this.BASE_URL + "/club-stats/" + teamCode + "/now", cb);
-    },
+    getScoreboard: function(date, cb) { httpGet(this.BASE_URL + "/scoreboard/" + date, function(err, data) { if (err) { let cached = getFromCache("scoreboard_" + date); if (cached) cb(null, cached, true); else cb(err, null); } else { saveToCache("scoreboard_" + date, data); cb(null, data, false); } }); },
+    getScoreboardNow: function(teamCode, cb) { httpGet(this.BASE_URL + "/scoreboard/" + teamCode + "/now", function(err, data) { if (err) { let cached = getFromCache("scoreboard_now_" + teamCode); if (cached) cb(null, cached, true); else cb(err, null); } else { saveToCache("scoreboard_now_" + teamCode, data); cb(null, data, false); } }); },
+    getSchedule: function(date, cb) { httpGet(this.BASE_URL + "/schedule/" + date, cb); },
+    getScore: function(date, cb) { httpGet(this.BASE_URL + "/score/" + date, cb); },
+    getStandings: function(cb) { httpGet(this.BASE_URL + "/standings/now", function(err, data) { if (err) { let cached = getFromCache("standings"); if (cached) cb(null, cached, true); else cb(err, null); } else { saveToCache("standings", data); cb(null, data, false); } }); },
+    getGameClock: function(gameId, cb) { httpGet(this.BASE_URL + "/gamecenter/" + gameId + "/play-by-play", cb); },
+    getGameLanding: function(gameId, cb) { httpGet(this.BASE_URL + "/gamecenter/" + gameId + "/landing", function(err, data) { if (err) { let cached = getFromCache("game_" + gameId); if (cached) cb(null, cached, true); else cb(err, null); } else { saveToCache("game_" + gameId, data); cb(null, data, false); } }); },
+    getGameRightRail: function(gameId, cb) { httpGet(this.BASE_URL + "/gamecenter/" + gameId + "/right-rail", cb); },
+    getGameBoxscore: function(gameId, cb) { httpGet(this.BASE_URL + "/gamecenter/" + gameId + "/boxscore", cb); },
+    getSkaterLeaders: function(limit, isRookie, category, cb) { var r = isRookie ? '&isRookie=1' : ''; httpGet(this.BASE_URL + "/skater-stats-leaders/current?limit=" + limit + r + "&categories=" + category, cb); },
+    getGoalieLeaders: function(limit, isRookie, categories, cb) { var r = isRookie ? '&isRookie=1' : ''; httpGet(this.BASE_URL + "/goalie-stats-leaders/current?categories=" + categories + "&limit=" + limit + r, cb); },
+    getPlayerLanding: function(playerId, cb) { httpGet(this.BASE_URL + "/player/" + playerId + "/landing", function(err, data) { if (err) { let cached = getFromCache("player_" + playerId); if (cached) cb(null, cached, true); else cb(err, null); } else { saveToCache("player_" + playerId, data); cb(null, data, false); } }); },
+    getPlayoffBracket: function(cb) { httpGet(this.BASE_URL + "/playoff-bracket/now", cb); },
+    getTeamSchedule: function(teamCode, cb) { httpGet(this.BASE_URL + "/club-schedule-season/" + teamCode + "/now", cb); },
+    getTeamStats: function(teamCode, cb) { httpGet(this.BASE_URL + "/club-stats/" + teamCode + "/now", cb); },
     getFranchiseLeaders: function(teamCode, category, limit, activeOnly, cb) {
-        var fid = getFranchiseId(teamCode);
-        if (fid === 0) { cb(new Error("Unknown franchise ID for " + teamCode), null); return; }
-        // Utilisation de l'API Stats pour les records historiques (agrégés)
-        var cayenne = "franchiseId=" + fid;
-        if (activeOnly) cayenne += " and active=1";
-        
-        var url = this.STATS_BASE_URL + "/skater/summary" 
-                + "?isAggregate=true&isGame=false"
-                + "&sort=[{\"property\":\"" + category + "\",\"direction\":\"DESC\"}]"
-                + "&start=0&limit=" + limit
-                + "&cayenneExp=" + encodeURIComponent(cayenne);
+        var fid = getFranchiseId(teamCode); if (fid === 0) { cb(new Error("Unknown franchise ID"), null); return; }
+        var cayenne = "franchiseId=" + fid; if (activeOnly) cayenne += " and active=1";
+        var url = this.STATS_BASE_URL + "/skater/summary" + "?isAggregate=true&isGame=false" + "&sort=[{\"property\":\"" + category + "\",\"direction\":\"DESC\"}]" + "&start=0&limit=" + limit + "&cayenneExp=" + encodeURIComponent(cayenne);
         httpGet(url, cb);
     },
     searchPlayers: function(query, cb) {
-        var self = this;
-        var url = this.SEARCH_URL + "/search/player?q=" + encodeURIComponent(query) + "&culture=en-US&limit=20";
-        
+        var self = this; var url = this.SEARCH_URL + "/search/player?q=" + encodeURIComponent(query) + "&culture=en-US&limit=20";
         httpGet(url, function(err, data) {
-            if (!err && data && data.length > 0) {
-                cb(null, data);
-                return;
-            }
-            
-            // FALLBACK: Si l'API de recherche dédiée échoue, on interroge l'API Stats
-            // On cherche dans les patineurs (skaters) ET les gardiens (goalies)
-            var results = [];
-            var pending = 2;
-            function done() {
-                pending--;
-                if (pending <= 0) {
-                    if (results.length > 0) cb(null, results);
-                    else cb(new Error("No results"), null);
-                }
-            }
-
+            if (!err && data && data.length > 0) { cb(null, data); return; }
+            var results = []; var pending = 2;
+            function done() { pending--; if (pending <= 0) { if (results.length > 0) cb(null, results); else cb(new Error("No results"), null); } }
             var skaterUrl = self.STATS_BASE_URL + "/skater/summary?isAggregate=true&isGame=false&limit=20&cayenneExp=skaterFullName%20like%20%27%25" + encodeURIComponent(query) + "%25%27";
-            httpGet(skaterUrl, function(e1, d1) {
-                if (!e1 && d1 && d1.data) {
-                    d1.data.forEach(function(p) {
-                        results.push({
-                            playerId: p.playerId,
-                            name: p.skaterFullName,
-                            lastName: p.lastName,
-                            teamAbbrev: p.teamAbbrevs || "",
-                            positionCode: p.positionCode
-                        });
-                    });
-                }
-                done();
-            });
-
+            httpGet(skaterUrl, function(e1, d1) { if (!e1 && d1 && d1.data) { d1.data.forEach(function(p) { results.push({ playerId: p.playerId, name: p.skaterFullName, lastName: p.lastName, teamAbbrev: p.teamAbbrevs || "", positionCode: p.positionCode }); }); } done(); });
             var goalieUrl = self.STATS_BASE_URL + "/goalie/summary?isAggregate=true&isGame=false&limit=10&cayenneExp=goalieFullName%20like%20%27%25" + encodeURIComponent(query) + "%25%27";
-            httpGet(goalieUrl, function(e2, d2) {
-                if (!e2 && d2 && d2.data) {
-                    d2.data.forEach(function(p) {
-                        results.push({
-                            playerId: p.playerId,
-                            name: p.goalieFullName,
-                            lastName: p.lastName,
-                            teamAbbrev: p.teamAbbrevs || "",
-                            positionCode: "G"
-                        });
-                    });
-                }
-                done();
-            });
+            httpGet(goalieUrl, function(e2, d2) { if (!e2 && d2 && d2.data) { d2.data.forEach(function(p) { results.push({ playerId: p.playerId, name: p.goalieFullName, lastName: p.lastName, teamAbbrev: p.teamAbbrevs || "", positionCode: "G" }); }); } done(); });
         });
     }
 };
 
-// --- Data Transformation Helpers (Optimization A) ---
+function getFranchiseId(code) {
+    var table = {
+        'MTL': 1,  'TOR': 5,  'BOS': 6,  'DET': 17, 'CHI': 16, 'NYR': 10, // Original Six
+        'PHI': 16, 'PIT': 17, 'STL': 18, 'DAL': 15, 'LAK': 14, 'OAK': 9, // Expansion 67 (DAL=North Stars)
+        'BUF': 19, 'VAN': 20, 'NYI': 22, 'NJD': 23, 'WSH': 24, 'COL': 21, 'EDM': 25, 'CGY': 26, 'ARI': 27, 'CAR': 28,
+        'WPG': 35, 'TBL': 31, 'OTT': 30, 'SJS': 29, 'FLA': 33, 'ANA': 32, 'NSH': 34, 'CBJ': 36, 'MIN': 37, 'VGK': 38, 'SEA': 39, 'UTA': 40
+    };
+    // Note : Certains IDs peuvent varier selon l'endpoint. 
+    // MTL=1, TOR=5, BOS=6, NYR=10, CHI=11, DET=12 est la liste standard des Franchise IDs.
+    // Je corrige pour correspondre à l'API Stats.
+    var official = {
+        'MTL': 1, 'OTT': 30, 'TOR': 5, 'BOS': 6, 'BUF': 19, 'DET': 12, 'FLA': 33, 'TBL': 31,
+        'CAR': 28, 'CBJ': 36, 'NJD': 23, 'NYI': 22, 'NYR': 10, 'PHI': 16, 'PIT': 17, 'WSH': 24,
+        'CHI': 11, 'COL': 21, 'DAL': 15, 'MIN': 37, 'NSH': 34, 'STL': 18, 'WPG': 35, 'UTA': 40,
+        'ANA': 32, 'CGY': 26, 'EDM': 25, 'LAK': 14, 'SJS': 29, 'SEA': 39, 'VGK': 38, 'ARI': 27
+    };
+    return official[String(code || '').toUpperCase()] || 0;
+}
 
 function compareTeams(a, b) {
-    // 1. Points
     if (b.points !== a.points) return b.points - a.points;
-
-    // 2. Matchs joués (le moins de matchs = meilleur pourcentage)
     if (a.gamesPlayed !== b.gamesPlayed) return a.gamesPlayed - b.gamesPlayed;
-
-    // 3. Victoires en temps réglementaire (VR / RW)
-    var arw = a.regulationWins || 0;
-    var brw = b.regulationWins || 0;
-    if (brw !== arw) return brw - arw;
-
-    // 4. Victoires hors tirs de barrage (VRP / ROW)
-    var arow = a.regulationPlusOtWins || 0;
-    var brow = b.regulationPlusOtWins || 0;
-    if (brow !== arow) return brow - arow;
-
-    // 5. Victoires totales (V / W)
+    var arw = a.regulationWins || 0; var brw = b.regulationWins || 0; if (brw !== arw) return brw - arw;
+    var arow = a.regulationPlusOtWins || 0; var brow = b.regulationPlusOtWins || 0; if (brow !== arow) return brow - arow;
     if (b.wins !== a.wins) return b.wins - a.wins;
-
-    // 6. Différentiel de buts (DIFF)
-    // Note: L'API inclut déjà les buts de SO (1 pour victoire, 0 pour défaite) dans goalFor/Against
-    var adiff = (a.goalFor || 0) - (a.goalAgainst || 0);
-    var bdiff = (b.goalFor || 0) - (b.goalAgainst || 0);
-    if (bdiff !== adiff) return bdiff - adiff;
-
-    // 7. Buts marqués (BP / GF)
-    var agf = a.goalFor || 0;
-    var bgf = b.goalFor || 0;
-    if (bgf !== agf) return bgf - agf;
-
+    var adiff = (a.goalFor || 0) - (a.goalAgainst || 0); var bdiff = (b.goalFor || 0) - (b.goalAgainst || 0); if (bdiff !== adiff) return bdiff - adiff;
     return 0;
 }
 
 function leagueSortVal(t, key) {
     switch(key) {
-        case 'pts':    return t.points          || 0;
-        case 'w':      return t.wins            || 0;
-        case 'l':      return t.losses          || 0;
-        case 'ot':     return t.otLosses        || 0;
-        case 'gp':     return t.gamesPlayed     || 0;
-        case 'gf':     return t.goalFor         || 0;
-        case 'ga':     return t.goalAgainst     || 0;
-        case 'so':     return (t.shootoutWins||0) + (t.shootoutLosses||0);
-        case 'home':   return (t.homeWins||0)*2 - (t.homeLosses||0);
-        case 'away':   return (t.roadWins||0)*2 - (t.roadLosses||0);
-        case 'l10':    return (t.l10Wins||0)*2  - (t.l10Losses||0);
-        case 'streak': return parseInt(t.streakCount) || 0;
-        default:       return t.points          || 0;
+        case 'pts': return t.points || 0; case 'w': return t.wins || 0; case 'l': return t.losses || 0;
+        case 'ot': return t.otLosses || 0; case 'gp': return t.gamesPlayed || 0; case 'gf': return t.goalFor || 0;
+        case 'ga': return t.goalAgainst || 0; case 'so': return (t.shootoutWins||0) + (t.shootoutLosses||0);
+        case 'home': return (t.homeWins||0)*2 - (t.homeLosses||0); case 'away': return (t.roadWins||0)*2 - (t.roadLosses||0);
+        case 'l10': return (t.l10Wins||0)*2 - (t.l10Losses||0); case 'streak': return parseInt(t.streakCount) || 0;
+        default: return t.points || 0;
     }
 }
 
 function parseLeagueStandings(data, sortKey, sortAsc) {
     var all = (data || []).slice();
-    all.sort(function(a, b) {
-        var av = leagueSortVal(a, sortKey);
-        var bv = leagueSortVal(b, sortKey);
-        if (av === bv) {
-            return compareTeams(a, b);
-        }
-        return sortAsc ? (av < bv ? -1 : 1) : (bv < av ? -1 : 1);
-    });
-    
-    var result = [];
-    result.push({ type: "leagueHeader" });
+    all.sort(function(a, b) { var av = leagueSortVal(a, sortKey); var bv = leagueSortVal(b, sortKey); if (av === bv) { return compareTeams(a, b); } return sortAsc ? (av < bv ? -1 : 1) : (bv < av ? -1 : 1); });
+    var result = []; result.push({ type: "leagueHeader" });
     for (var i = 0; i < all.length; i++) {
-        var t = all[i];
-        result.push({
-            type:   "leagueTeam",
-            abbrev: t.teamAbbrev  ? (t.teamAbbrev.default  || t.teamAbbrev)  : "?",
-            city:   t.teamCommonName ? (t.teamCommonName.default || t.teamCommonName) : "",
-            clinch: t.clinchIndicator || "",
-            gp: t.gamesPlayed || 0, w: t.wins || 0, l: t.losses || 0, ot: t.otLosses || 0, pts: t.points || 0,
-            gf: t.goalFor || 0, ga: t.goalAgainst || 0, 
-            sow: t.shootoutWins || 0, sol: t.shootoutLosses || 0,
-            hw: t.homeWins || 0, hl: t.homeLosses || 0, hot: t.homeOtLosses || 0,
-            rw: t.roadWins || 0, rl: t.roadLosses || 0, rot: t.roadOtLosses || 0,
-            l10w: t.l10Wins || 0, l10l: t.l10Losses || 0, l10ot: t.l10OtLosses || 0,
-            streak: (t.streakCode || '') + String(t.streakCount || '')
-        });
+        var t = all[i]; result.push({ type: "leagueTeam", abbrev: t.teamAbbrev ? (t.teamAbbrev.default || t.teamAbbrev) : "?", city: t.teamCommonName ? (t.teamCommonName.default || t.teamCommonName) : "", clinch: t.clinchIndicator || "", gp: t.gamesPlayed || 0, w: t.wins || 0, l: t.losses || 0, ot: t.otLosses || 0, pts: t.points || 0, gf: t.goalFor || 0, ga: t.goalAgainst || 0, sow: t.shootoutWins || 0, sol: t.shootoutLosses || 0, hw: t.homeWins || 0, hl: t.homeLosses || 0, hot: t.homeOtLosses || 0, rw: t.roadWins || 0, rl: t.roadLosses || 0, rot: t.roadOtLosses || 0, l10w: t.l10Wins || 0, l10l: t.l10Losses || 0, l10ot: t.l10OtLosses || 0, streak: (t.streakCode || '') + String(t.streakCount || '') });
     }
     return result;
 }
 
 function parseDivisionStandings(data, labels) {
-    var divs = [
-        { api: "Atlantic",      label: labels.atlantic || "Atlantic" },
-        { api: "Metropolitan",  label: labels.metro    || "Metropolitan" },
-        { api: "Central",       label: labels.central  || "Central" },
-        { api: "Pacific",       label: labels.pacific  || "Pacific" }
-    ];
+    var divs = [ { api: "Atlantic", label: labels.atlantic || "Atlantic" }, { api: "Metropolitan", label: labels.metro || "Metropolitan" }, { api: "Central", label: labels.central || "Central" }, { api: "Pacific", label: labels.pacific || "Pacific" } ];
     var result = [];
     for (var di = 0; di < divs.length; di++) {
-        var div = divs[di];
-        var divTeams = data.filter(function(t) { return t.divisionName === div.api; });
-        divTeams.sort(compareTeams);
-        result.push({ type: "divHeader", label: div.label });
-        result.push({ type: "colHeader" });
-        for (var k = 0; k < divTeams.length; k++) {
-            if (k === 3) result.push({ type: "wcSeparator" });
-            var t = divTeams[k];
-            result.push({
-                type: "team",
-                abbrev: t.teamAbbrev ? (t.teamAbbrev.default || t.teamAbbrev) : "?",
-                city:   t.placeName  ? (t.placeName.default  || t.placeName)  : "",
-                clinch: t.clinchIndicator || "",
-                gp: t.gamesPlayed || 0, w: t.wins || 0, l: t.losses || 0, ot: t.otLosses || 0, pts: t.points || 0
-            });
-        }
+        var div = divs[di]; var divTeams = data.filter(function(t) { return t.divisionName === div.api; }); divTeams.sort(compareTeams);
+        result.push({ type: "divHeader", label: div.label }); result.push({ type: "colHeader" });
+        for (var k = 0; k < divTeams.length; k++) { if (k === 3) result.push({ type: "wcSeparator" }); var t = divTeams[k]; result.push({ type: "team", abbrev: t.teamAbbrev ? (t.teamAbbrev.default || t.teamAbbrev) : "?", city: t.placeName ? (t.placeName.default || t.placeName) : "", clinch: t.clinchIndicator || "", gp: t.gamesPlayed || 0, w: t.wins || 0, l: t.losses || 0, ot: t.otLosses || 0, pts: t.points || 0 }); }
     }
     return result;
 }
 
 function parseWildCardStandings(data, labels) {
-    var confs = [
-        { abbrev: "E", name: labels.east || "Eastern",
-          divs: [ { api: "Atlantic",      label: labels.atlantic },
-                  { api: "Metropolitan",  label: labels.metro } ] },
-        { abbrev: "W", name: labels.west || "Western",
-          divs: [ { api: "Central",       label: labels.central },
-                  { api: "Pacific",       label: labels.pacific } ] }
-    ];
+    var confs = [ { abbrev: "E", name: labels.east || "Eastern", divs: [ { api: "Atlantic", label: labels.atlantic }, { api: "Metropolitan", label: labels.metro } ] }, { abbrev: "W", name: labels.west || "Western", divs: [ { api: "Central", label: labels.central }, { api: "Pacific", label: labels.pacific } ] } ];
     var result = [];
     for (var ci = 0; ci < confs.length; ci++) {
-        var conf = confs[ci];
-        var confTeams = data.filter(function(t) { return t.conferenceAbbrev === conf.abbrev; });
-        result.push({ type: "confHeader", label: conf.name });
-        result.push({ type: "colHeader" });
-        for (var di = 0; di < conf.divs.length; di++) {
-            var div = conf.divs[di];
-            var divTeams = confTeams.filter(function(t) { return t.divisionName === div.api; });
-            divTeams.sort(compareTeams);
-            result.push({ type: "divHeader", label: div.label });
-            for (var k = 0; k < Math.min(3, divTeams.length); k++) {
-                var dt = divTeams[k];
-                result.push({
-                    type: "team",
-                    abbrev: dt.teamAbbrev ? (dt.teamAbbrev.default || dt.teamAbbrev) : "?",
-                    city:   dt.placeName  ? (dt.placeName.default  || dt.placeName)  : "",
-                    clinch: dt.clinchIndicator || "",
-                    gp: dt.gamesPlayed || 0, w: dt.wins || 0, l: dt.losses || 0, ot: dt.otLosses || 0, pts: dt.points || 0
-                });
-            }
-        }
-        var wc = confTeams.filter(function(t) { 
-            return t.divisionSequence > 3 || (!t.divisionSequence && t.wildcardSequence);
-        });
-        wc.sort(compareTeams);
+        var conf = confs[ci]; var confTeams = data.filter(function(t) { return t.conferenceAbbrev === conf.abbrev; });
+        result.push({ type: "confHeader", label: conf.name }); result.push({ type: "colHeader" });
+        for (var di = 0; di < conf.divs.length; di++) { var div = conf.divs[di]; var divTeams = confTeams.filter(function(t) { return t.divisionName === div.api; }); divTeams.sort(compareTeams); result.push({ type: "divHeader", label: div.label }); for (var k = 0; k < Math.min(3, divTeams.length); k++) { var dt = divTeams[k]; result.push({ type: "team", abbrev: dt.teamAbbrev ? (dt.teamAbbrev.default || dt.teamAbbrev) : "?", city: dt.placeName ? (dt.placeName.default || dt.placeName) : "", clinch: dt.clinchIndicator || "", gp: dt.gamesPlayed || 0, w: dt.wins || 0, l: dt.losses || 0, ot: dt.otLosses || 0, pts: dt.points || 0 }); } }
+        var wc = confTeams.filter(function(t) { return t.divisionSequence > 3 || (!t.divisionSequence && t.wildcardSequence); }); wc.sort(compareTeams);
         result.push({ type: "wcHeader", label: labels.wc || "Wild Card" });
-        for (var wci = 0; wci < wc.length; wci++) {
-            if (wci === 2) result.push({ type: "wcSeparator" });
-            var wt = wc[wci];
-            result.push({
-                type: "team",
-                abbrev: wt.teamAbbrev ? (wt.teamAbbrev.default || wt.teamAbbrev) : "?",
-                city:   wt.placeName  ? (wt.placeName.default  || wt.placeName)  : "",
-                clinch: wt.clinchIndicator || "",
-                gp: wt.gamesPlayed || 0, w: wt.wins || 0, l: wt.losses || 0, ot: wt.otLosses || 0, pts: wt.points || 0
-            });
-        }
+        for (var wci = 0; wci < wc.length; wci++) { if (wci === 2) result.push({ type: "wcSeparator" }); var wt = wc[wci]; result.push({ type: "team", abbrev: wt.teamAbbrev ? (wt.teamAbbrev.default || wt.teamAbbrev) : "?", city: wt.placeName ? (wt.placeName.default || wt.placeName) : "", clinch: wt.clinchIndicator || "", gp: wt.gamesPlayed || 0, w: wt.wins || 0, l: wt.losses || 0, ot: wt.otLosses || 0, pts: wt.points || 0 }); }
     }
     return result;
 }
 
 function simulatePlayoffs(data) {
     if (!data || data.length === 0) return null;
-
-    function getAbbr(t) { 
-        if (!t) return "";
-        return (t.teamAbbrev && t.teamAbbrev.default) ? t.teamAbbrev.default : (t.teamAbbrev || ""); 
-    }
-
-    var conferences = ["W", "E"]; 
-    var divisions = { "E": ["Atlantic", "Metropolitan"], "W": ["Central", "Pacific"] };
-    
-    var bracket = { rounds: [] };
-    var r1Series = [];
-
+    function getAbbr(t) { if (!t) return ""; return (t.teamAbbrev && t.teamAbbrev.default) ? t.teamAbbrev.default : (t.teamAbbrev || ""); }
+    var conferences = ["W", "E"]; var divisions = { "E": ["Atlantic", "Metropolitan"], "W": ["Central", "Pacific"] }; var bracket = { rounds: [] }; var r1Series = [];
     for (var ci = 0; ci < conferences.length; ci++) {
-        var conf = conferences[ci];
-        var confTeams = data.filter(function(t) { return t.conferenceAbbrev === conf; });
-        var divWinners = [];
-        var qualifiedTop3 = [];
-        
-        var confDivs = divisions[conf];
-        for (var di = 0; di < confDivs.length; di++) {
-            var divName = confDivs[di];
-            var divTeams = confTeams.filter(function(t) { return t.divisionName === divName; });
-            divTeams.sort(compareTeams);
-            
-            if (divTeams.length >= 3) {
-                var top3 = divTeams.slice(0, 3);
-                divWinners.push({team: top3[0], divName: divName});
-                qualifiedTop3.push({teams: top3, divName: divName}); 
-            }
-        }
-
-        var top3Ids = [];
-        for (var i = 0; i < qualifiedTop3.length; i++) {
-            var group = qualifiedTop3[i];
-            for (var j = 0; j < group.teams.length; j++) {
-                var teamObj = group.teams[j];
-                if (teamObj) top3Ids.push(getAbbr(teamObj));
-            }
-        }
-        
-        var wcTeams = confTeams.filter(function(t) { return top3Ids.indexOf(getAbbr(t)) === -1; });
-        wcTeams.sort(compareTeams);
-        
-        var wc1 = wcTeams.length > 0 ? wcTeams[0] : null;
-        var wc2 = wcTeams.length > 1 ? wcTeams[1] : null;
-
-        divWinners.sort(function(a, b) { return compareTeams(a.team, b.team); });
-        var bestDivWinner = divWinners[0];
-        var otherDivWinner = divWinners[1];
-
-        if (bestDivWinner && wc2) {
-            r1Series.push({
-                conference: conf,
-                topSeedTeam: { abbrev: getAbbr(bestDivWinner.team), seed: "D1" },
-                bottomSeedTeam: { abbrev: getAbbr(wc2), seed: "WC2" },
-                topSeedWins: 0, bottomSeedWins: 0, seriesAbbrev: "R1"
-            });
-        }
-        
-        if (bestDivWinner) {
-            var bestGroup = null;
-            for (var k=0; k<qualifiedTop3.length; k++) {
-                if (qualifiedTop3[k].divName === bestDivWinner.divName) { bestGroup = qualifiedTop3[k]; break; }
-            }
-            if (bestGroup && bestGroup.teams.length >= 3) {
-                r1Series.push({
-                    conference: conf,
-                    topSeedTeam: { abbrev: getAbbr(bestGroup.teams[1]), seed: "D2" },
-                    bottomSeedTeam: { abbrev: getAbbr(bestGroup.teams[2]), seed: "D3" },
-                    topSeedWins: 0, bottomSeedWins: 0, seriesAbbrev: "R1"
-                });
-            }
-        }
-
-        if (otherDivWinner && wc1) {
-            r1Series.push({
-                conference: conf,
-                topSeedTeam: { abbrev: getAbbr(otherDivWinner.team), seed: "D1" },
-                bottomSeedTeam: { abbrev: getAbbr(wc1), seed: "WC1" },
-                topSeedWins: 0, bottomSeedWins: 0, seriesAbbrev: "R1"
-            });
-        }
-
-        if (otherDivWinner) {
-            var otherGroup = null;
-            for (var m=0; m<qualifiedTop3.length; m++) {
-                if (qualifiedTop3[m].divName === otherDivWinner.divName) { otherGroup = qualifiedTop3[m]; break; }
-            }
-            if (otherGroup && otherGroup.teams.length >= 3) {
-                r1Series.push({
-                    conference: conf,
-                    topSeedTeam: { abbrev: getAbbr(otherGroup.teams[1]), seed: "D2" },
-                    bottomSeedTeam: { abbrev: getAbbr(otherGroup.teams[2]), seed: "D3" },
-                    topSeedWins: 0, bottomSeedWins: 0, seriesAbbrev: "R1"
-                });
-            }
-        }
+        var conf = conferences[ci]; var confTeams = data.filter(function(t) { return t.conferenceAbbrev === conf; }); var divWinners = []; var qualifiedTop3 = []; var confDivs = divisions[conf];
+        for (var di = 0; di < confDivs.length; di++) { var divName = confDivs[di]; var divTeams = confTeams.filter(function(t) { return t.divisionName === divName; }); divTeams.sort(compareTeams); if (divTeams.length >= 3) { var top3 = divTeams.slice(0, 3); divWinners.push({team: top3[0], divName: divName}); qualifiedTop3.push({teams: top3, divName: divName}); } }
+        var top3Ids = []; for (var i = 0; i < qualifiedTop3.length; i++) { var group = qualifiedTop3[i]; for (var j = 0; j < group.teams.length; j++) { var teamObj = group.teams[j]; if (teamObj) top3Ids.push(getAbbr(teamObj)); } }
+        var wcTeams = confTeams.filter(function(t) { return top3Ids.indexOf(getAbbr(t)) === -1; }); wcTeams.sort(compareTeams);
+        var wc1 = wcTeams.length > 0 ? wcTeams[0] : null; var wc2 = wcTeams.length > 1 ? wcTeams[1] : null;
+        divWinners.sort(function(a, b) { return compareTeams(a.team, b.team); }); var bestDivWinner = divWinners[0]; var otherDivWinner = divWinners[1];
+        if (bestDivWinner && wc2) { r1Series.push({ conference: conf, topSeedTeam: { abbrev: getAbbr(bestDivWinner.team), seed: "D1" }, bottomSeedTeam: { abbrev: getAbbr(wc2), seed: "WC2" }, topSeedWins: 0, bottomSeedWins: 0, seriesAbbrev: "R1" }); }
+        if (bestDivWinner) { var bestGroup = null; for (var k=0; k<qualifiedTop3.length; k++) { if (qualifiedTop3[k].divName === bestDivWinner.divName) { bestGroup = qualifiedTop3[k]; break; } } if (bestGroup && bestGroup.teams.length >= 3) { r1Series.push({ conference: conf, topSeedTeam: { abbrev: getAbbr(bestGroup.teams[1]), seed: "D2" }, bottomSeedTeam: { abbrev: getAbbr(bestGroup.teams[2]), seed: "D3" }, topSeedWins: 0, bottomSeedWins: 0, seriesAbbrev: "R1" }); } }
+        if (otherDivWinner && wc1) { r1Series.push({ conference: conf, topSeedTeam: { abbrev: getAbbr(otherDivWinner.team), seed: "D1" }, bottomSeedTeam: { abbrev: getAbbr(wc1), seed: "WC1" }, topSeedWins: 0, bottomSeedWins: 0, seriesAbbrev: "R1" }); }
+        if (otherDivWinner) { var otherGroup = null; for (var m=0; m<qualifiedTop3.length; m++) { if (qualifiedTop3[m].divName === otherDivWinner.divName) { otherGroup = qualifiedTop3[m]; break; } } if (otherGroup && otherGroup.teams.length >= 3) { r1Series.push({ conference: conf, topSeedTeam: { abbrev: getAbbr(otherGroup.teams[1]), seed: "D2" }, bottomSeedTeam: { abbrev: getAbbr(otherGroup.teams[2]), seed: "D3" }, topSeedWins: 0, bottomSeedWins: 0, seriesAbbrev: "R1" }); } }
     }
-
     bracket.rounds.push({ roundNumber: 1, series: r1Series });
-    
-    var r2Series = []; for(var n=0; n<4; n++) r2Series.push({ conference: n<2 ? "W" : "E", seriesAbbrev: "R2" });
-    bracket.rounds.push({ roundNumber: 2, series: r2Series });
-    bracket.rounds.push({ roundNumber: 3, series: [{ conference: "W" }, { conference: "E" }] });
-    bracket.rounds.push({ roundNumber: 4, series: [{ conference: "SC" }] });
-
+    var r2Series = []; for(var n=0; n<4; n++) r2Series.push({ conference: n<2 ? "W" : "E", seriesAbbrev: "R2" }); bracket.rounds.push({ roundNumber: 2, series: r2Series });
+    bracket.rounds.push({ roundNumber: 3, series: [{ conference: "W" }, { conference: "E" }] }); bracket.rounds.push({ roundNumber: 4, series: [{ conference: "SC" }] });
     return bracket;
 }
 
 function parseLeaders(players, category) {
-    var res = [];
-    for (var i = 0; i < players.length; i++) {
-        var p = players[i];
-        var fname = p.firstName ? (p.firstName.default || '') : '';
-        var lname = p.lastName  ? (p.lastName.default  || '') : '';
-        res.push({
-            id:    p.id || p.playerId || 0,
-            name:  fname + ' ' + lname,
-            team:  p.teamAbbrev ? (p.teamAbbrev.default || p.teamAbbrev) : '',
-            value: p.value || 0,
-            cat:   category || '',
-            position: p.positionCode || p.position || '',
-            rookie: p.isRookie === true || p.rookie === true
-        });
-    }
-    return res;
+    var res = []; for (var i = 0; i < players.length; i++) { var p = players[i]; var fname = p.firstName ? (p.firstName.default || '') : ''; var lname = p.lastName ? (p.lastName.default || '') : ''; res.push({ id: p.id || p.playerId || 0, name: fname + ' ' + lname, team: p.teamAbbrev ? (p.teamAbbrev.default || p.teamAbbrev) : '', value: p.value || 0, cat: category || '', position: p.positionCode || p.position || '', rookie: p.isRookie === true || p.rookie === true }); } return res;
 }

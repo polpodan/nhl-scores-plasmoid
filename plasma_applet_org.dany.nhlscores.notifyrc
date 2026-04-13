@@ -1,0 +1,13 @@
+[Global]
+IconName=org.dany.nhlscores
+Name=NHL Scores
+Name[fr]=Scores LNH
+Comment=Live NHL scores
+Comment[fr]=Scores de la LNH en direct
+
+[Event/goal]
+Name=Goal
+Name[fr]=But
+Comment=Notification for a goal
+Comment[fr]=Notification pour un but
+Action=Popup

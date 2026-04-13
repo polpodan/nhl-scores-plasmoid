@@ -42,7 +42,7 @@ Row {
             radius: 3
             color: (typeof controller !== 'undefined' && controller) 
                    ? controller.teamColorAdapted(awayCode, homeCode, true, false)
-                   : Logic.getTeamColor(awayCode, Kirigami.Theme.positiveBackgroundColor)
+                   : Logic.getTeamColorAdapted(awayCode, homeCode, true, false, Kirigami.Theme.backgroundColor)
             border.color: 'white'; border.width: 1
             height: aText.implicitHeight + Math.max(3, sz * 0.12)
             width:  aText.implicitWidth  + Math.max(4, sz * 0.22)
@@ -52,9 +52,7 @@ Row {
             }
             Text {
                 id: aText; anchors.centerIn: parent; text: awayCode
-                color: (typeof controller !== 'undefined' && controller)
-                       ? controller.teamTextColor(awayCode, homeCode, true)
-                       : Logic.getTeamTextColor(awayCode)
+                color: Logic.getContrastColor(aBadge.color)
                 font.pixelSize: Math.max(8, sz * 0.72); font.bold: true; font.family: "monospace"
             }
         }
@@ -136,7 +134,7 @@ Row {
             radius: 3
             color: (typeof controller !== 'undefined' && controller)
                    ? controller.teamColorAdapted(homeCode, awayCode, false, false)
-                   : Logic.getTeamColor(homeCode, Kirigami.Theme.positiveBackgroundColor)
+                   : Logic.getTeamColorAdapted(homeCode, awayCode, false, false, Kirigami.Theme.backgroundColor)
             border.color: 'white'; border.width: 1
             height: hText.implicitHeight + Math.max(3, sz * 0.12)
             width:  hText.implicitWidth  + Math.max(4, sz * 0.22)
@@ -146,9 +144,7 @@ Row {
             }
             Text {
                 id: hText; anchors.centerIn: parent; text: homeCode
-                color: (typeof controller !== 'undefined' && controller)
-                       ? controller.teamTextColor(homeCode, awayCode, false)
-                       : Logic.getTeamTextColor(homeCode)
+                color: Logic.getContrastColor(hBadge.color)
                 font.pixelSize: Math.max(8, sz * 0.72); font.bold: true; font.family: "monospace"
             }
         }

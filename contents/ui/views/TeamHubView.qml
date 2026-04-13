@@ -171,11 +171,11 @@ Item {
                                 }
                                 Rectangle {
                                     radius: 3
-                                    color: Logic.getTeamColor(modelData.opp || "")
+                                    color: Logic.getTeamColorAdapted(modelData.opp || "", "", false, false, Kirigami.Theme.backgroundColor)
                                     width: 32
                                     height: 18
                                     anchors.verticalCenter: parent.verticalCenter
-                                    Label { anchors.centerIn: parent; text: modelData.opp || '?'; color: Logic.getTeamTextColor(modelData.opp || ''); font.bold: true; font.pixelSize: 10; font.family: "monospace" }
+                                    Label { anchors.centerIn: parent; text: modelData.opp || '?'; color: Logic.getContrastColor(parent.color); font.bold: true; font.pixelSize: 10; font.family: "monospace" }
                                 }
                                 Label { 
                                     text: (modelData.gf || 0) + " – " + (modelData.ga || 0)

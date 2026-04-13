@@ -29,6 +29,7 @@ Item {
                 onClicked: {
                     if (controller) {
                         controller.nav.franchiseLeaders = false
+                        controller.nav.teamHub = true // Restaurer la visibilité du Hub
                     }
                 }
             }

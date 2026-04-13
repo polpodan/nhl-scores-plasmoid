@@ -258,8 +258,8 @@ Item {
                                     id: lgBadge
                                     visible: !controller.showLogos
                                     width: lgLbl.implicitWidth + 6; height: lgLbl.implicitHeight + 3; radius: 3
-                                    color: Logic.getTeamColor(rAbbrev)
-                                    Label { id: lgLbl; anchors.centerIn: parent; text: rAbbrev; color: Logic.getTeamTextColor(rAbbrev); font.pixelSize: s.fonts.tiny + 1; font.bold: true; font.family: "monospace" }
+                                    color: Logic.getTeamColorAdapted(rAbbrev, "", false, false, Kirigami.Theme.backgroundColor)
+                                    Label { id: lgLbl; anchors.centerIn: parent; text: rAbbrev; color: Logic.getContrastColor(lgBadge.color); font.pixelSize: s.fonts.tiny + 1; font.bold: true; font.family: "monospace" }
                                 }
                                 Image {
                                     visible: controller.showLogos
@@ -308,8 +308,9 @@ Item {
                                 Rectangle {
                                     id: abbrBadge
                                     visible: !controller.showLogos
-                                    width: abbrLbl.implicitWidth + 8; height: abbrLbl.implicitHeight + 4; radius: 4; color: Logic.getTeamColor(rAbbrev)
-                                    Label { id: abbrLbl; anchors.centerIn: parent; text: rAbbrev !== "" ? rAbbrev : "?"; color: Logic.getTeamTextColor(rAbbrev); font.pixelSize: s.fonts.small + 1; font.bold: true; font.family: "monospace" }
+                                    width: abbrLbl.implicitWidth + 8; height: abbrLbl.implicitHeight + 4; radius: 4
+                                    color: Logic.getTeamColorAdapted(rAbbrev, "", false, false, Kirigami.Theme.backgroundColor)
+                                    Label { id: abbrLbl; anchors.centerIn: parent; text: rAbbrev !== "" ? rAbbrev : "?"; color: Logic.getContrastColor(abbrBadge.color); font.pixelSize: s.fonts.small + 1; font.bold: true; font.family: "monospace" }
                                 }
                                 Image {
                                     visible: controller.showLogos
@@ -345,12 +346,12 @@ Item {
                 anchors.centerIn: parent
                 spacing: 2
                 Label {
-                    text: "x - " + i18n("Place en séries assurée") + " | y - " + i18n("Titre de division assuré") + " | z - " + i18n("Titre d'association assuré")
+                    text: "x - " + i18n("Clinched Playoff Spot") + " | y - " + i18n("Clinched Division") + " | z - " + i18n("Clinched Conference")
                     font.pixelSize: 10; font.italic: true; opacity: 0.7
                     Layout.alignment: Qt.AlignHCenter
                 }
                 Label {
-                    text: "E - " + i18n("Éliminé des séries")
+                    text: "E - " + i18n("Eliminated from Playoffs")
                     font.pixelSize: 10; font.bold: true; font.italic: true; color: "#ff4444"; opacity: 0.8
                     Layout.alignment: Qt.AlignHCenter
                 }
