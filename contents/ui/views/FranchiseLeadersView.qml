@@ -71,6 +71,45 @@ Item {
                     Layout.alignment: Qt.AlignHCenter
                 }
 
+                // ── Filtre Saison Type ──────────────────────────────
+                RowLayout {
+                    Layout.alignment: Qt.AlignHCenter
+                    Layout.bottomMargin: 10
+                    spacing: 8
+                    
+                    Repeater {
+                        model: [
+                            { lbl: i18n("Reg"), val: 2 },
+                            { lbl: i18n("Post"), val: 3 }
+                        ]
+                        delegate: Rectangle {
+                            radius: 4
+                            implicitWidth: typeLbl.implicitWidth + 16
+                            implicitHeight: typeLbl.implicitHeight + 8
+                            readonly property bool active: !!(controller && controller.flead.seasonType === modelData.val)
+                            color: active ? Kirigami.Theme.highlightColor : Qt.rgba(1,1,1,0.07)
+                            border.color: active ? Kirigami.Theme.highlightColor : Qt.rgba(1,1,1,0.15)
+                            border.width: 1
+                            
+                            Label {
+                                id: typeLbl; anchors.centerIn: parent
+                                text: modelData.lbl
+                                font.pixelSize: 12; font.bold: parent.active
+                                color: parent.active ? "white" : Kirigami.Theme.textColor
+                            }
+                            TapHandler {
+                                onTapped: {
+                                    if (controller) {
+                                        controller.flead.seasonType = modelData.val
+                                        controller.fetchFranchiseLeaders(controller.flead.team)
+                                    }
+                                }
+                            }
+                            HoverHandler { cursorShape: Qt.PointingHandCursor }
+                        }
+                    }
+                }
+
                 // Points
                 ColumnLayout {
                     Layout.fillWidth: true

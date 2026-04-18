@@ -49,7 +49,7 @@ Rectangle {
             id: t1
             anchors.horizontalCenter: parent.horizontalCenter
             text: isStandardPP ? sit.ppType : badgeRoot.line1
-            color: 'white'
+            color: Logic.getContrastColor(badgeRoot.color)
             font.pixelSize: isStandardPP ? badgeRoot.fontSize1 - 1 : badgeRoot.fontSize1
             font.bold: true
         }
@@ -58,7 +58,7 @@ Rectangle {
             anchors.horizontalCenter: parent.horizontalCenter
             visible: text !== ''
             text: (isStandardPP && badgeRoot.penaltyTime !== "") ? badgeRoot.penaltyTime : badgeRoot.line2
-            color: 'white'
+            color: Logic.getContrastColor(badgeRoot.color)
             font.pixelSize: badgeRoot.fontSize2
             font.bold: true
             opacity: 0.95

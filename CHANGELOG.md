@@ -2,6 +2,25 @@
 
 All notable changes to this project will be documented in this file.
 
+## [6.0.0] - 2026-04-18
+
+### Added
+- **Deep Historical Database:** Users can now browse League Leaders and Team Statistics for any season back to **1917-18** using a new seasonal dropdown menu.
+- **Playoff Statistical Toggle:** Added a "Reg / Post" switch across all leaderboards (League, Team, and Franchise) to easily compare regular season vs. playoff performance.
+- **Stanley Cup Trophy Case:** The Team Hub now proudly displays each franchise's championship history with a centered grid of 🏆 icons (e.g., 24 trophies for the Montreal Canadiens).
+- **Interactive Playoff Bracket:** Teams in the bracket view are now fully interactive; clicking a team badge instantly opens its Team Hub.
+- **Enhanced Stanley Cup Tracking:** Series win counts (e.g., 1-0, 4-2) are now automatically tracked and updated in the bracket as games finish.
+
+### Improved
+- **Robust Time & Day Transition:** Replaced static midnight refresh with a smart day-change detector. Date separators and the season calendar now update correctly even if the computer was asleep during the midnight transition.
+- **Smart Network Resilience:** The applet now uses an aggressive 20s polling interval when in "Offline" mode or after a network error, ensuring it reconnects to the NHL API the moment the internet becomes available.
+- **Modern QML Syntax:** Fixed all "injection of parameters into signal handlers" deprecation warnings for better compatibility with future Plasma 6 updates.
+- **Better Visual Hierarchy:** Redesigned the Team Hub header to accommodate championship trophies while maintaining perfect alignment with team stats and game history.
+
+### Fixed
+- **Translation Completeness:** Fully translated the Playoff Bracket interface and new statistical filters into French.
+- **Pluralization Logic:** Implemented proper KDE `i18np` plural handling for championship labels (e.g., "1 Coupe Stanley" vs. "24 Coupes Stanley").
+
 ## [5.4.0] - 2026-04-12
 
 ### Added

@@ -166,7 +166,7 @@ Item {
                                             return (controller && controller.dateMode === 'venue') ? "(" + i18n("arena") + ")" : "(" + i18n("local") + ")"
                                         }
                                         if (modelData.status === 'FINAL') return i18n("Final")
-                                        if (modelData.inIntermission) return "INT"
+                                        if (modelData.inIntermission) return "INT" + (modelData.intermissionRemain ? " " + modelData.intermissionRemain : "")
                                         var per = (controller ? controller.livePeriodText(modelData.periodType, modelData.period) : "")
                                         return per + (modelData.remain ? " " + modelData.remain : "")
                                     }
@@ -217,7 +217,8 @@ Item {
                                         modelData.periodType, modelData.period,
                                         modelData.remain,
                                         modelData.start ? new Date(modelData.start).getTime() : 0,
-                                        modelData.inIntermission, '1551'
+                                        modelData.inIntermission, '1551',
+                                        modelData.intermissionRemain
                                     )
                                 }
                             }

@@ -121,6 +121,7 @@ PlasmoidItem {
         property var points: []
         property var goals: []
         property var assists: []
+        property int seasonType: 2
     }
 
     readonly property QtObject glob: QtObject {
@@ -170,6 +171,13 @@ PlasmoidItem {
         property bool   filterD: false
         property bool   filterG: false
         property bool   filterR: false
+        property string season: {
+            var now = new Date()
+            var y = now.getFullYear()
+            if (now.getMonth() < 8) y--
+            return y + String(y+1)
+        }
+        property int    seasonType: 2
     }
 
     readonly property QtObject ply: QtObject {
@@ -200,6 +208,7 @@ PlasmoidItem {
         property int    ot:        0
         property int    pts:       0
         property int    gp:        0
+        readonly property int stanleyCups: Logic.getStanleyCupsCount(code)
         property var    lastGames: []
         property var    nextGame:  null
     }
@@ -375,6 +384,13 @@ PlasmoidItem {
         property var    goalies:   []
         property bool   statsLoading: false
         property string statsError:   ''
+        property string season: {
+            var now = new Date()
+            var y = now.getFullYear()
+            if (now.getMonth() < 8) y--
+            return y + String(y+1)
+        }
+        property int    seasonType: 2
     }
 
     Timer {
@@ -636,7 +652,7 @@ PlasmoidItem {
 
     Timer {
         id: pollTimer
-        interval: hasActiveGames() ? root.pollInterval * 1000 : 300000
+        interval: (hasActiveGames() || glob.isOffline) ? root.pollInterval * 1000 : 300000
         running: true
         repeat: true
         triggeredOnStart: true
@@ -647,11 +663,16 @@ PlasmoidItem {
         interval: 60000   // vérifie chaque minute
         running: true
         repeat: true
+        property int lastDay: new Date().getDate()
         onTriggered: {
             let now = new Date()
-            // Minuit (nouvelle journée) ou 4h AM (tous les matchs NHL sont terminés)
-            if ((now.getHours() === 0 || now.getHours() === 4) && now.getMinutes() < 2) {
-                pollTimer.running = true
+            let dayChanged = (now.getDate() !== lastDay)
+            let isUpdateHour = (now.getHours() === 0 || now.getHours() === 4) && now.getMinutes() < 2
+
+            if (dayChanged || isUpdateHour) {
+                lastDay = now.getDate()
+                cal.year = now.getFullYear()
+                cal.month = now.getMonth()
                 refresh()
             }
         }
@@ -758,6 +779,24 @@ PlasmoidItem {
         var variant = L < 0.5 ? 'dark' : 'light'
         return Qt.resolvedUrl("../logos/" + abbrev + "_" + variant + ".svg")
     }
+
+    function historicalTeamLogoUrl(abbrev, season) {
+        if (!abbrev) return ''
+        var displayCode = Logic.getHistoricalLogo(abbrev, season)
+        return teamLogoUrl(displayCode)
+    }
+
+    function getHistoricalTeamName(abbrev, season) {
+        if (!abbrev) return ''
+        var displayCode = Logic.getHistoricalLogo(abbrev, season)
+        if (displayCode === abbrev) return ''
+        var names = {
+            'HFD': 'Hartford Whalers', 'QUE': 'Nordiques de Québec', 'WIN': 'Winnipeg Jets',
+            'MNS': 'Minnesota North Stars', 'ATL': 'Atlanta Thrashers', 'CLR': 'Colorado Rockies',
+            'KCS': 'Kansas City Scouts', 'AFM': 'Atlanta Flames'
+        }
+        return names[displayCode] || ''
+    }
     function resolveNHLAbbrev(teamCommonName) {
         return Logic.resolveNHLAbbrev(teamCommonName)
     }
@@ -787,7 +826,7 @@ PlasmoidItem {
                 else if (data && data.games){ acc = acc.concat(data.games) }
                 pending--
                 if(pending===0) {
-                    glob.isOffline = (offlineCount > 0 && acc.length > 0)
+                    glob.isOffline = (offlineCount > 0 || errors.length > 0)
                     cb(acc, errors)
                 }
             })
@@ -814,7 +853,7 @@ PlasmoidItem {
                 }
                 pending--
                 if (pending===0) {
-                    glob.isOffline = (offlineCount > 0 && acc.length > 0)
+                    glob.isOffline = (offlineCount > 0 || errors.length > 0)
                     cb(acc, errors)
                 }
             })
@@ -901,7 +940,7 @@ PlasmoidItem {
  return st==='LIVE' ? liveColor : (st==='FINAL' ? finalColor : upcomingColor) }
 
     // Ligne 1 de la pastille : Période (ou Final/Heure)
-    function badgeLine1(st, rawState, periodType, period, liveRemain, startMs, homeTeam, intermission) {
+    function badgeLine1(st, rawState, periodType, period, liveRemain, startMs, homeTeam, intermission, intermissionRemain) {
         var suffix = statusSuffix(rawState, periodType)
         if (st === 'LIVE') {
             if (intermission) return 'INT'
@@ -1164,6 +1203,7 @@ PlasmoidItem {
                         periodType: per.periodType || '',
                         remain:    clk.timeRemaining || '',
                         inIntermission: clk.inIntermission || false,
+                        intermissionRemain: clk.inIntermission ? (clk.timeRemaining || "") : "",
                         awayLogo:  g.awayTeam && g.awayTeam.logo || '',
                         homeLogo:  g.homeTeam && g.homeTeam.logo || '',
                         homeAbbrev: g.homeTeam && g.homeTeam.abbrev || ''
@@ -1414,21 +1454,21 @@ PlasmoidItem {
         function skaterDone() { skaterPending--; if (skaterPending <= 0) done() }
 
         if (loadSkaters) {
-            Logic.ApiService.getSkaterLeaders(limit, fR, "points", function(err, data) {
+            Logic.ApiService.getSkaterLeaders(limit, fR, "points", lead.season, lead.seasonType, function(err, data) {
                 if (err) { lead.error = String(err) }
                 var pts = Logic.parseLeaders(data.points || [], "points")
                 lead.points = applyFilter(pts, false)
                 skaterDone()
             })
-            Logic.ApiService.getSkaterLeaders(limit, fR, "goals", function(err, data) {
+            Logic.ApiService.getSkaterLeaders(limit, fR, "goals", lead.season, lead.seasonType, function(err, data) {
                 if (!err) lead.goals = applyFilter(Logic.parseLeaders(data.goals || [], "goals"), false)
                 skaterDone()
             })
-            Logic.ApiService.getSkaterLeaders(limit, fR, "assists", function(err, data) {
+            Logic.ApiService.getSkaterLeaders(limit, fR, "assists", lead.season, lead.seasonType, function(err, data) {
                 if (!err) lead.assists = applyFilter(Logic.parseLeaders(data.assists || [], "assists"), false)
                 skaterDone()
             })
-            Logic.ApiService.getSkaterLeaders(limit, fR, "penaltyMins", function(err, data) {
+            Logic.ApiService.getSkaterLeaders(limit, fR, "penaltyMins", lead.season, lead.seasonType, function(err, data) {
                 if (!err) lead.pim = applyFilter(Logic.parseLeaders(data.penaltyMins || [], "penaltyMins"), false)
                 skaterDone()
             })
@@ -1439,12 +1479,12 @@ PlasmoidItem {
         }
 
         if (loadGoalies) {
-            Logic.ApiService.getGoalieLeaders(limit, fR, "wins,shutouts,goalsAgainstAverage,savePctg", function(err, data) {
+            Logic.ApiService.getGoalieLeaders(limit, fR, "wins,shutouts,goalsAgainstAverage,savePctg", lead.season, lead.seasonType, function(err, data) {
                 if (err) { done(); return }
-                lead.wins = applyFilter(Logic.parseLeaders(data.wins, "wins"), true)
-                lead.sho  = applyFilter(Logic.parseLeaders(data.shutouts, "shutouts"), true)
-                lead.gaa = applyFilter(Logic.parseLeaders(data.goalsAgainstAverage, "gaa"), true)
-                lead.svp = applyFilter(Logic.parseLeaders(data.savePctg, "savePctg"), true)
+                lead.wins = applyFilter(Logic.parseLeaders(data.wins || [], "wins"), true)
+                lead.sho  = applyFilter(Logic.parseLeaders(data.shutouts || [], "shutouts"), true)
+                lead.gaa = applyFilter(Logic.parseLeaders(data.goalsAgainstAverage || [], "gaa"), true)
+                lead.svp = applyFilter(Logic.parseLeaders(data.savePctg || [], "savePctg"), true)
                 done()
             })
         } else {
@@ -1507,6 +1547,7 @@ PlasmoidItem {
     // ── Ouvrir le hub d'équipe ──────────────────────────────────────
     function fetchTeamHub(teamCode, from) {
         hub.code    = teamCode
+        hub.stanleyCups = Logic.getStanleyCupsCount(teamCode)
         sch.team    = teamCode // Important pour le calendrier
         hub.from    = from || 'detail'
         hub.loading = true
@@ -1928,6 +1969,7 @@ PlasmoidItem {
                     det.period  = g.period
                     det.remain  = g.liveRemain
                     det.interm  = g.inIntermission
+                    det.intermRemain = g.intermissionRemain
                     break
                 }
             }
@@ -1966,7 +2008,8 @@ PlasmoidItem {
             line1: root.badgeLine1(parent.gameStatus, parent.rawState,
                                    parent.periodType, parent.period,
                                    parent.liveRemain, parent.startMs,
-                                   parent.homeTeam, parent.intermission)
+                                   parent.homeTeam, parent.intermission,
+                                   parent.intermissionRemain)
             line2: root.badgeLine2(parent.gameStatus, parent.startMs,
                                    parent.homeTeam, parent.periodType,
                                    parent.period, parent.liveRemain,
@@ -2094,7 +2137,7 @@ PlasmoidItem {
         }
 
         // 0. Fetch list of all active players for this franchise (to mark them in the top 10)
-        Logic.ApiService.getFranchiseLeaders(teamCode, "points", 100, true, function(err, data) {
+        Logic.ApiService.getFranchiseLeaders(teamCode, "points", 100, true, flead.seasonType, function(err, data) {
             if (!err && data && data.data) {
                 data.data.forEach(function(l) { activeIds[l.playerId] = true })
             }
@@ -2102,7 +2145,7 @@ PlasmoidItem {
         })
 
         // 1. Points
-        Logic.ApiService.getFranchiseLeaders(teamCode, "points", limit, false, function(err, data) {
+        Logic.ApiService.getFranchiseLeaders(teamCode, "points", limit, false, flead.seasonType, function(err, data) {
             if (err) { flead.error = String(err) }
             else if (data && data.data) {
                 flead.points = data.data.map(function(l) {
@@ -2113,7 +2156,7 @@ PlasmoidItem {
         })
 
         // 2. Goals
-        Logic.ApiService.getFranchiseLeaders(teamCode, "goals", limit, false, function(err, data) {
+        Logic.ApiService.getFranchiseLeaders(teamCode, "goals", limit, false, flead.seasonType, function(err, data) {
             if (!err && data && data.data) {
                 flead.goals = data.data.map(function(l) {
                     return { id: l.playerId, name: l.skaterFullName, value: l.goals, active: false }
@@ -2123,7 +2166,7 @@ PlasmoidItem {
         })
 
         // 3. Assists
-        Logic.ApiService.getFranchiseLeaders(teamCode, "assists", limit, false, function(err, data) {
+        Logic.ApiService.getFranchiseLeaders(teamCode, "assists", limit, false, flead.seasonType, function(err, data) {
             if (!err && data && data.data) {
                 flead.assists = data.data.map(function(l) {
                     return { id: l.playerId, name: l.skaterFullName, value: l.assists, active: false }
@@ -2207,8 +2250,12 @@ PlasmoidItem {
     function fetchTeamStats(team) {
         sch.statsLoading = true
         sch.statsError   = ''
-        // Endpoint stats équipe saison courante
-        Logic.ApiService.getTeamStats(team, function(err, data) {
+        
+        // Utiliser le code historique (ex: HFD au lieu de CAR) pour l'API
+        var apiCode = Logic.getHistoricalLogo(team, sch.season)
+        
+        // Endpoint stats équipe saison/type choisis
+        Logic.ApiService.getTeamStats(apiCode, sch.season, sch.seasonType, function(err, data) {
             sch.statsLoading = false
             if (err) { sch.statsError = String(err); return }
             try {
@@ -2267,7 +2314,7 @@ PlasmoidItem {
         })
     }
 
-    function openDetail(gid, away, home, ag, hg, status, ptype, period, remain, start, interm, sitCode) {
+    function openDetail(gid, away, home, ag, hg, status, ptype, period, remain, start, interm, sitCode, intermRemain) {
         // En mode compact bureau, on ouvre le popup séparé au lieu de changer la vue interne
         // detailPopup est maintenant défini dans fullRepresentation
         if (root.isDesktop && root.showCompactDesktop && root.popupRef) {
@@ -2288,6 +2335,7 @@ PlasmoidItem {
             det.remain  = remain
             det.start   = start
             det.interm  = interm || false
+            det.intermRemain = intermRemain || ""
             det.sitCode = sitCode || '1551'
             det.view    = 'goals'
             fetchH2H(away, home)
@@ -2327,6 +2375,7 @@ PlasmoidItem {
         det.remain  = remain
         det.start   = start
         det.interm  = interm || false
+        det.intermRemain = intermRemain || ""
         det.goals   = []
         det.stats   = ({})
         det.venue = ''; det.seriesAway = 0; det.seriesHome = 0; det.seriesTotal = false; det.h2hGames = []
@@ -2440,6 +2489,7 @@ PlasmoidItem {
                     if (d.clock) {
                         det.interm = d.clock.inIntermission || false
                         det.remain = d.clock.timeRemaining || ""
+                        det.intermRemain = d.clock.inIntermission ? (d.clock.timeRemaining || "") : ""
                     }
 
                     // ── Preview pour les matchs à venir ─────────────────
@@ -2840,8 +2890,8 @@ PlasmoidItem {
             function localTimeStr(m) { return root.localTimeStr(m) }
             function localeDateLong(m) { return root.localeDateLong(m) }
             function statusColor(s) { return root.statusColor(s) }
-            function badgeLine1(s,rs,pt,p,lr,sm,ht,i) { return root.badgeLine1(s,rs,pt,p,lr,sm,ht,i) }
-            function badgeLine2(s,rs,pt,p,lr,sm,ht,i) { return root.badgeLine2(s,rs,pt,p,lr,sm,ht,i) }
+            function badgeLine1(st, rs, pt, p, lr, sm, ht, i) { return root.badgeLine1(st, rs, pt, p, lr, sm, ht, i) }
+            function badgeLine2(st, sm, ht, pt, p, lr, i, ir) { return root.badgeLine2(st, sm, ht, pt, p, lr, i, ir) }
             function penaltyDesc(p) { return root.penaltyDesc(p) }
             function blinkOpacity(g,s) { return root.blinkOpacity(g,s) }
             function gameCenterUrl(a,h,s,g) { return root.gameCenterUrl(a,h,s,g) }
@@ -2861,8 +2911,13 @@ PlasmoidItem {
             function openSimulationBracket() { popupNav.bracket=true; root.fetchPlayoffBracket(); popupStack.push(bracketViewComp, {"ctrl": popupProxy}) }
             function openCalendar() { popupNav.calendar=true; popupStack.push(calendarViewComp, {"ctrl": popupProxy}) }
             function openDayView(d) { popupNav.dayView=true; root.fetchDayView(d); popupStack.push(dayViewComp, {"ctrl": popupProxy}) }
-            function openDetail(gid,a,h,as,hs,st,pt,p,r,s,i,sc) {
-                root.det.gameId = gid; root.fetchDetail(gid);
+            function openDetail(gid,a,h,as,hs,st,pt,p,r,s,i,sc,ir) {
+                root.det.gameId = gid; root.det.away = a; root.det.home = h;
+                root.det.ag = as; root.det.hg = hs; root.det.status = st;
+                root.det.pType = pt; root.det.period = p; root.det.remain = r;
+                root.det.start = s; root.det.interm = i; root.det.sitCode = sc;
+                root.det.intermRemain = ir || "";
+                root.fetchDetail(gid);
                 popupStack.push(detailViewComp, {"ctrl": popupProxy})
             }
         }

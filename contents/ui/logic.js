@@ -34,10 +34,66 @@ const teamColors = {
     'VGK': { p: '#B4975A', s: '#333F42' },
     'WPG': { p: '#041E42', s: '#AC162C' },
     'WSH': { p: '#C8102E', s: '#041E42' },
-    'ARI': { p: '#8C2633', s: '#E2D6B5' }
+    'ARI': { p: '#8C2633', s: '#E2D6B5' },
+    // Franchises Historiques
+    'HFD': { p: '#00A651', s: '#0055A4' }, // Hartford Whalers (Vert/Bleu)
+    'QUE': { p: '#005DAA', s: '#FFFFFF' }, // Nordiques de Québec (Bleu/Blanc)
+    'WIN': { p: '#002E62', s: '#C8102E' }, // Winnipeg Jets 1.0 (Bleu/Rouge)
+    'MNS': { p: '#008A4B', s: '#FFCC00' }, // Minnesota North Stars (Vert/Jaune)
+    'ATL': { p: '#041E42', s: '#5C88B1' }, // Atlanta Thrashers (Bleu/Bleu ciel)
+    'CLR': { p: '#002868', s: '#C8102E' }, // Colorado Rockies (Bleu/Rouge)
+    'KCS': { p: '#0046AD', s: '#CE1126' }, // Kansas City Scouts (Bleu/Rouge)
+    'AFM': { p: '#D2001C', s: '#FFCC00' }  // Atlanta Flames (Rouge/Jaune)
+};
+
+const TEAM_STANLEY_CUPS = {
+    'MTL': 24, 'TOR': 13, 'DET': 11, 'BOS': 6, 'CHI': 6, 
+    'PIT': 5, 'EDM': 5, 'NYI': 4, 'NYR': 4, 'TBL': 3, 
+    'NJD': 3, 'COL': 3, 'LAK': 2, 'PHI': 2, 'DAL': 1, 
+    'CGY': 1, 'ANA': 1, 'CAR': 1, 'STL': 1, 'WSH': 1, 
+    'VGK': 1, 'FLA': 1
+};
+
+const TEAM_FOUNDING_YEARS = {
+    'ANA': 1993, 'ARI': 1979, 'BOS': 1924, 'BUF': 1970, 'CAR': 1979, 'CBJ': 2000,
+    'CGY': 1972, 'CHI': 1926, 'COL': 1979, 'DAL': 1967, 'DET': 1926, 'EDM': 1979,
+    'FLA': 1993, 'LAK': 1967, 'MIN': 2000, 'MTL': 1917, 'NJD': 1974, 'NSH': 1998,
+    'NYI': 1972, 'NYR': 1926, 'OTT': 1992, 'PHI': 1967, 'PIT': 1967, 'SEA': 2021,
+    'SJS': 1991, 'STL': 1967, 'TBL': 1992, 'TOR': 1917, 'UTA': 2024, 'VAN': 1970,
+    'VGK': 2017, 'WPG': 1999, 'WSH': 1974
+};
+
+const TEAM_HISTORY = {
+    'CAR': [ { year: 1997, logo: 'HFD' } ],
+    'COL': [ { year: 1995, logo: 'QUE' } ],
+    'ARI': [ { year: 1996, logo: 'WIN' } ],
+    'DAL': [ { year: 1993, logo: 'MNS' } ],
+    'WPG': [ { year: 2011, logo: 'ATL' } ],
+    'CGY': [ { year: 1980, logo: 'AFM' } ],
+    'NJD': [ { year: 1982, logo: 'CLR' }, { year: 1976, logo: 'KCS' } ]
 };
 
 let _cache = {};
+
+function getTeamFoundingYear(code) {
+    return TEAM_FOUNDING_YEARS[String(code).toUpperCase()] || 1917;
+}
+
+function getHistoricalLogo(code, seasonStr) {
+    if (!seasonStr || seasonStr === 'now') return code;
+    var year = parseInt(String(seasonStr).substring(0, 4));
+    var history = TEAM_HISTORY[code.toUpperCase()];
+    if (!history) return code;
+    // On trie par année descendante pour trouver la période correcte
+    for (var i = 0; i < history.length; i++) {
+        if (year < history[i].year) return history[i].logo;
+    }
+    return code;
+}
+
+function getStanleyCupsCount(code) {
+    return TEAM_STANLEY_CUPS[String(code).toUpperCase()] || 0;
+}
 let _configRef = null;
 
 function initializeCache(configObject) {
@@ -217,9 +273,11 @@ function resolveNHLAbbrev(commonName) {
         "Stars": "DAL", "Dallas": "DAL", "Wild": "MIN", "Minnesota": "MIN", "Predators": "NSH", "Nashville": "NSH",
         "Blues": "STL", "Louis": "STL", "Ducks": "ANA", "Anaheim": "ANA", "Kings": "LAK", "Angeles": "LAK",
         "Sharks": "SJS", "Jose": "SJS", "Kraken": "SEA", "Seattle": "SEA", "Golden Knights": "VGK", "Vegas": "VGK",
-        "Coyotes": "ARI", "Arizona": "ARI", "Utah": "UTA", "HC": "UTA" 
-    };
-    for (var key in map) { if (name.indexOf(key) !== -1) return map[key]; }
+        "Coyotes": "ARI", "Arizona": "ARI", "Utah": "UTA", "HC": "UTA",
+        "Whalers": "HFD", "Hartford": "HFD", "Nordiques": "QUE", "Quebec": "QUE",
+        "North Stars": "MNS", "Minnesota North Stars": "MNS", "Thrashers": "ATL", "Atlanta": "ATL",
+        "Colorado Rockies": "CLR", "Scouts": "KCS", "Kansas City": "KCS"
+        };    for (var key in map) { if (name.indexOf(key) !== -1) return map[key]; }
     return "";
 }
 
@@ -261,15 +319,28 @@ const ApiService = {
     getGameLanding: function(gameId, cb) { httpGet(this.BASE_URL + "/gamecenter/" + gameId + "/landing", function(err, data) { if (err) { let cached = getFromCache("game_" + gameId); if (cached) cb(null, cached, true); else cb(err, null); } else { saveToCache("game_" + gameId, data); cb(null, data, false); } }); },
     getGameRightRail: function(gameId, cb) { httpGet(this.BASE_URL + "/gamecenter/" + gameId + "/right-rail", cb); },
     getGameBoxscore: function(gameId, cb) { httpGet(this.BASE_URL + "/gamecenter/" + gameId + "/boxscore", cb); },
-    getSkaterLeaders: function(limit, isRookie, category, cb) { var r = isRookie ? '&isRookie=1' : ''; httpGet(this.BASE_URL + "/skater-stats-leaders/current?limit=" + limit + r + "&categories=" + category, cb); },
-    getGoalieLeaders: function(limit, isRookie, categories, cb) { var r = isRookie ? '&isRookie=1' : ''; httpGet(this.BASE_URL + "/goalie-stats-leaders/current?categories=" + categories + "&limit=" + limit + r, cb); },
+    getSkaterLeaders: function(limit, isRookie, category, season, seasonType, cb) { 
+        var path = (season && seasonType) ? (season + "/" + seasonType) : "current";
+        var r = isRookie ? '&isRookie=1' : ''; 
+        httpGet(this.BASE_URL + "/skater-stats-leaders/" + path + "?limit=" + limit + r + "&categories=" + category, cb); 
+    },
+    getGoalieLeaders: function(limit, isRookie, categories, season, seasonType, cb) { 
+        var path = (season && seasonType) ? (season + "/" + seasonType) : "current";
+        var r = isRookie ? '&isRookie=1' : ''; 
+        httpGet(this.BASE_URL + "/goalie-stats-leaders/" + path + "?categories=" + categories + "&limit=" + limit + r, cb); 
+    },
     getPlayerLanding: function(playerId, cb) { httpGet(this.BASE_URL + "/player/" + playerId + "/landing", function(err, data) { if (err) { let cached = getFromCache("player_" + playerId); if (cached) cb(null, cached, true); else cb(err, null); } else { saveToCache("player_" + playerId, data); cb(null, data, false); } }); },
     getPlayoffBracket: function(cb) { httpGet(this.BASE_URL + "/playoff-bracket/now", cb); },
     getTeamSchedule: function(teamCode, cb) { httpGet(this.BASE_URL + "/club-schedule-season/" + teamCode + "/now", cb); },
-    getTeamStats: function(teamCode, cb) { httpGet(this.BASE_URL + "/club-stats/" + teamCode + "/now", cb); },
-    getFranchiseLeaders: function(teamCode, category, limit, activeOnly, cb) {
+    getTeamStats: function(teamCode, season, seasonType, cb) { 
+        var path = (season && seasonType) ? (season + "/" + seasonType) : "now";
+        httpGet(this.BASE_URL + "/club-stats/" + teamCode + "/" + path, cb); 
+    },
+    getFranchiseLeaders: function(teamCode, category, limit, activeOnly, seasonType, cb) {
         var fid = getFranchiseId(teamCode); if (fid === 0) { cb(new Error("Unknown franchise ID"), null); return; }
-        var cayenne = "franchiseId=" + fid; if (activeOnly) cayenne += " and active=1";
+        var cayenne = "franchiseId=" + fid; 
+        if (activeOnly) cayenne += " and active=1";
+        if (seasonType) cayenne += " and gameTypeId=" + seasonType;
         var url = this.STATS_BASE_URL + "/skater/summary" + "?isAggregate=true&isGame=false" + "&sort=[{\"property\":\"" + category + "\",\"direction\":\"DESC\"}]" + "&start=0&limit=" + limit + "&cayenneExp=" + encodeURIComponent(cayenne);
         httpGet(url, cb);
     },
@@ -288,20 +359,13 @@ const ApiService = {
 };
 
 function getFranchiseId(code) {
-    var table = {
-        'MTL': 1,  'TOR': 5,  'BOS': 6,  'DET': 17, 'CHI': 16, 'NYR': 10, // Original Six
-        'PHI': 16, 'PIT': 17, 'STL': 18, 'DAL': 15, 'LAK': 14, 'OAK': 9, // Expansion 67 (DAL=North Stars)
-        'BUF': 19, 'VAN': 20, 'NYI': 22, 'NJD': 23, 'WSH': 24, 'COL': 21, 'EDM': 25, 'CGY': 26, 'ARI': 27, 'CAR': 28,
-        'WPG': 35, 'TBL': 31, 'OTT': 30, 'SJS': 29, 'FLA': 33, 'ANA': 32, 'NSH': 34, 'CBJ': 36, 'MIN': 37, 'VGK': 38, 'SEA': 39, 'UTA': 40
-    };
-    // Note : Certains IDs peuvent varier selon l'endpoint. 
-    // MTL=1, TOR=5, BOS=6, NYR=10, CHI=11, DET=12 est la liste standard des Franchise IDs.
-    // Je corrige pour correspondre à l'API Stats.
     var official = {
-        'MTL': 1, 'OTT': 30, 'TOR': 5, 'BOS': 6, 'BUF': 19, 'DET': 12, 'FLA': 33, 'TBL': 31,
-        'CAR': 28, 'CBJ': 36, 'NJD': 23, 'NYI': 22, 'NYR': 10, 'PHI': 16, 'PIT': 17, 'WSH': 24,
-        'CHI': 11, 'COL': 21, 'DAL': 15, 'MIN': 37, 'NSH': 34, 'STL': 18, 'WPG': 35, 'UTA': 40,
-        'ANA': 32, 'CGY': 26, 'EDM': 25, 'LAK': 14, 'SJS': 29, 'SEA': 39, 'VGK': 38, 'ARI': 27
+        'MTL': 1,  'TOR': 5,  'BOS': 6,  'NYR': 10, 'CHI': 11, 'DET': 12,
+        'LAK': 14, 'DAL': 15, 'PHI': 16, 'PIT': 17, 'STL': 18, 'BUF': 19,
+        'VAN': 20, 'CGY': 21, 'NYI': 22, 'NJD': 23, 'WSH': 24, 'EDM': 25,
+        'CAR': 26, 'COL': 27, 'ARI': 28, 'SJS': 29, 'OTT': 30, 'TBL': 31,
+        'ANA': 32, 'FLA': 33, 'NSH': 34, 'WPG': 35, 'CBJ': 36, 'MIN': 37,
+        'VGK': 38, 'SEA': 39, 'UTA': 40
     };
     return official[String(code || '').toUpperCase()] || 0;
 }

@@ -31,7 +31,7 @@ Item {
             }
             Item { Layout.fillWidth: true }
             Label {
-                text: "🏆 STANLEY CUP PLAYOFFS 2026"
+                text: i18n("🏆 STANLEY CUP PLAYOFFS 2026")
                 font.bold: true; font.pixelSize: 14
                 rightPadding: 12
             }
@@ -78,6 +78,7 @@ Item {
                         RowLayout {
                             Layout.fillWidth: true; spacing: 8
                             Components.TeamBadge {
+                                id: tbTop
                                 code: (sData && sData.topSeedTeam) ? (sData.topSeedTeam.abbrev || "") : ""
                                 opponentCode: (sData && sData.bottomSeedTeam) ? (sData.bottomSeedTeam.abbrev || "") : ""
                                 teamSide: 'away'
@@ -95,6 +96,11 @@ Item {
                                 text: sData && sData.topSeedWins !== undefined ? sData.topSeedWins : "0"
                                 font.bold: true; font.pixelSize: 16; color: Kirigami.Theme.textColor 
                             }
+
+                            TapHandler {
+                                onTapped: if(tbTop.code && controller) controller.openTeamHub(tbTop.code, 'bracket')
+                            }
+                            HoverHandler { cursorShape: Qt.PointingHandCursor; enabled: !!tbTop.code }
                         }
                         
                         Rectangle { Layout.fillWidth: true; height: 1; color: Kirigami.Theme.textColor; opacity: 0.1 }
@@ -103,6 +109,7 @@ Item {
                         RowLayout {
                             Layout.fillWidth: true; spacing: 8
                             Components.TeamBadge {
+                                id: tbBottom
                                 code: (sData && sData.bottomSeedTeam) ? (sData.bottomSeedTeam.abbrev || "") : ""
                                 opponentCode: (sData && sData.topSeedTeam) ? (sData.topSeedTeam.abbrev || "") : ""
                                 teamSide: 'home'
@@ -120,6 +127,11 @@ Item {
                                 text: sData && sData.bottomSeedWins !== undefined ? sData.bottomSeedWins : "0"
                                 font.bold: true; font.pixelSize: 16; color: Kirigami.Theme.textColor 
                             }
+
+                            TapHandler {
+                                onTapped: if(tbBottom.code && controller) controller.openTeamHub(tbBottom.code, 'bracket')
+                            }
+                            HoverHandler { cursorShape: Qt.PointingHandCursor; enabled: !!tbBottom.code }
                         }
                     }
                 }
@@ -132,7 +144,7 @@ Item {
                 Layout.margins: 10
 
                 // ── CONFÉRENCE OUEST ──
-                Label { text: "WESTERN CONFERENCE"; font.bold: true; font.pixelSize: 12; Layout.alignment: Qt.AlignHCenter; opacity: 0.6 }
+                Label { text: i18n("WESTERN CONFERENCE"); font.bold: true; font.pixelSize: 12; Layout.alignment: Qt.AlignHCenter; opacity: 0.6 }
                 
                 RowLayout {
                     Layout.fillWidth: true
@@ -167,14 +179,14 @@ Item {
                 ColumnLayout {
                     Layout.alignment: Qt.AlignHCenter
                     spacing: 10
-                    Label { text: "STANLEY CUP FINALS"; font.bold: true; font.pixelSize: 16; Layout.alignment: Qt.AlignHCenter; color: Kirigami.Theme.highlightColor }
+                    Label { text: i18n("STANLEY CUP FINALS"); font.bold: true; font.pixelSize: 16; Layout.alignment: Qt.AlignHCenter; color: Kirigami.Theme.highlightColor }
                     Loader { sourceComponent: matchupCard; property var seriesData: bracketScroll.getSeries(3, 0); Layout.preferredWidth: 200 }
                 }
 
                 Rectangle { Layout.fillWidth: true; height: 1; color: Kirigami.Theme.textColor; opacity: 0.1; Layout.margins: 10 }
 
                 // ── CONFÉRENCE EST ──
-                Label { text: "EASTERN CONFERENCE"; font.bold: true; font.pixelSize: 12; Layout.alignment: Qt.AlignHCenter; opacity: 0.6 }
+                Label { text: i18n("EASTERN CONFERENCE"); font.bold: true; font.pixelSize: 12; Layout.alignment: Qt.AlignHCenter; opacity: 0.6 }
 
                 RowLayout {
                     Layout.fillWidth: true

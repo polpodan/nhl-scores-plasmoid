@@ -26,7 +26,7 @@ Item {
                     gameId: m.gameId, away: m.away, home: m.home,
                     awayScore: m.ag, homeScore: m.hg, status: m.statusRole,
                     pType: m.periodType, period: m.period, remain: m.liveRemain,
-                    start: m.start, interm: m.inIntermission, sitCode: m.situationCode
+                    start: m.start, interm: m.inIntermission, sitCode: m.situationCode, intermRemain: m.intermissionRemain
                 }
             }
         }
@@ -40,6 +40,9 @@ Item {
             return i18n("Final") + (root.statusSuffix(m.status, m.pType) || "")
         }
         // LIVE
+        if (m.interm) {
+            return "INT" + (m.intermRemain ? " " + m.intermRemain : "")
+        }
         return root.liveClockText(m.pType, m.period, m.remain)
     }
 
@@ -196,6 +199,7 @@ Item {
             property string dRemain: model.remain || ""
             property var dStart: model.start || 0
             property bool dInterm: model.interm || false
+            property string dIntermRemain: model.intermissionRemain || ""
             property string dSit: model.sitCode || "1551"
 
             Rectangle {
@@ -244,7 +248,7 @@ Item {
                     }
                     Label {
                         Layout.alignment: Qt.AlignHCenter
-                        text: compactStatusText({ status: dStatus, pType: model.periodType, period: model.period, remain: model.liveRemain, start: dStart })
+                        text: compactStatusText({ status: dStatus, pType: model.periodType, period: model.period, remain: model.liveRemain, start: dStart, interm: dInterm, intermRemain: dIntermRemain })
                         font.pixelSize: 10
                         font.bold: true
                         opacity: 0.7
@@ -384,7 +388,7 @@ Item {
             enabled: !!compactTeamMatch
             onTapped: {
                 var m = compactTeamMatch
-                root.openDetail(m.gameId, m.away, m.home, m.awayScore, m.homeScore, m.status, m.pType, m.period, m.remain, m.start, m.interm, m.sitCode)
+                root.openDetail(m.gameId, m.away, m.home, m.awayScore, m.homeScore, m.status, m.pType, m.period, m.remain, m.start, m.interm, m.sitCode, m.intermRemain)
             }
         }
     }

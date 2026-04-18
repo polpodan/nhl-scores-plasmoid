@@ -112,7 +112,8 @@ Item {
                             // Équipe Visiteur
                             Item {
                                 width: controller.showLogos ? 22 : 16; height: width; anchors.verticalCenter: parent.verticalCenter
-                                Rectangle {
+                                    Rectangle {
+                                    id: aBadge
                                     visible: !controller.showLogos
                                     anchors.fill: parent; radius: width/2
                                     color: controller.teamColorAdapted(hDelegateWrapper.currentModel.away, hDelegateWrapper.currentModel.home, true, false)
@@ -121,7 +122,7 @@ Item {
                                     Text { 
                                         anchors.centerIn: parent
                                         text: hDelegateWrapper.currentModel.away.charAt(0)
-                                        color: controller.teamTextColor(hDelegateWrapper.currentModel.away, hDelegateWrapper.currentModel.home, true)
+                                        color: Logic.getContrastColor(aBadge.color)
                                         font.pixelSize: 9; font.bold: true 
                                     }
                                 }
@@ -145,6 +146,7 @@ Item {
                             Item {
                                 width: controller.showLogos ? 22 : 16; height: width; anchors.verticalCenter: parent.verticalCenter
                                 Rectangle {
+                                    id: hBadge
                                     visible: !controller.showLogos
                                     anchors.fill: parent; radius: width/2
                                     color: controller.teamColorAdapted(hDelegateWrapper.currentModel.home, hDelegateWrapper.currentModel.away, false, false)
@@ -153,7 +155,7 @@ Item {
                                     Text { 
                                         anchors.centerIn: parent
                                         text: hDelegateWrapper.currentModel.home.charAt(0)
-                                        color: controller.teamTextColor(hDelegateWrapper.currentModel.home, hDelegateWrapper.currentModel.away, false)
+                                        color: Logic.getContrastColor(hBadge.color)
                                         font.pixelSize: 9; font.bold: true 
                                     }
                                 }
@@ -178,7 +180,7 @@ Item {
                                 if (controller && controller.nav && controller.day && controller.nav.dayView && controller.day.date === iso) { controller.nav.dayView = false; controller.expanded = false }
                                 else if (controller) { controller.openDayView(iso) }
                             } else if (controller) {
-                                controller.openDetail(hDelegateWrapper.currentModel.gameId, hDelegateWrapper.currentModel.away, hDelegateWrapper.currentModel.home, hDelegateWrapper.currentModel.ag, hDelegateWrapper.currentModel.hg, hDelegateWrapper.currentModel.statusRole, hDelegateWrapper.currentModel.periodType, hDelegateWrapper.currentModel.period, hDelegateWrapper.currentModel.liveRemain, hDelegateWrapper.currentModel.start, hDelegateWrapper.currentModel.inIntermission, hDelegateWrapper.currentModel.situationCode)
+                                controller.openDetail(hDelegateWrapper.currentModel.gameId, hDelegateWrapper.currentModel.away, hDelegateWrapper.currentModel.home, hDelegateWrapper.currentModel.ag, hDelegateWrapper.currentModel.hg, hDelegateWrapper.currentModel.statusRole, hDelegateWrapper.currentModel.periodType, hDelegateWrapper.currentModel.period, hDelegateWrapper.currentModel.liveRemain, hDelegateWrapper.currentModel.start, hDelegateWrapper.currentModel.inIntermission, hDelegateWrapper.currentModel.situationCode, hDelegateWrapper.currentModel.intermissionRemain)
                             }
                         }
                     }
@@ -268,7 +270,7 @@ Item {
                         property string awayCode: hDelegateWrapper.currentModel.away; property string homeCode: hDelegateWrapper.currentModel.home
                         property int agScore: hDelegateWrapper.currentModel.ag; property int hgScore: hDelegateWrapper.currentModel.hg
                         property int sz: compactRoot.dims.baseSz; property string gameId: String(hDelegateWrapper.currentModel.gameId || '')
-                        property string line1: controller.badgeLine1(hDelegateWrapper.currentModel.statusRole, hDelegateWrapper.currentModel.rawState, hDelegateWrapper.currentModel.periodType, hDelegateWrapper.currentModel.period, hDelegateWrapper.currentModel.liveRemain, hDelegateWrapper.currentModel.start, hDelegateWrapper.currentModel.home, hDelegateWrapper.currentModel.inIntermission)
+                        property string line1: controller.badgeLine1(hDelegateWrapper.currentModel.statusRole, hDelegateWrapper.currentModel.rawState, hDelegateWrapper.currentModel.periodType, hDelegateWrapper.currentModel.period, hDelegateWrapper.currentModel.liveRemain, hDelegateWrapper.currentModel.start, hDelegateWrapper.currentModel.home, hDelegateWrapper.currentModel.inIntermission, hDelegateWrapper.currentModel.intermissionRemain)
                         property string line2: controller.badgeLine2(hDelegateWrapper.currentModel.statusRole, hDelegateWrapper.currentModel.start, hDelegateWrapper.currentModel.home, hDelegateWrapper.currentModel.periodType, hDelegateWrapper.currentModel.period, hDelegateWrapper.currentModel.liveRemain, hDelegateWrapper.currentModel.inIntermission, hDelegateWrapper.currentModel.intermissionRemain)
                         property color bgColor: controller.statusColor(hDelegateWrapper.currentModel.statusRole)
                         property string gameStatus: hDelegateWrapper.currentModel.statusRole
@@ -322,7 +324,7 @@ Item {
                                 if (controller && controller.nav && controller.day && controller.nav.dayView && controller.day.date === iso) { controller.nav.dayView = false; controller.expanded = false }
                                 else if (controller) { controller.openDayView(iso) }
                             } else if (controller) {
-                                controller.openDetail(vDelegateWrapper.currentModel.gameId, vDelegateWrapper.currentModel.away, vDelegateWrapper.currentModel.home, vDelegateWrapper.currentModel.ag, vDelegateWrapper.currentModel.hg, vDelegateWrapper.currentModel.statusRole, vDelegateWrapper.currentModel.periodType, vDelegateWrapper.currentModel.period, vDelegateWrapper.currentModel.liveRemain, vDelegateWrapper.currentModel.start, vDelegateWrapper.currentModel.inIntermission, vDelegateWrapper.currentModel.situationCode)
+                                controller.openDetail(vDelegateWrapper.currentModel.gameId, vDelegateWrapper.currentModel.away, vDelegateWrapper.currentModel.home, vDelegateWrapper.currentModel.ag, vDelegateWrapper.currentModel.hg, vDelegateWrapper.currentModel.statusRole, vDelegateWrapper.currentModel.periodType, vDelegateWrapper.currentModel.period, vDelegateWrapper.currentModel.liveRemain, vDelegateWrapper.currentModel.start, vDelegateWrapper.currentModel.inIntermission, vDelegateWrapper.currentModel.situationCode, vDelegateWrapper.currentModel.intermissionRemain)
                             }
                         }
                     }

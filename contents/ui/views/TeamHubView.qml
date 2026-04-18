@@ -94,6 +94,37 @@ Item {
                         wrapMode: Text.WordWrap
                         color: controller ? controller.teamColorAdapted(controller.hub.code) : Kirigami.Theme.textColor
                     }
+
+                    // ── Stanley Cup Trophies ───────────────────────────
+                    Column {
+                        width: parent.width - 40
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        spacing: 6
+                        visible: !!(controller && controller.hub.stanleyCups > 0)
+
+                        Label {
+                            text: (controller && controller.hub.stanleyCups > 0) ? i18np("%1 Stanley Cup", "%1 Stanley Cups", controller.hub.stanleyCups) : ""
+                            font.pixelSize: 12
+                            font.bold: true
+                            anchors.horizontalCenter: parent.horizontalCenter
+                            color: Kirigami.Theme.highlightColor
+                        }
+
+                        Grid {
+                            columns: 6
+                            spacing: 6
+                            anchors.horizontalCenter: parent.horizontalCenter
+                            
+                            Repeater {
+                                model: (controller && controller.hub.stanleyCups > 0) ? controller.hub.stanleyCups : 0
+                                delegate: Label {
+                                    text: "🏆"
+                                    font.pixelSize: 20
+                                    color: Kirigami.Theme.textColor
+                                }
+                            }
+                        }
+                    }
                 }
 
                 // 2. Grille de statistiques

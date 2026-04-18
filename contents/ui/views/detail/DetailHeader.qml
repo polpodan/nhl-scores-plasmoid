@@ -129,22 +129,22 @@ ColumnLayout {
                 spacing: 2
                 Label {
                     anchors.horizontalCenter: parent.horizontalCenter
-                    text: (controller && controller.det) ? controller.badgeLine1(controller.det.status, '', controller.det.pType, controller.det.period, controller.det.remain, controller.det.start, controller.det.home, controller.det.interm) : ""
+                    text: (controller && controller.det) ? controller.badgeLine1(controller.det.status, '', controller.det.pType, controller.det.period, controller.det.remain, controller.det.start, controller.det.home, controller.det.interm, controller.det.intermRemain) : ""
                     font.pixelSize: 13
                     font.bold: true
                     color: Kirigami.Theme.textColor
                 }
                 Label {
                     anchors.horizontalCenter: parent.horizontalCenter
-                    visible: !!controller && !!controller.det && !!controller.det.interm && (controller.det.intermRemain || "") !== ''
-                    text: (controller && controller.det) ? controller.det.intermRemain : ""
+                    visible: !!controller && !!controller.det && !!controller.det.interm
+                    text: (controller && controller.det && (controller.det.intermRemain || "") !== "") ? controller.det.intermRemain : i18n("Intermission")
                     font.pixelSize: 18
                     font.bold: true
                     color: Kirigami.Theme.textColor
                 }
                 Label {
                     anchors.horizontalCenter: parent.horizontalCenter
-                    visible: text !== ''
+                    visible: text !== '' && !(controller && controller.det && controller.det.interm)
                     text: (controller && controller.det) ? controller.badgeLine2(controller.det.status, controller.det.start, controller.det.home, controller.det.pType, controller.det.period, controller.det.remain, controller.det.interm, controller.det.intermRemain) : ""
                     font.pixelSize: 11
                     color: Kirigami.Theme.disabledTextColor

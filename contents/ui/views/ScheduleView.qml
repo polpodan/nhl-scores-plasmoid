@@ -52,16 +52,37 @@ Item {
                 spacing: 6
                 Layout.alignment: Qt.AlignHCenter
                 Image {
-                    source: (controller && controller.sch.team) ? controller.teamLogoUrl(controller.sch.team) : ""
+                    id: teamLogoImg
+                    source: (controller && controller.sch.team) ? controller.historicalTeamLogoUrl(controller.sch.team, controller.sch.season) : ""
                     Layout.preferredWidth: 96
                     Layout.preferredHeight: 96
                     fillMode: Image.PreserveAspectFit
                     smooth: true
+                    
+                    onStatusChanged: {
+                        if (status === Image.Error && controller && controller.sch.team) {
+                            // Si le logo historique échoue (404), on affiche le logo de l'équipe actuelle
+                            source = controller.teamLogoUrl(controller.sch.team)
+                        }
+                    }
                 }
-                Label {
-                    text: (controller && controller.nav.scheduleShowStats) ? i18n("Stats") : i18n("Schedule")
-                    font.bold: true
-                    font.pixelSize: 16
+                Column {
+                    Layout.alignment: Qt.AlignVCenter
+                    Label {
+                        text: {
+                            var hist = (controller && controller.sch.team) ? controller.getHistoricalTeamName(controller.sch.team, controller.sch.season) : ""
+                            if (hist !== "") return hist
+                            return (controller && controller.nav.scheduleShowStats) ? i18n("Stats") : i18n("Schedule")
+                        }
+                        font.bold: true
+                        font.pixelSize: 15
+                    }
+                    Label {
+                        visible: (controller && controller.sch.team && controller.getHistoricalTeamName(controller.sch.team, controller.sch.season) !== "")
+                        text: (controller && controller.nav.scheduleShowStats) ? i18n("Stats") : i18n("Schedule")
+                        font.pixelSize: 10
+                        opacity: 0.6
+                    }
                 }
             }
 
@@ -220,21 +241,106 @@ Item {
         }
 
         // ── Vue stats joueurs (mode stats) ─────────────────────
-        Item {
+        ColumnLayout {
             Layout.fillWidth: true
             Layout.fillHeight: true
             visible: !!(controller && controller.nav.scheduleShowStats)
+            spacing: 0
+
+            // ── Filtres Saison et Type ──
+            RowLayout {
+                Layout.alignment: Qt.AlignHCenter
+                Layout.topMargin: 4
+                Layout.bottomMargin: 8
+                spacing: 10
+                visible: !!(controller && !controller.sch.statsLoading)
+
+                ComboBox {
+                    id: teamSeasonCombo
+                    implicitWidth: 100
+                    font.pixelSize: 11
+                    model: {
+                        if (!controller || !controller.sch.team) return []
+                        var list = []
+                        var now = new Date()
+                        var endYear = now.getFullYear()
+                        if (now.getMonth() < 8) endYear-- 
+                        
+                        var foundingYear = Logic.getTeamFoundingYear(controller.sch.team)
+
+                        for (var y = endYear; y >= foundingYear; y--) {
+                            var sStart = y
+                            var sEnd = y + 1
+                            list.push({
+                                label: sStart + "-" + String(sEnd).substring(2),
+                                value: sStart + String(sEnd)
+                            })
+                        }
+                        return list
+                    }
+                    textRole: "label"
+                    currentIndex: {
+                        if (!controller) return 0
+                        for (var i=0; i<model.length; i++) {
+                            if (model[i].value === controller.sch.season) return i
+                        }
+                        return 0
+                    }
+                    onActivated: (index) => {
+                        if (controller) {
+                            controller.sch.season = model[index].value
+                            controller.fetchTeamStats(controller.sch.team)
+                        }
+                    }
+                }
+
+                Row {
+                    spacing: 2
+                    Repeater {
+                        model: [
+                            { lbl: i18n("Reg"), val: 2 },
+                            { lbl: i18n("Post"), val: 3 }
+                        ]
+                        delegate: Rectangle {
+                            radius: 4
+                            implicitWidth: typeLbl.implicitWidth + 12
+                            implicitHeight: teamSeasonCombo.height
+                            readonly property bool active: !!(controller && controller.sch.seasonType === modelData.val)
+                            color: active ? Kirigami.Theme.highlightColor : Qt.rgba(1,1,1,0.07)
+                            border.color: active ? Kirigami.Theme.highlightColor : Qt.rgba(1,1,1,0.15)
+                            border.width: 1
+                            Label {
+                                id: typeLbl; anchors.centerIn: parent
+                                text: modelData.lbl
+                                font.pixelSize: 11; font.bold: parent.active
+                                color: parent.active ? "white" : Kirigami.Theme.textColor
+                            }
+                            TapHandler {
+                                onTapped: {
+                                    if (controller) {
+                                        controller.sch.seasonType = modelData.val
+                                        controller.fetchTeamStats(controller.sch.team)
+                                    }
+                                }
+                            }
+                            HoverHandler { cursorShape: Qt.PointingHandCursor }
+                        }
+                    }
+                }
+            }
 
             // Gestion de l'état (Chargement / Erreur des stats)
             Components.StateLayer {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
                 loading: !!controller && controller.sch.statsLoading
                 error: controller ? controller.sch.statsError : ""
                 topMargin: 0
-                anchors.centerIn: parent
             }
 
             ScrollView {
-                anchors.fill: parent
+                Layout.fillWidth: true
+                Layout.fillHeight: true
                 visible: !!(controller && !controller.sch.statsLoading && controller.sch.statsError === "")
                 contentWidth: availableWidth
                 clip: true
