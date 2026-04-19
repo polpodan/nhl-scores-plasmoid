@@ -43,7 +43,20 @@ const teamColors = {
     'ATL': { p: '#041E42', s: '#5C88B1' }, // Atlanta Thrashers (Bleu/Bleu ciel)
     'CLR': { p: '#002868', s: '#C8102E' }, // Colorado Rockies (Bleu/Rouge)
     'KCS': { p: '#0046AD', s: '#CE1126' }, // Kansas City Scouts (Bleu/Rouge)
-    'AFM': { p: '#D2001C', s: '#FFCC00' }  // Atlanta Flames (Rouge/Jaune)
+    'AFM': { p: '#D2001C', s: '#FFCC00' }, // Atlanta Flames (Rouge/Jaune)
+    'OAK': { p: '#006241', s: '#FFB81C' }, // Oakland Seals (Vert/Jaune)
+    'CGS': { p: '#006241', s: '#FFB81C' }, // California Golden Seals
+    'CLE': { p: '#C8102E', s: '#000000' }, // Cleveland Barons (Rouge/Noir)
+    'MMR': { p: '#632432', s: '#FFFFFF' }, // Montreal Maroons (Marron/Blanc)
+    'NYA': { p: '#002868', s: '#C8102E' }, // NY Americans (Bleu/Rouge)
+    'BRK': { p: '#002868', s: '#C8102E' }, // Brooklyn Americans
+    'SEN': { p: '#C8102E', s: '#000000' }, // Ottawa Senators (Old)
+    'SLE': { p: '#C8102E', s: '#000000' }, // St. Louis Eagles
+    'HAM': { p: '#000000', s: '#FFB81C' }, // Hamilton Tigers (Noir/Jaune)
+    'PTP': { p: '#000000', s: '#FFB81C' }, // Pittsburgh Pirates
+    'PHQ': { p: '#C8102E', s: '#000000' }, // Philadelphia Quakers
+    'TSP': { p: '#006241', s: '#FFFFFF' }, // Toronto St. Patricks
+    'TAN': { p: '#00205B', s: '#FFFFFF' }  // Toronto Arenas
 };
 
 const TEAM_STANLEY_CUPS = {
@@ -261,23 +274,40 @@ function getLivePeriodText(periodType, period, labels) { if (periodType === 'SO'
 function parseSituation(code, away, home) { if (!code || code === "1551" || code.length !== 4) return null; var aG = code[0] === '1', aS = parseInt(code[1]), hS = parseInt(code[2]), hG = code[3] === '1'; var res = { even: (aS === hS), empty_Net: (!aG || !hG), enTeam: (!aG ? away : (!hG ? home : '')), ppTeam: (aS > hS ? away : (hS > aS ? home : '')), awaySkaters: aS, homeSkaters: hS, isSpecial: (aS !== hS || !aG || !hG) }; if (aS > hS) res.ppType = (aS - hS > 1) ? "5v3 PP" : "PP"; else if (hS > aS) res.ppType = (hS - aS > 1) ? "5v3 PP" : "PP"; else res.ppType = ""; return res; }
 function resolveNHLAbbrev(commonName) {
     if (!commonName) return "";
-    var name = String(commonName).normalize("NFD").replace(/[\u0300-\u036f]/g, ""); // Supprimer les accents
-    var map = { 
-        "Leafs": "TOR", "Toronto": "TOR", "Canadiens": "MTL", "Montreal": "MTL", "Canucks": "VAN", "Vancouver": "VAN",
-        "Senators": "OTT", "Ottawa": "OTT", "Jets": "WPG", "Winnipeg": "WPG", "Oilers": "EDM", "Edmonton": "EDM",
-        "Flames": "CGY", "Calgary": "CGY", "Bruins": "BOS", "Boston": "BOS", "Sabres": "BUF", "Buffalo": "BUF",
-        "Red Wings": "DET", "Detroit": "DET", "Panthers": "FLA", "Florida": "FLA", "Lightning": "TBL", "Tampa": "TBL",
-        "Hurricanes": "CAR", "Carolina": "CAR", "Blue Jackets": "CBJ", "Columbus": "CBJ", "Devils": "NJD", "Jersey": "NJD",
-        "Islanders": "NYI", "Rangers": "NYR", "Flyers": "PHI", "Philadelphia": "PHI", "Penguins": "PIT", "Pittsburgh": "PIT",
-        "Capitals": "WSH", "Washington": "WSH", "Blackhawks": "CHI", "Chicago": "CHI", "Avalanche": "COL", "Colorado": "COL",
-        "Stars": "DAL", "Dallas": "DAL", "Wild": "MIN", "Minnesota": "MIN", "Predators": "NSH", "Nashville": "NSH",
-        "Blues": "STL", "Louis": "STL", "Ducks": "ANA", "Anaheim": "ANA", "Kings": "LAK", "Angeles": "LAK",
-        "Sharks": "SJS", "Jose": "SJS", "Kraken": "SEA", "Seattle": "SEA", "Golden Knights": "VGK", "Vegas": "VGK",
-        "Coyotes": "ARI", "Arizona": "ARI", "Utah": "UTA", "HC": "UTA",
-        "Whalers": "HFD", "Hartford": "HFD", "Nordiques": "QUE", "Quebec": "QUE",
-        "North Stars": "MNS", "Minnesota North Stars": "MNS", "Thrashers": "ATL", "Atlanta": "ATL",
-        "Colorado Rockies": "CLR", "Scouts": "KCS", "Kansas City": "KCS"
-        };    for (var key in map) { if (name.indexOf(key) !== -1) return map[key]; }
+    var name = String(commonName).normalize("NFD").replace(/[\u0300-\u036f]/g, ""); 
+    var pairs = [
+        ["Leafs", "TOR"], ["Toronto", "TOR"], ["Canadiens", "MTL"], ["Montreal", "MTL"],
+        ["Canucks", "VAN"], ["Vancouver", "VAN"], ["Senators", "OTT"], ["Ottawa", "OTT"],
+        ["Jets", "WPG"], ["Winnipeg", "WPG"], ["Oilers", "EDM"], ["Edmonton", "EDM"],
+        ["Flames", "CGY"], ["Calgary", "CGY"], ["Bruins", "BOS"], ["Boston", "BOS"],
+        ["Sabres", "BUF"], ["Buffalo", "BUF"], ["Red Wings", "DET"], ["Detroit", "DET"],
+        ["Panthers", "FLA"], ["Florida", "FLA"], ["Lightning", "TBL"], ["Tampa", "TBL"],
+        ["Hurricanes", "CAR"], ["Carolina", "CAR"], ["Blue Jackets", "CBJ"], ["Columbus", "CBJ"],
+        ["Devils", "NJD"], ["Jersey", "NJD"], ["Islanders", "NYI"], ["Rangers", "NYR"],
+        ["Flyers", "PHI"], ["Philadelphia", "PHI"], ["Penguins", "PIT"], ["Pittsburgh", "PIT"],
+        ["Capitals", "WSH"], ["Washington", "WSH"], ["Blackhawks", "CHI"], ["Chicago", "CHI"],
+        ["Avalanche", "COL"], ["Colorado Rockies", "CLR"], ["Rockies", "CLR"], ["Colorado", "COL"],
+        ["Stars", "DAL"], ["Dallas", "DAL"], ["Wild", "MIN"], ["Minnesota", "MIN"],
+        ["Predators", "NSH"], ["Nashville", "NSH"], ["Blues", "STL"], ["Louis", "STL"],
+        ["Ducks", "ANA"], ["Anaheim", "ANA"], ["Kings", "LAK"], ["Angeles", "LAK"],
+        ["Sharks", "SJS"], ["Jose", "SJS"], ["Kraken", "SEA"], ["Seattle", "SEA"],
+        ["Golden Knights", "VGK"], ["Vegas", "VGK"], ["Coyotes", "ARI"], ["Arizona", "ARI"],
+        ["Whalers", "HFD"], ["Hartford", "HFD"], ["Nordiques", "QUE"], ["Quebec", "QUE"],
+        ["North Stars", "MNS"], ["Minnesota North Stars", "MNS"],
+        ["Thrashers", "ATL"], ["Atlanta", "ATL"], ["Scouts", "KCS"], ["Kansas City", "KCS"],
+        ["California Golden Seals", "CGS"], ["Golden Seals", "CGS"], ["Oakland Seals", "OAK"], ["California Seals", "OAK"], ["Seals", "OAK"],
+        ["Cleveland Barons", "CLE"], ["Barons", "CLE"], ["Montreal Maroons", "MMR"],
+        ["Maroons", "MMR"], ["New York Americans", "NYA"], ["Brooklyn Americans", "BRK"],
+        ["Americans", "NYA"], ["Hamilton", "HAM"], ["Pittsburgh Pirates", "PTP"],
+        ["Philadelphia Quakers", "PHQ"], ["Quakers", "PHQ"], ["St. Louis Eagles", "SLE"], ["Eagles", "SLE"],
+        ["Senators (1917)", "SEN"], ["Toronto St. Patricks", "TSP"], ["Toronto Arenas", "TAN"]
+        ];
+    for (var i = 0; i < pairs.length; i++) {
+        if (name.indexOf(pairs[i][0]) !== -1) {
+            // console.log("NHL Scores Debug - Resolved '" + name + "' to '" + pairs[i][1] + "'");
+            return pairs[i][1];
+        }
+    }
     return "";
 }
 
@@ -330,18 +360,38 @@ const ApiService = {
         httpGet(this.BASE_URL + "/goalie-stats-leaders/" + path + "?categories=" + categories + "&limit=" + limit + r, cb); 
     },
     getPlayerLanding: function(playerId, cb) { httpGet(this.BASE_URL + "/player/" + playerId + "/landing", function(err, data) { if (err) { let cached = getFromCache("player_" + playerId); if (cached) cb(null, cached, true); else cb(err, null); } else { saveToCache("player_" + playerId, data); cb(null, data, false); } }); },
-    getPlayoffBracket: function(cb) { httpGet(this.BASE_URL + "/playoff-bracket/now", cb); },
+    getPlayoffBracket: function(cb) { 
+        var year = new Date().getFullYear();
+        if (new Date().getMonth() > 8) year++;
+        var cacheKey = "playoff_bracket_" + year;
+        
+        httpGet(this.BASE_URL + "/playoff-bracket/" + year + "?_=" + new Date().getTime(), function(err, data) {
+            if (err) {
+                var cached = getFromCache(cacheKey);
+                if (cached) cb(null, cached, true);
+                else cb(err, null);
+            } else {
+                saveToCache(cacheKey, data);
+                cb(null, data, false);
+            }
+        });
+    },
     getTeamSchedule: function(teamCode, cb) { httpGet(this.BASE_URL + "/club-schedule-season/" + teamCode + "/now", cb); },
     getTeamStats: function(teamCode, season, seasonType, cb) { 
         var path = (season && seasonType) ? (season + "/" + seasonType) : "now";
         httpGet(this.BASE_URL + "/club-stats/" + teamCode + "/" + path, cb); 
     },
-    getFranchiseLeaders: function(teamCode, category, limit, activeOnly, seasonType, cb) {
+    getFranchiseLeaders: function(teamCode, category, limit, activeOnly, seasonType, isGoalie, pos, cb) {
         var fid = getFranchiseId(teamCode); if (fid === 0) { cb(new Error("Unknown franchise ID"), null); return; }
         var cayenne = "franchiseId=" + fid; 
         if (activeOnly) cayenne += " and active=1";
         if (seasonType) cayenne += " and gameTypeId=" + seasonType;
-        var url = this.STATS_BASE_URL + "/skater/summary" + "?isAggregate=true&isGame=false" + "&sort=[{\"property\":\"" + category + "\",\"direction\":\"DESC\"}]" + "&start=0&limit=" + limit + "&cayenneExp=" + encodeURIComponent(cayenne);
+        
+        if (pos === 'D') cayenne += " and positionCode='D'";
+        else if (pos === 'F') cayenne += " and positionCode in ('C','L','R')";
+        
+        var endpoint = isGoalie ? "/goalie/summary" : "/skater/summary";
+        var url = this.STATS_BASE_URL + endpoint + "?isAggregate=true&isGame=false" + "&sort=[{\"property\":\"" + category + "\",\"direction\":\"DESC\"}]" + "&start=0&limit=" + limit + "&cayenneExp=" + encodeURIComponent(cayenne);
         httpGet(url, cb);
     },
     searchPlayers: function(query, cb) {

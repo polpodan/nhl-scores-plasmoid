@@ -2,89 +2,30 @@
 
 All notable changes to this project will be documented in this file.
 
+## [6.1.0] - 2026-04-18
+
+### Added
+- **Instant Bracket Loading:** Implemented persistent local caching for the playoff bracket. After the first load, the bracket displays instantly with the last known scores while updating in the background.
+- **Enhanced Historical Database:** Added support for early NHL teams (pre-1940s) including Montreal Maroons, NY Americans, Hamilton Tigers, and original Ottawa Senators with correct colors and abbreviations.
+- **Historic Team Identities:** When viewing statistics for past seasons, the applet now dynamically displays the team's name and logo from that era (e.g., "Hartford Whalers" logo and title appear when viewing Carolina's 1990 stats).
+- **Goalie Support in Franchise History:** You can now view all-time leaders for Goalie Wins and Shutouts for every franchise.
+- **Deceased Legend Detection:** For retired players over 95 years old or with a recorded death date, the interface now respectfully displays "Deceased" and their age at the time of passing instead of a live age.
+
+### Improved
+- **Advanced Franchise Filtering:** Aligned the Franchise Leaders view with League Leaders; you can now filter historical records by position (Forwards, Defensemen, or Goalies) with 100% accurate results fetched directly from the NHL API.
+- **Visual Harmonization:** Re-centered and redesigned the Franchise Leaders header to perfectly match the main applet aesthetic.
+- **Streamlined Team Hub:** Removed redundant UI elements and consolidated the "Season Calendar" access to improve navigation flow.
+- **Optimized Scoring Logic:** Playoff series win counts are now calculated with strict game-type filtering, ensuring regular season matchups no longer interfere with playoff series results.
+
+### Fixed
+- **API Format Change (2026):** Completely rewrote the bracket parser to support the new flat "series" array format introduced by the NHL API for the 2026 season.
+- **Historical Scaling Bug:** Fixed a bug where viewing older teams (e.g., Ottawa Senators 1992) would allow selecting seasons prior to their founding.
+- **Translation Completeness:** Finalized French localization for the Stanley Cup Playoffs title and all new historical filters.
+- **QML Syntax:** Fixed "Unexpected token let" and other compatibility issues for older Plasma 6 environments.
+
 ## [6.0.0] - 2026-04-18
 
 ### Added
-- **Deep Historical Database:** Users can now browse League Leaders and Team Statistics for any season back to **1917-18** using a new seasonal dropdown menu.
-- **Playoff Statistical Toggle:** Added a "Reg / Post" switch across all leaderboards (League, Team, and Franchise) to easily compare regular season vs. playoff performance.
-- **Stanley Cup Trophy Case:** The Team Hub now proudly displays each franchise's championship history with a centered grid of 🏆 icons (e.g., 24 trophies for the Montreal Canadiens).
-- **Interactive Playoff Bracket:** Teams in the bracket view are now fully interactive; clicking a team badge instantly opens its Team Hub.
-- **Enhanced Stanley Cup Tracking:** Series win counts (e.g., 1-0, 4-2) are now automatically tracked and updated in the bracket as games finish.
-
-### Improved
-- **Robust Time & Day Transition:** Replaced static midnight refresh with a smart day-change detector. Date separators and the season calendar now update correctly even if the computer was asleep during the midnight transition.
-- **Smart Network Resilience:** The applet now uses an aggressive 20s polling interval when in "Offline" mode or after a network error, ensuring it reconnects to the NHL API the moment the internet becomes available.
-- **Modern QML Syntax:** Fixed all "injection of parameters into signal handlers" deprecation warnings for better compatibility with future Plasma 6 updates.
-- **Better Visual Hierarchy:** Redesigned the Team Hub header to accommodate championship trophies while maintaining perfect alignment with team stats and game history.
-
-### Fixed
-- **Translation Completeness:** Fully translated the Playoff Bracket interface and new statistical filters into French.
-- **Pluralization Logic:** Implemented proper KDE `i18np` plural handling for championship labels (e.g., "1 Coupe Stanley" vs. "24 Coupes Stanley").
-
-## [5.4.0] - 2026-04-12
-
-### Added
-- **Sliding Time Interval Selector:** Replaced static "Past days" options with a precision Range Slider in General settings. Users can now set a custom window from **-60h to +120h** (6h steps) relative to current time.
-- **Intelligent Caching System:** Implemented persistent storage for scores, standings, and player profiles. Data is now saved across sessions using Plasma configuration.
-- **Robust Offline Mode:** Automatic detection of network failures with transparent fallback to cached data. Added a discrete "Offline" indicator (󰖪) in the panel and header.
-- **Advanced Color Collision Engine:** Dynamic detection of teams with similar primary/secondary colors (e.g., Toronto vs. Tampa Bay). The engine now forces contrast adjustments and secondary color usage to ensure both teams remain distinct.
-- **Internal Badge Contrast:** Text color inside team badges now calculates contrast based on the **actual rendered color** of the badge, preventing "invisible text" issues on adapted backgrounds.
-- **Detailed Leader Stats:** Added "G", "A", or "PTS" suffixes to the pre-game leaders list for immediate statistical context.
-
-### Changed
-- **Modular Architectural Refactor:** Deconstructed the monolithic `DetailView.qml` into 6 specialized sub-components (`DetailHeader`, `MatchPreview`, `MatchStats`, `GoalsList`, etc.) for significantly improved maintainability.
-- **Performance UI Updates:** Replaced full model resets (`.clear()`) with a granular update pattern. The applet now only updates modified properties, eliminating UI flickering and reducing CPU usage.
-- **Smart Franchise Resolution:** Replaced team IDs with official NHL Franchise IDs, ensuring accurate historical records for relocated teams (e.g., Jets/Thrashers, Avalanche/Nordiques).
-- **Timezone-Aware Calendar:** Fixed a date-offset bug where Western Conference games started after midnight UTC would appear on the wrong day in the season calendar.
-
-### Fixed
-- **Type Safety in Logic:** Fixed `ReferenceError` and `TypeError` exceptions caused by strict Plasma 6 QML/JS isolation and color object handling.
-- **Desktop Interactivity:** Ensured clicking any part of the desktop widget (including logos) in compact mode correctly opens the match detail popup.
-- **Visual Alignment:** Corrected centering and overflow issues in the "Compact Desktop" representation.
-
-## [5.3.0] - 2026-04-08
-
-### Added
-- **Official NHL Standings Indicators:** Added support for official clinch indicators (**x**, **y**, **z**) and elimination markers (**E**) across all standings modes.
-- **Standings Legend:** Centered legend at the bottom of the standings view explaining all qualification and elimination markers.
-- **Smart Morning View:** Refined logic to show yesterday's games until 12:00 PM today even with "Past days" set to 0.
-- **Enhanced Player Playoff Stats:** Career playoff history is now fully calculated and displayed in a dedicated tab.
-- **Unified Vertical Alignment:** Forced perfect horizontal baseline for all panel elements in both Inline and Stacked modes.
-
-### Fixed
-- **Horizontal Scrolling:** Eliminated the need for horizontal scrolling in the Playoff Bracket via a new vertical tree layout.
-- **Color Conflicts:** Fixed Florida (FLA) vs Montreal (MTL) and New Jersey (NJD) vs Montreal (MTL) color clashing in special situations.
-
-## [5.2.0] - 2026-04-05
-
-### Added
-- **Team Logo Customization:** New option to choose between classic colored badges (Pastilles) and official team logos.
-- **Local Logo Storage:** Team logos are now bundled locally for instant loading and offline support.
-- **SVG Rendering Optimization:** Added `sourceSize` support for pixel-perfect sharpness on HiDPI screens.
-- **Contrast-Aware Themes:** Automatic switching between `_light` and `_dark` logo variants based on Plasma theme brightness.
-- **Advanced Pre-Game Hub:** Integrated seasonal comparisons: PP%, PK%, Faceoff%, GF/G, and GA/G.
-- **Goal Video Highlights:** Direct access to official NHL goal highlights via an integrated play button.
-
-### Fixed
-- **Flickering Issues:** Resolved a bug where season series info would disappear after a few seconds.
-- **Responsive Sizing:** Decoupled logo sizes from font scales for a more consistent panel width.
-
-## [5.1.0] - 2026-04-03
-
-### Added
-- **Multi-language Expansion:** Added support for Russian, Finnish, Swedish, German, Czech, and Slovak.
-- **Real-time Situation Indicators:** Live power play and empty net (🥅) indicators on game status badges.
-- **Team-Specific Goal Songs:** Goal notifications now play official team-specific songs.
-- **Future Calendar Data:** The main calendar now displays the number of scheduled games for future dates.
-
-## [5.0.0] - 2026-03-30
-
-### Added
-- **Centralized ApiService Layer:** Unified all NHL API calls into a robust service in `logic.js`.
-- **Grouped State Management:** Refactored application state into logical `QtObject` groups (nav, glob, std, lead, etc.).
-- **Redesigned Pre-Game Popup:** Major visual overhaul with XL logos and improved layout.
-- **Detailed Goalie Career Stats:** Correct calculation of NHL totals and GAA weighted averages.
-
-### Changed
-- **Statistical Precision:** Updated all goalie statistics to 3 decimal places.
-- **Enhanced Player Career Table:** Centered and aired out design for better legibility.
+- **Deep Historical Database:** Users can now browse League Leaders and Team Statistics for any season back to **1917-18**.
+- **Playoff Statistical Toggle:** Added a "Reg / Post" switch across all leaderboards to compare regular season vs. playoff performance.
+- **Stanley Cup Trophy Case:** The Team Hub now proudly displays each franchise's championship history with a grid of 🏆 icons.

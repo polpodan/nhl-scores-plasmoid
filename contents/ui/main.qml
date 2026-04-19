@@ -121,6 +121,11 @@ PlasmoidItem {
         property var points: []
         property var goals: []
         property var assists: []
+        property var wins: []
+        property var sho: []
+        property bool filterF: false
+        property bool filterD: false
+        property bool filterG: false
         property int seasonType: 2
     }
 
@@ -181,10 +186,19 @@ PlasmoidItem {
     }
 
     readonly property QtObject ply: QtObject {
+        property int    playerId: 0
+        property string from:    'leaders'
         property bool   loading: false
         property string error:   ""
         property var    data:    null
-        property string from:    'leaders'
+    }
+
+    readonly property QtObject brk: QtObject {
+        property bool   loading: false
+        property string error:   ""
+        property var    data:    null
+        property var    scores:  ({})
+        property int    pulse:   0
     }
 
     readonly property QtObject srch: QtObject {
@@ -227,12 +241,6 @@ PlasmoidItem {
         property bool   loading: false
     }
 
-    readonly property QtObject brk: QtObject {
-        property bool   loading: false
-        property string error:   ''
-        property var    data:    null
-    }
-
     readonly property QtObject det: QtObject {
         property int    gameId:   0
         property string away:     ''
@@ -263,8 +271,13 @@ PlasmoidItem {
         property string venue:    ''
         property int    seriesAway: 0
         property int    seriesHome: 0
+        property int    seriesAwaySeason: 0
+        property int    seriesHomeSeason: 0
+        property int    seriesAwayPlayoffs: 0
+        property int    seriesHomePlayoffs: 0
         property bool   seriesTotal: false
         property var    h2hGames: []
+        property var    h2hSeason: []
         property var    awayRecord: ({})
         property var    homeRecord: ({})
         property var    awayLeaders: []
@@ -867,6 +880,16 @@ PlasmoidItem {
         // Rafraîchir les détails du match actif si ouvert
         if (nav.detail && det.gameId !== 0) {
             fetchDetail(det.gameId)
+        }
+
+        // Rafraîchir le tableau des séries si ouvert
+        if (nav.bracket) {
+            fetchPlayoffBracket()
+        }
+
+        // Rafraîchir les classements si ouverts
+        if (nav.standings) {
+            fetchStandings()
         }
 
         let now = new Date()
@@ -1534,12 +1557,26 @@ PlasmoidItem {
     function fetchPlayoffBracket() {
         brk.loading = true
         brk.error   = ''
-        Logic.ApiService.getPlayoffBracket(function(err, data) {
-            brk.loading = false
+        Logic.ApiService.getPlayoffBracket(function(err, data, isOffline) {
+            // Si on a des données (cache ou réseau), on arrête d'afficher l'état de chargement
+            if (!err && data) brk.loading = false
+            
             if (err) {
                 brk.error = String(err)
-            } else {
+                brk.loading = false
+            } else if (data && data.series) {
+                var sMap = {}
+                data.series.forEach(function(s) {
+                    if (s.topSeedTeam && s.topSeedTeam.abbrev) {
+                        sMap[s.topSeedTeam.abbrev] = s.topSeedWins || 0
+                    }
+                    if (s.bottomSeedTeam && s.bottomSeedTeam.abbrev) {
+                        sMap[s.bottomSeedTeam.abbrev] = s.bottomSeedWins || 0
+                    }
+                })
+                brk.scores = sMap
                 brk.data = data
+                brk.pulse++
             }
         })
     }
@@ -2110,70 +2147,83 @@ PlasmoidItem {
     }
 
     function fetchFranchiseLeaders(teamCode) {
+        if (!teamCode) return
+        flead.team = teamCode
         flead.loading = true
         flead.error = ""
-        flead.points = []
-        flead.goals = []
-        flead.assists = []
         
-        var pending = 4
+        // Reset
+        flead.points = []; flead.goals = []; flead.assists = [];
+        flead.wins = []; flead.sho = [];
+        
         var activeIds = {}
         var limit = (root.franchiseLeadersLimit > 0) ? root.franchiseLeadersLimit : 10
+        var st = flead.seasonType
+        
+        var loadSkaters = !flead.filterG
+        var loadGoalies = flead.filterG
+        
+        var pos = ""
+        if (flead.filterF) pos = "F"
+        else if (flead.filterD) pos = "D"
+
+        var pending = (loadSkaters ? 4 : 0) + (loadGoalies ? 3 : 0)
         
         function done() { 
             pending--
             if (pending <= 0) {
                 var applyActive = function(list) {
-                    return list.map(function(p) {
-                        p.active = !!activeIds[p.id]
-                        return p
-                    })
+                    return list.map(function(p) { p.active = !!activeIds[p.id]; return p })
                 }
                 flead.points = applyActive(flead.points)
-                flead.goals = applyActive(flead.goals)
+                flead.goals  = applyActive(flead.goals)
                 flead.assists = applyActive(flead.assists)
+                flead.wins   = applyActive(flead.wins)
+                flead.sho    = applyActive(flead.sho)
                 flead.loading = false 
             }
         }
 
-        // 0. Fetch list of all active players for this franchise (to mark them in the top 10)
-        Logic.ApiService.getFranchiseLeaders(teamCode, "points", 100, true, flead.seasonType, function(err, data) {
-            if (!err && data && data.data) {
-                data.data.forEach(function(l) { activeIds[l.playerId] = true })
-            }
-            done()
-        })
-
-        // 1. Points
-        Logic.ApiService.getFranchiseLeaders(teamCode, "points", limit, false, flead.seasonType, function(err, data) {
-            if (err) { flead.error = String(err) }
-            else if (data && data.data) {
-                flead.points = data.data.map(function(l) {
-                    return { id: l.playerId, name: l.skaterFullName, value: l.points, active: false }
-                })
-            }
-            done()
-        })
-
-        // 2. Goals
-        Logic.ApiService.getFranchiseLeaders(teamCode, "goals", limit, false, flead.seasonType, function(err, data) {
-            if (!err && data && data.data) {
-                flead.goals = data.data.map(function(l) {
-                    return { id: l.playerId, name: l.skaterFullName, value: l.goals, active: false }
-                })
-            }
-            done()
-        })
-
-        // 3. Assists
-        Logic.ApiService.getFranchiseLeaders(teamCode, "assists", limit, false, flead.seasonType, function(err, data) {
-            if (!err && data && data.data) {
-                flead.assists = data.data.map(function(l) {
-                    return { id: l.playerId, name: l.skaterFullName, value: l.assists, active: false }
-                })
-            }
-            done()
-        })
+        if (loadSkaters) {
+            // 0. Active IDs (Skaters)
+            Logic.ApiService.getFranchiseLeaders(teamCode, "points", 100, true, st, false, pos, function(err, data) {
+                if (!err && data && data.data) data.data.forEach(function(l) { activeIds[l.playerId] = true })
+                done()
+            })
+            // 1. Points
+            Logic.ApiService.getFranchiseLeaders(teamCode, "points", limit, false, st, false, pos, function(err, data) {
+                if (!err && data && data.data) flead.points = data.data.map(function(l) { return { id: l.playerId, name: l.skaterFullName, value: l.points, pos: l.positionCode } })
+                done()
+            })
+            // 2. Goals
+            Logic.ApiService.getFranchiseLeaders(teamCode, "goals", limit, false, st, false, pos, function(err, data) {
+                if (!err && data && data.data) flead.goals = data.data.map(function(l) { return { id: l.playerId, name: l.skaterFullName, value: l.goals, pos: l.positionCode } })
+                done()
+            })
+            // 3. Assists
+            Logic.ApiService.getFranchiseLeaders(teamCode, "assists", limit, false, st, false, pos, function(err, data) {
+                if (!err && data && data.data) flead.assists = data.data.map(function(l) { return { id: l.playerId, name: l.skaterFullName, value: l.assists, pos: l.positionCode } })
+                done()
+            })
+        }
+        
+        if (loadGoalies) {
+            // 0. Active IDs (Goalies)
+            Logic.ApiService.getFranchiseLeaders(teamCode, "wins", 100, true, st, true, "", function(err, data) {
+                if (!err && data && data.data) data.data.forEach(function(l) { activeIds[l.playerId] = true })
+                done()
+            })
+            // 1. Wins
+            Logic.ApiService.getFranchiseLeaders(teamCode, "wins", limit, false, st, true, "", function(err, data) {
+                if (!err && data && data.data) flead.wins = data.data.map(function(l) { return { id: l.playerId, name: l.goalieFullName, value: l.wins } })
+                done()
+            })
+            // 2. Blanchissages
+            Logic.ApiService.getFranchiseLeaders(teamCode, "shutouts", limit, false, st, true, "", function(err, data) {
+                if (!err && data && data.data) flead.sho = data.data.map(function(l) { return { id: l.playerId, name: l.goalieFullName, value: l.shutouts } })
+                done()
+            })
+        }
     }
 
     function fetchSchedule(team) {
@@ -2445,30 +2495,61 @@ PlasmoidItem {
                     det.teamComparison = tcList
                 }
 
-                // 2. Série de saison (plus précis que notre calcul manuel)
+                // 2. Série de saison / Séries éliminatoires
                 if (d.seasonSeriesWins) {
                     det.seriesAway = d.seasonSeriesWins.awayTeamWins || 0
                     det.seriesHome = d.seasonSeriesWins.homeTeamWins || 0
                     det.seriesTotal = true
                 }
                 
-                // 3. Matchs H2H
+                // 3. Matchs H2H (Séparation Saison / Séries)
                 if (d.seasonSeries) {
-                    var h2h = []
+                    var h2hAll = []
+                    var h2hSeason = []
+                    var winsAwaySeason = 0
+                    var winsHomeSeason = 0
+                    var winsAwayPlayoffs = 0
+                    var winsHomePlayoffs = 0
+                    
                     for (var i=0; i<d.seasonSeries.length; i++) {
                         var g = d.seasonSeries[i]
-                        if (g.gameState === 'OFF') {
-                            h2h.push({
-                                date: g.gameDate,
-                                away: g.awayTeam.abbrev,
-                                home: g.homeTeam.abbrev,
-                                awayScore: g.awayTeam.score,
-                                homeScore: g.homeTeam.score,
-                                final: true
-                            })
+                        var isFinal = (g.gameState === 'OFF' || g.gameState === 'FINAL')
+                        var isPlayoff = (g.gameType === 3)
+                        
+                        var item = {
+                            date: g.gameDate,
+                            away: g.awayTeam.abbrev,
+                            home: g.homeTeam.abbrev,
+                            awayScore: g.awayTeam.score,
+                            homeScore: g.homeTeam.score,
+                            final: isFinal,
+                            isPlayoff: isPlayoff
+                        }
+                        
+                        if (isFinal) {
+                            if (!isPlayoff) {
+                                h2hSeason.push(item)
+                                if (g.awayTeam.score > g.homeTeam.score) winsAwaySeason++
+                                else winsHomeSeason++
+                            } else {
+                                if (g.awayTeam.score > g.homeTeam.score) winsAwayPlayoffs++
+                                else winsHomePlayoffs++
+                            }
+                            h2hAll.push(item)
                         }
                     }
-                    det.h2hGames = h2h
+                    det.h2hGames = h2hAll
+                    det.h2hSeason = h2hSeason
+                    
+                    // Stockage étanche des scores calculés manuellement
+                    det.seriesAwaySeason = winsAwaySeason
+                    det.seriesHomeSeason = winsHomeSeason
+                    det.seriesAwayPlayoffs = winsAwayPlayoffs
+                    det.seriesHomePlayoffs = winsHomePlayoffs
+                    
+                    // Mise à jour des variables globales pour compatibilité
+                    det.seriesAway = winsAwayPlayoffs
+                    det.seriesHome = winsHomePlayoffs
                 }
             }
             tryDone()

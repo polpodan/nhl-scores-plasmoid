@@ -53,119 +53,101 @@ ColumnLayout {
         }
     }
 
-    // 2. Série saison (H2H)
+    // 2. Face-à-face (H2H)
     ColumnLayout {
-        visible: controller && controller.det && ((controller.det.isPlayoff && (controller.det.seriesAway > 0 || controller.det.seriesHome > 0)) || (controller.det.h2hGames && controller.det.h2hGames.length > 0))
+        visible: controller && controller.det && (controller.det.h2hGames && controller.det.h2hGames.length > 0)
         Layout.fillWidth: true
-        spacing: 8
+        spacing: 12
 
-        Rectangle {
-            Layout.fillWidth: true; implicitHeight: 24; color: Qt.rgba(1,1,1,0.04); radius: 4
-            Label { anchors.centerIn: parent; text: i18n("Season series"); font.pixelSize: 11; font.bold: true; opacity: 0.6 }
-        }
-
-        // Info Playoff (Bannière spéciale)
+        // ── SECTION SÉRIES ÉLIMINATOIRES ──
         ColumnLayout {
-            visible: controller && controller.det && controller.det.isPlayoff && (controller.det.seriesAway > 0 || controller.det.seriesHome > 0)
-            Layout.alignment: Qt.AlignHCenter; spacing: 4
-            Label { Layout.alignment: Qt.AlignHCenter; text: (controller && controller.det) ? controller.det.seriesRound : ""; font.pixelSize: 12; font.bold: true; opacity: 0.8 }
-            RowLayout {
-                Layout.alignment: Qt.AlignHCenter; spacing: 8
-                Label { 
-                    text: {
-                        if (!controller || !controller.det) return ""
-                        return controller.det.seriesAway > controller.det.seriesHome ? controller.det.away + " mène" : controller.det.seriesHome > controller.det.seriesAway ? controller.det.home + " mène" : "Égalité"
+            visible: controller && controller.det && controller.det.isPlayoff
+            Layout.fillWidth: true
+            spacing: 8
+
+            Rectangle {
+                Layout.fillWidth: true; implicitHeight: 24; color: Kirigami.Theme.highlightColor; radius: 4; opacity: 0.2
+                Label { anchors.centerIn: parent; text: i18n("Playoff series"); font.pixelSize: 11; font.bold: true }
+            }
+
+            ColumnLayout {
+                Layout.alignment: Qt.AlignHCenter; spacing: 4
+                Label { Layout.alignment: Qt.AlignHCenter; text: controller.det.seriesRound; font.pixelSize: 12; font.bold: true; opacity: 0.8 }
+                RowLayout {
+                    Layout.alignment: Qt.AlignHCenter; spacing: 8
+                    Label { 
+                        text: {
+                            if (!controller || !controller.det) return ""
+                            if (controller.det.seriesAwayPlayoffs > controller.det.seriesHomePlayoffs) return controller.det.away + " mène"
+                            if (controller.det.seriesHomePlayoffs > controller.det.seriesAwayPlayoffs) return controller.det.home + " mène"
+                            return "Égalité"
+                        }
+                        font.pixelSize: 13 
                     }
-                    font.pixelSize: 13 
+                    Label { text: controller.det.seriesAwayPlayoffs + " – " + controller.det.seriesHomePlayoffs; font.pixelSize: 22; font.bold: true }
+                    Button { text: "🏆"; flat: true; onClicked: if (controller) controller.openPlayoffBracket() }
                 }
-                Label { text: (controller && controller.det) ? (controller.det.seriesAway + " – " + controller.det.seriesHome) : ""; font.pixelSize: 22; font.bold: true }
-                Button { text: "🏆"; flat: true; onClicked: if (controller) controller.openPlayoffBracket() }
+            }
+
+            // Liste des matchs de séries uniquement
+            ColumnLayout {
+                Layout.fillWidth: true; spacing: 2
+                Repeater {
+                    model: controller.det.h2hGames.filter(function(g){ return g.isPlayoff })
+                    delegate: h2hDelegate
+                }
             }
         }
 
-        // Résumé victoires (Barre de comparaison)
-        Components.StatComparisonBar {
-            visible: controller && controller.det && !controller.det.isPlayoff // Déjà résumé au dessus pour les playoffs
-            Layout.fillWidth: true
-            label: i18n("Wins")
-            awayValue: (controller && controller.det) ? controller.det.seriesAway : 0
-            homeValue: (controller && controller.det) ? controller.det.seriesHome : 0
-            awayColor: (controller && controller.det) ? controller.teamColorAdapted(controller.det.away, controller.det.home, true, false) : "gray"
-            homeColor: (controller && controller.det) ? controller.teamColorAdapted(controller.det.home, controller.det.away, false, false) : "gray"
-        }
-
-        // Liste des matchs
+        // ── SECTION SAISON RÉGULIÈRE ──
         ColumnLayout {
+            visible: controller && controller.det && (controller.det.h2hSeason && controller.det.h2hSeason.length > 0)
             Layout.fillWidth: true
-            spacing: 2
-            Repeater {
-                model: (controller && controller.det) ? controller.det.h2hGames : []
-                delegate: Rectangle {
-                    Layout.fillWidth: true
-                    implicitHeight: 30
-                    radius: 4
-                    color: h2hMouse.hovered ? Qt.rgba(1,1,1,0.05) : "transparent"
+            spacing: 8
 
-                    HoverHandler { id: h2hMouse }
+            Rectangle {
+                Layout.fillWidth: true; implicitHeight: 24; color: Qt.rgba(1,1,1,0.04); radius: 4
+                Label { anchors.centerIn: parent; text: i18n("Regular season series"); font.pixelSize: 11; font.bold: true; opacity: 0.6 }
+            }
 
-                    RowLayout {
-                        anchors.fill: parent
-                        anchors.leftMargin: 8
-                        anchors.rightMargin: 8
-                        spacing: 8
+            // Résumé victoires saison régulière
+            Components.StatComparisonBar {
+                Layout.fillWidth: true
+                label: i18n("Wins")
+                awayValue: controller.det.seriesAwaySeason
+                homeValue: controller.det.seriesHomeSeason
+                awayColor: controller.teamColorAdapted(controller.det.away, controller.det.home, true, false)
+                homeColor: controller.teamColorAdapted(controller.det.home, controller.det.away, false, false)
+            }
 
-                        Label {
-                            text: modelData.start ? Qt.formatDate(new Date(modelData.start), "dd/MM") : ""
-                            font.pixelSize: 10
-                            opacity: 0.5
-                            Layout.preferredWidth: 35
-                        }
-
-                        // Équipe Visiteur
-                        Item {
-                            width: 24; height: 16
-                            Image {
-                                anchors.fill: parent
-                                source: (controller) ? controller.teamLogoUrl(modelData.away) : ""
-                                fillMode: Image.PreserveAspectFit
-                                smooth: true
-                            }
-                        }
-
-                        Label {
-                            text: modelData.final ? (modelData.awayScore + " – " + modelData.homeScore) : i18n("vs")
-                            font.pixelSize: 12
-                            font.bold: modelData.final
-                            Layout.fillWidth: true
-                            horizontalAlignment: Text.AlignHCenter
-                        }
-
-                        // Équipe Locale
-                        Item {
-                            width: 24; height: 16
-                            Image {
-                                anchors.fill: parent
-                                source: (controller) ? controller.teamLogoUrl(modelData.home) : ""
-                                fillMode: Image.PreserveAspectFit
-                                smooth: true
-                            }
-                        }
-
-                        Label {
-                            visible: modelData.final
-                            text: (modelData.awayScore > modelData.homeScore) ? modelData.away : modelData.home
-                            font.pixelSize: 10
-                            font.bold: true
-                            color: Logic.getTeamColor((modelData.awayScore > modelData.homeScore) ? modelData.away : modelData.home, Kirigami.Theme.backgroundColor)
-                            Layout.preferredWidth: 35
-                            horizontalAlignment: Text.AlignRight
-                        }
-                        Item {
-                            visible: !modelData.final
-                            Layout.preferredWidth: 35
-                        }
-                    }
+            // Liste des matchs de saison régulière uniquement
+            ColumnLayout {
+                Layout.fillWidth: true; spacing: 2
+                Repeater {
+                    model: controller.det.h2hSeason
+                    delegate: h2hDelegate
                 }
+            }
+        }
+    }
+
+    // Delegate pour les lignes de match H2H
+    Component {
+        id: h2hDelegate
+        Rectangle {
+            Layout.fillWidth: true
+            implicitHeight: 30
+            radius: 4
+            color: h2hMouse.hovered ? Qt.rgba(1,1,1,0.05) : "transparent"
+            HoverHandler { id: h2hMouse }
+            RowLayout {
+                anchors.fill: parent; anchors.leftMargin: 8; anchors.rightMargin: 8; spacing: 8
+                Label { text: modelData.date ? Qt.formatDate(new Date(modelData.date), "dd/MM") : ""; font.pixelSize: 10; opacity: 0.5; Layout.preferredWidth: 35 }
+                Item { width: 24; height: 16; Image { anchors.fill: parent; source: controller.teamLogoUrl(modelData.away); fillMode: Image.PreserveAspectFit; smooth: true } }
+                Label { text: modelData.final ? (modelData.awayScore + " – " + modelData.homeScore) : i18n("vs"); font.pixelSize: 12; font.bold: modelData.final; Layout.fillWidth: true; horizontalAlignment: Text.AlignHCenter }
+                Item { width: 24; height: 16; Image { anchors.fill: parent; source: controller.teamLogoUrl(modelData.home); fillMode: Image.PreserveAspectFit; smooth: true } }
+                Label { visible: modelData.final; text: (modelData.awayScore > modelData.homeScore) ? modelData.away : modelData.home; font.pixelSize: 10; font.bold: true; color: Logic.getTeamColor((modelData.awayScore > modelData.homeScore) ? modelData.away : modelData.home, Kirigami.Theme.backgroundColor); Layout.preferredWidth: 35; horizontalAlignment: Text.AlignRight }
+                Item { visible: !modelData.final; Layout.preferredWidth: 35 }
             }
         }
     }

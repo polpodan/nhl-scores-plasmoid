@@ -194,6 +194,12 @@ msgid "Playoffs"
 msgstr "Séries"
 
 #: ../contents/ui/views/PlayerView.qml:251
+msgid "Died:"
+msgstr "Décès :"
+
+msgid "Deceased"
+msgstr "Décédé"
+
 msgid "years"
 msgstr "ans"
 
@@ -502,8 +508,15 @@ msgid "Retired"
 msgstr "Retraité"
 
 #: ../contents/ui/views/detail/MatchPreview.qml:24
+msgid "Playoff series"
+msgstr "Série éliminatoire"
+
+msgid "Regular season series"
+msgstr "Série de saison régulière"
+
 msgid "Season Comparison"
-msgstr "Comparaison de saison"
+msgstr "Comparaison de la saison"
+
 
 #: ../contents/ui/views/detail/MatchPreview.qml:31
 msgid "Power Play %"
@@ -1073,6 +1086,9 @@ msgstr "CONFÉRENCE DE L'EST"
 
 msgid "STANLEY CUP FINALS"
 msgstr "FINALE DE LA COUPE STANLEY"
+
+msgid "🏆 STANLEY CUP PLAYOFFS 2026"
+msgstr "🏆 SÉRIES ÉLIMINATOIRES 2026"
 
 msgid "%1 Stanley Cup"
 msgid_plural "%1 Stanley Cups"

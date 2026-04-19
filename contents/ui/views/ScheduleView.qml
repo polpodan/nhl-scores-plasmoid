@@ -72,14 +72,14 @@ Item {
                         text: {
                             var hist = (controller && controller.sch.team) ? controller.getHistoricalTeamName(controller.sch.team, controller.sch.season) : ""
                             if (hist !== "") return hist
-                            return (controller && controller.nav.scheduleShowStats) ? i18n("Stats") : i18n("Schedule")
+                            return i18n("Stats")
                         }
                         font.bold: true
                         font.pixelSize: 15
                     }
                     Label {
                         visible: (controller && controller.sch.team && controller.getHistoricalTeamName(controller.sch.team, controller.sch.season) !== "")
-                        text: (controller && controller.nav.scheduleShowStats) ? i18n("Stats") : i18n("Schedule")
+                        text: i18n("Stats")
                         font.pixelSize: 10
                         opacity: 0.6
                     }
@@ -90,19 +90,7 @@ Item {
                 Layout.fillWidth: true
             }
 
-            Button {
-                text: (controller && controller.nav.scheduleShowStats) ? i18n("Schedule") : i18n("Stats")
-                icon.name: (controller && controller.nav.scheduleShowStats) ? "view-calendar" : "view-statistics"
-                flat: true
-                onClicked: {
-                    if (controller) {
-                        controller.nav.scheduleShowStats = !controller.nav.scheduleShowStats
-                        if (controller.nav.scheduleShowStats && controller.sch.skaters.length === 0 && !controller.sch.statsLoading) {
-                            controller.fetchTeamStats(controller.sch.team)
-                        }
-                    }
-                }
-            }
+            // Le bouton de bascule a été supprimé ici pour éviter les doublons avec le Hub d'équipe.
         }
 
         // Gestion de l'état (Chargement / Erreur du calendrier)
