@@ -28,8 +28,8 @@ const teamColors = {
     'SEA': { p: '#99D9D9', s: '#001628' },
     'SJS': { p: '#006D75', s: '#EA7208' },
     'STL': { p: '#002F87', s: '#FCB514' },
-    'TBL': { p: '#002868', s: '#FFFFFF' },
-    'TOR': { p: '#00205B', s: '#FFFFFF' },
+    'TBL': { p: '#002868', s: '#F0F0F0' },
+    'TOR': { p: '#00205B', s: '#F0F0F0' },
     'VAN': { p: '#00205B', s: '#00843D' },
     'VGK': { p: '#B4975A', s: '#333F42' },
     'WPG': { p: '#041E42', s: '#AC162C' },
@@ -182,15 +182,27 @@ function teamLogoUrl(code) { return "https://assets.nhle.com/logos/nhl/svg/" + S
 
 function getLuminance(hex) {
     if (!hex) return 0;
-    var s = String(hex).replace('#', '');
-    if (s.length === 3) s = s[0]+s[0]+s[1]+s[1]+s[2]+s[2];
+    var s = String(hex).toLowerCase();
+    if (s === "white" || s === "#ffffff" || s === "#ffffffff") return 1.0;
+    if (s === "black" || s === "#000000" || s === "#000000ff") return 0.0;
+
+    s = s.replace('#', '');
+    if (s.length === 3 || s.length === 4) s = s[0]+s[0]+s[1]+s[1]+s[2]+s[2];
+
     var r = parseInt(s.substring(0, 2), 16) / 255;
     var g = parseInt(s.substring(2, 4), 16) / 255;
     var b = parseInt(s.substring(4, 6), 16) / 255;
+
+    if (isNaN(r) || isNaN(g) || isNaN(b)) return 0.5;
+
     r = (r <= 0.03928) ? r / 12.92 : Math.pow((r + 0.055) / 1.055, 2.4);
     g = (g <= 0.03928) ? g / 12.92 : Math.pow((g + 0.055) / 1.055, 2.4);
     b = (b <= 0.03928) ? b / 12.92 : Math.pow((b + 0.055) / 1.055, 2.4);
     return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+function getContrastColor(hex) { 
+    return getLuminance(hex) > 0.35 ? "#000000" : "#ffffff"; 
 }
 
 function getContrast(L1, L2) {
@@ -215,7 +227,6 @@ function getTeamColor(code, variant) {
     return (variant === 's') ? (entry.s || entry.p) : entry.p;
 }
 
-function getContrastColor(hex) { return getLuminance(hex) > 0.52 ? "#000000" : "#ffffff"; }
 function getTeamBadgeTextColor(teamCode) { return getContrastColor(getTeamColor(teamCode)); }
 
 function getTeamColorAdapted(teamCode, opponentCode, isAway, forText, bgColor) {
@@ -226,6 +237,11 @@ function getTeamColorAdapted(teamCode, opponentCode, isAway, forText, bgColor) {
     var primary = entry.p; var secondary = entry.s || entry.p;
     var targetContrast = forText ? 4.5 : 2.0;
     var finalColor = primary;
+
+    // Cas spécifique Tampa / Toronto / Detroit sur fond clair : éviter le blanc
+    if (Lbg > 0.6 && (t === 'TBL' || t === 'TOR' || t === 'DET')) {
+        if (isAway) return primary; // On force la couleur sombre si le fond est clair
+    }
 
     if ((t === 'TOR' && o === 'TBL') || (t === 'TBL' && o === 'TOR')) {
         if (Lbg < 0.5) { if (isAway) return "#00AFFF"; return "#FFFFFF"; }

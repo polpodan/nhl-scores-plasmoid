@@ -44,22 +44,30 @@ Rectangle {
     Column {
         id: contentCol
         anchors.centerIn: parent
-        spacing: -2
+        spacing: isStandardPP ? -3 : -2
         Text {
             id: t1
             anchors.horizontalCenter: parent.horizontalCenter
-            text: isStandardPP ? sit.ppType : badgeRoot.line1
+            // En PP: on affiche "Période TempsMatch" (ex: 1st 12:34)
+            text: isStandardPP ? (badgeRoot.line1 + " " + badgeRoot.line2) : badgeRoot.line1
             color: Logic.getContrastColor(badgeRoot.color)
-            font.pixelSize: isStandardPP ? badgeRoot.fontSize1 - 1 : badgeRoot.fontSize1
+            font.pixelSize: isStandardPP ? Math.max(8, badgeRoot.fontSize2 - 1) : badgeRoot.fontSize1
             font.bold: true
         }
         Text {
             id: t2
             anchors.horizontalCenter: parent.horizontalCenter
             visible: text !== ''
-            text: (isStandardPP && badgeRoot.penaltyTime !== "") ? badgeRoot.penaltyTime : badgeRoot.line2
+            // En PP: on affiche "PP TempsPunition" (ex: PP 1:30)
+            // Si le temps est vide (cas fréquent en entracte), on affiche juste "PP"
+            text: {
+                if (isStandardPP) {
+                    return (badgeRoot.penaltyTime !== "") ? (sit.ppType + " " + badgeRoot.penaltyTime) : sit.ppType
+                }
+                return badgeRoot.line2
+            }
             color: Logic.getContrastColor(badgeRoot.color)
-            font.pixelSize: badgeRoot.fontSize2
+            font.pixelSize: isStandardPP ? (badgeRoot.fontSize1 - 1) : badgeRoot.fontSize2
             font.bold: true
             opacity: 0.95
         }

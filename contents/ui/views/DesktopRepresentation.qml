@@ -26,7 +26,8 @@ Item {
                     gameId: m.gameId, away: m.away, home: m.home,
                     awayScore: m.ag, homeScore: m.hg, status: m.statusRole,
                     pType: m.periodType, period: m.period, remain: m.liveRemain,
-                    start: m.start, interm: m.inIntermission, sitCode: m.situationCode, intermRemain: m.intermissionRemain
+                    start: m.start, interm: m.inIntermission, sitCode: m.situationCode, 
+                    intermRemain: m.intermissionRemain, penaltyTime: m.penaltyTime || ""
                 }
             }
         }
@@ -194,13 +195,13 @@ Item {
             property int dAg: model.ag || 0
             property int dHg: model.hg || 0
             property string dStatus: model.statusRole || ""
-            property string dPType: model.pType || ""
+            property string dPType: model.periodType || ""
             property int dPeriod: model.period || 0
-            property string dRemain: model.remain || ""
+            property string dRemain: model.liveRemain || ""
             property var dStart: model.start || 0
-            property bool dInterm: model.interm || false
+            property bool dInterm: model.inIntermission || false
             property string dIntermRemain: model.intermissionRemain || ""
-            property string dSit: model.sitCode || "1551"
+            property string dSit: model.situationCode || "1551"
 
             Rectangle {
                 anchors.fill: parent
@@ -223,6 +224,7 @@ Item {
                 // Équipe Visiteur
                 Components.TeamBadge {
                     code: dAway
+                    opponentCode: dHome
                     score: dAg
                     sz: root.showLogos ? 48 : 18
                     gameId: String(model.gameId)
@@ -246,19 +248,30 @@ Item {
                         font.bold: true
                         color: Kirigami.Theme.textColor
                     }
-                    Label {
+
+                    Loader {
                         Layout.alignment: Qt.AlignHCenter
-                        text: compactStatusText({ status: dStatus, pType: model.periodType, period: model.period, remain: model.liveRemain, start: dStart, interm: dInterm, intermRemain: dIntermRemain })
-                        font.pixelSize: 10
-                        font.bold: true
-                        opacity: 0.7
-                        color: dStatus === 'LIVE' ? root.liveColor : Kirigami.Theme.textColor
+                        sourceComponent: root.statusBadgeComponent
+                        property string gameStatus: dStatus
+                        property string rawState: model.rawState
+                        property string periodType: dPType
+                        property int period: dPeriod
+                        property string liveRemain: dRemain
+                        property var startMs: dStart
+                        property string awayTeam: dAway
+                        property string homeTeam: dHome
+                        property bool intermission: dInterm
+                        property string intermissionRemain: dIntermRemain
+                        property string situationCode: dSit
+                        property string penaltyTime: model.penaltyTime || ""
+                        property int sz: 14
                     }
-                }
+                    }
 
                 // Équipe Locale
                 Components.TeamBadge {
                     code: dHome
+                    opponentCode: dAway
                     score: dHg
                     sz: root.showLogos ? 48 : 18
                     gameId: String(model.gameId)
@@ -345,6 +358,8 @@ Item {
 
             Components.TeamBadge {
                 code: compactTeamMatch ? compactTeamMatch.away : ""
+                opponentCode: compactTeamMatch ? compactTeamMatch.home : ""
+                teamSide: 'away'
                 sz: compactView.dynamicLogoSize
                 showScore: false; controller: root
                 Layout.alignment: Qt.AlignVCenter
@@ -364,20 +379,29 @@ Item {
                     horizontalAlignment: Text.AlignHCenter
                     Layout.fillWidth: true
                 }
-                Label {
+                Loader {
                     Layout.alignment: Qt.AlignHCenter
-                    text: compactStatusText(compactTeamMatch)
-                    font.pixelSize: compactView.dynamicStatusSize; font.bold: true; opacity: 0.8
-                    color: (compactTeamMatch && compactTeamMatch.status === 'LIVE') ? root.liveColor : Kirigami.Theme.textColor
-                    fontSizeMode: Text.Fit
-                    minimumPixelSize: 8
-                    horizontalAlignment: Text.AlignHCenter
-                    Layout.fillWidth: true
+                    sourceComponent: root.statusBadgeComponent
+                    property string gameStatus: compactTeamMatch ? compactTeamMatch.status : ""
+                    property string rawState: compactTeamMatch ? compactTeamMatch.pType : ""
+                    property string periodType: compactTeamMatch ? compactTeamMatch.pType : ""
+                    property int period: compactTeamMatch ? compactTeamMatch.period : 0
+                    property string liveRemain: compactTeamMatch ? compactTeamMatch.remain : ""
+                    property var startMs: compactTeamMatch ? compactTeamMatch.start : 0
+                    property string awayTeam: compactTeamMatch ? compactTeamMatch.away : ""
+                    property string homeTeam: compactTeamMatch ? compactTeamMatch.home : ""
+                    property bool intermission: compactTeamMatch ? compactTeamMatch.interm : false
+                    property string intermissionRemain: compactTeamMatch ? compactTeamMatch.intermRemain : ""
+                    property string situationCode: compactTeamMatch ? compactTeamMatch.sitCode : "1551"
+                    property string penaltyTime: compactTeamMatch ? (compactTeamMatch.penaltyTime || "") : ""
+                    property int sz: 12
                 }
             }
 
             Components.TeamBadge {
                 code: compactTeamMatch ? compactTeamMatch.home : ""
+                opponentCode: compactTeamMatch ? compactTeamMatch.away : ""
+                teamSide: 'home'
                 sz: compactView.dynamicLogoSize
                 showScore: false; controller: root
                 Layout.alignment: Qt.AlignVCenter

@@ -35,7 +35,7 @@ Row {
         anchors.verticalCenter: parent.verticalCenter
         radius: 3
         color: teamBadgeRoot.finalColor
-        border.color: 'white'
+        border.color: Logic.getLuminance(teamBadgeRoot.finalColor) > 0.45 ? Qt.rgba(0,0,0,0.5) : Qt.rgba(1,1,1,0.6)
         border.width: 1
         height: nameText.implicitHeight + Math.max(3, sz * 0.15)
         width:  nameText.implicitWidth  + Math.max(4, sz * 0.28)

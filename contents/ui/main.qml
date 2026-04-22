@@ -1009,10 +1009,12 @@ PlasmoidItem {
                         todayGames.setProperty(modelIndex, "intermissionRemain", "")
                     if (data.situationCode) {
                         todayGames.setProperty(modelIndex, "situationCode", data.situationCode)
-                        // Mise à jour immédiate du popup si ce match est ouvert
-                        if (nav.detail && det.gameId === gameId) {
-                            det.sitCode = data.situationCode
-                        }
+                        if (nav.detail && det.gameId === gameId) det.sitCode = data.situationCode
+                    } else if (data.clock && data.clock.inIntermission) {
+                        // En entracte, on ne vide pas la situation si elle est manquante dans l'API clock
+                    } else {
+                        todayGames.setProperty(modelIndex, "situationCode", "1551")
+                        if (nav.detail && det.gameId === gameId) det.sitCode = "1551"
                     }
                 }
                 if (data && data.displayPeriod) {
@@ -1034,6 +1036,10 @@ PlasmoidItem {
         Logic.ApiService.getGameLanding(gameId, function(err, data) {
             if (err) return
             try {
+                // PROTECTION ENTRACTE : Si le match est en entracte, on ne vide PAS la situation
+                // car iceSurface est souvent vide dans l'API pendant la pause.
+                if (data.clock && data.clock.inIntermission) return
+
                 let ice = data.summary && data.summary.iceSurface
                 if (!ice) return
                 let at = ice.awayTeam || {}
@@ -1947,6 +1953,14 @@ PlasmoidItem {
         for (let j = 0; j < targetData.length; j++) {
             let current = todayGames.get(j)
             let target = targetData[j]
+
+            // PROTECTION ENTRACTE : Conserver l'avantage numérique si on entre en entracte
+            if (target.inIntermission && current && current.gameId === target.gameId) {
+                if (target.situationCode === "1551" && current.situationCode !== "1551") {
+                    target.situationCode = current.situationCode
+                    target.penaltyTime = current.penaltyTime
+                }
+            }
             
             // On compare les clés essentielles pour décider s'il faut mettre à jour
             if (current.gameId !== target.gameId || 
@@ -2527,13 +2541,16 @@ PlasmoidItem {
                         }
                         
                         if (isFinal) {
+                            let awayWin = g.awayTeam.score > g.homeTeam.score
+                            let winnerAbbrev = awayWin ? g.awayTeam.abbrev : g.homeTeam.abbrev
+
                             if (!isPlayoff) {
                                 h2hSeason.push(item)
-                                if (g.awayTeam.score > g.homeTeam.score) winsAwaySeason++
-                                else winsHomeSeason++
+                                if (winnerAbbrev === det.away) winsAwaySeason++
+                                else if (winnerAbbrev === det.home) winsHomeSeason++
                             } else {
-                                if (g.awayTeam.score > g.homeTeam.score) winsAwayPlayoffs++
-                                else winsHomePlayoffs++
+                                if (winnerAbbrev === det.away) winsAwayPlayoffs++
+                                else if (winnerAbbrev === det.home) winsHomePlayoffs++
                             }
                             h2hAll.push(item)
                         }
