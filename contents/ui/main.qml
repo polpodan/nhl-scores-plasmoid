@@ -787,7 +787,6 @@ PlasmoidItem {
     function teamLogoUrl(abbrev) {
         if (!abbrev) return ''
         var bg = Kirigami.Theme.backgroundColor
-        // Calcul de la luminosité du fond
         var L  = 0.2126*bg.r + 0.7152*bg.g + 0.0722*bg.b
         var variant = L < 0.5 ? 'dark' : 'light'
         return Qt.resolvedUrl("../logos/" + abbrev + "_" + variant + ".svg")
@@ -2979,8 +2978,7 @@ PlasmoidItem {
             property var nav: popupNav; property bool isPopup: true; property var popupRef: detailPopup
 
             function teamLogoUrl(c) { return root.teamLogoUrl(c) }
-            function teamColorAdapted(c,o,a,t) { return root.teamColorAdapted(c,o,a,t) }
-            function teamTextColor(c,o,a) { return root.teamTextColor(c,o,a) }
+            function teamColorAdapted(c,o,a,t) { return root.teamColorAdapted(c,o,a,t) }            function teamTextColor(c,o,a) { return root.teamTextColor(c,o,a) }
             function parseSituation(s,a,h) { return root.parseSituation(s,a,h) }
             function statusSuffix(s,p) { return root.statusSuffix(s,p) }
             function liveClockText(p,n,r) { return root.liveClockText(p,n,r) }

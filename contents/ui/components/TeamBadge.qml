@@ -53,7 +53,7 @@ Row {
             font.family: "monospace"
         }
     }
-
+    
     Image {
         id: teamLogo
         visible: teamBadgeRoot.showLogos
@@ -61,8 +61,9 @@ Row {
         source: teamBadgeRoot.showLogos ? (typeof controller !== 'undefined' && controller ? controller.teamLogoUrl(code) : "https://assets.nhle.com/logos/nhl/svg/" + code + "_light.svg") : ""
         height: finalIconH
         width: finalIconH * 1.4
-        sourceSize.width: width * 2
-        sourceSize.height: height * 2
+        // Résolution fixe et stable pour le moteur de rendu
+        sourceSize.width: 64
+        sourceSize.height: 64
         fillMode: Image.PreserveAspectFit
         smooth: true
         opacity: teamRect.opacity

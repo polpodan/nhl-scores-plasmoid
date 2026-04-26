@@ -60,6 +60,10 @@ Item {
     property bool cfg_showUpcomingTime
     property string cfg_dateMode
 
+    // Champs de cache (internes)
+    property string cfg_cacheData
+    property string cfg_cacheDataDefault
+
     // Defaults
     property string cfg_favoritesDefault
     property string cfg_favoriteTeamSoundDefault

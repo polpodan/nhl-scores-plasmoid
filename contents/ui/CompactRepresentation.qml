@@ -12,13 +12,14 @@ Item {
 
     readonly property QtObject dims: QtObject {
         readonly property int pad: 4
-        readonly property int baseSz: (controller && controller.isVertical) ? 14 : Math.min(20, Math.max(8, Math.round(height * 0.38)))
-        readonly property int sz: (controller && controller.showLogos) ? 22 : baseSz
+        // Réduction du ratio pour laisser de l'espace haut/bas
+        readonly property int baseSz: (controller && controller.isVertical) ? 14 : Math.max(10, Math.round(compactRoot.height * 0.40))
+        readonly property int sz: (controller && controller.showLogos) ? Math.max(20, Math.round(compactRoot.height * 0.65)) : baseSz
         readonly property bool forceInline: controller ? (!controller.isVertical && baseSz < 13.5) : false
     }
 
-    implicitWidth: (controller && controller.isVertical) ? parent.width : Math.max(hRow.implicitWidth + dims.pad, emptyMsg.implicitWidth + dims.pad)
-    implicitHeight: (controller && controller.isVertical) ? Math.max(vCol.implicitHeight, emptyMsg.implicitHeight + 2) : Math.max(hRow.implicitHeight + 2, emptyMsg.implicitHeight + 2)
+    implicitWidth: (controller && controller.isVertical) ? 200 : hRow.implicitWidth + 8
+    implicitHeight: (controller && controller.isVertical) ? vCol.implicitHeight + 8 : 24
 
     Layout.preferredWidth: implicitWidth
     Layout.minimumWidth: (controller && controller.isVertical) ? 0 : implicitWidth
@@ -61,6 +62,7 @@ Item {
         id: hRow
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.verticalCenter: parent.verticalCenter
+        anchors.verticalCenterOffset: 2 // Décalage de 2px vers le bas pour toute l'applet
         // Espacement ajustable via config
         spacing: controller ? controller.spacingBetweenGames : 3
         visible: controller && !controller.isVertical && controller.todayGamesModel && controller.todayGamesModel.count > 0
@@ -111,8 +113,9 @@ Item {
                             
                             // Équipe Visiteur
                             Item {
-                                width: controller.showLogos ? 22 : 16; height: width; anchors.verticalCenter: parent.verticalCenter
-                                    Rectangle {
+                                width: controller.showLogos ? dims.sz : Math.max(16, dims.baseSz * 1.1)
+                                height: width; anchors.verticalCenter: parent.verticalCenter
+                                Rectangle {
                                     id: aBadge
                                     visible: !controller.showLogos
                                     anchors.fill: parent; radius: width/2
@@ -129,9 +132,9 @@ Item {
                                 Image {
                                     visible: controller.showLogos
                                     anchors.fill: parent
-                                    source: controller.showLogos ? controller.teamLogoUrl(hDelegateWrapper.currentModel.away) : ""
-                                    sourceSize.width: width * 2
-                                    sourceSize.height: height * 2
+                                    source: (controller.showLogos && width > 1) ? controller.teamLogoUrl(hDelegateWrapper.currentModel.away) : ""
+                                    sourceSize.width: 64
+                                    sourceSize.height: 64
                                     fillMode: Image.PreserveAspectFit; smooth: true
                                     opacity: controller.blinkOpacity(hDelegateWrapper.currentModel.gameId, 'away')
                                 }
@@ -144,7 +147,8 @@ Item {
 
                             // Équipe Locale
                             Item {
-                                width: controller.showLogos ? 22 : 16; height: width; anchors.verticalCenter: parent.verticalCenter
+                                width: controller.showLogos ? dims.sz : Math.max(16, dims.baseSz * 1.1)
+                                height: width; anchors.verticalCenter: parent.verticalCenter
                                 Rectangle {
                                     id: hBadge
                                     visible: !controller.showLogos
@@ -162,9 +166,9 @@ Item {
                                 Image {
                                     visible: controller.showLogos
                                     anchors.fill: parent
-                                    source: controller.showLogos ? controller.teamLogoUrl(hDelegateWrapper.currentModel.home) : ""
-                                    sourceSize.width: width * 2
-                                    sourceSize.height: height * 2
+                                    source: (controller.showLogos && width > 1) ? controller.teamLogoUrl(hDelegateWrapper.currentModel.home) : ""
+                                    sourceSize.width: 64
+                                    sourceSize.height: 64
                                     fillMode: Image.PreserveAspectFit; smooth: true
                                     opacity: controller.blinkOpacity(hDelegateWrapper.currentModel.gameId, 'home')
                                 }
