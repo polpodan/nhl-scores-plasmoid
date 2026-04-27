@@ -55,7 +55,7 @@ ColumnLayout {
             }
             ColumnLayout {
                 anchors.horizontalCenter: parent.horizontalCenter
-                visible: controller && controller.det && controller.det.status === 'UPCOMING'
+                visible: controller && controller.det && controller.det.status === 'UPCOMING' && !controller.det.isPlayoff
                 spacing: 0
                 Label {
                     text: (controller && controller.det) ? headerRoot.formatRecord(controller.det.awayRecord) : ""
@@ -185,7 +185,7 @@ ColumnLayout {
             }
             ColumnLayout {
                 anchors.horizontalCenter: parent.horizontalCenter
-                visible: controller && controller.det && controller.det.status === 'UPCOMING'
+                visible: controller && controller.det && controller.det.status === 'UPCOMING' && !controller.det.isPlayoff
                 spacing: 0
                 Label {
                     text: (controller && controller.det) ? headerRoot.formatRecord(controller.det.homeRecord) : ""
@@ -198,6 +198,46 @@ ColumnLayout {
                     font.pixelSize: 9; opacity: 0.5
                     Layout.alignment: Qt.AlignHCenter
                 }
+            }
+        }
+    }
+
+    // ── SECTION SÉRIES ÉLIMINATOIRES (Permanent) ──
+    Column {
+        visible: controller && controller.det && controller.det.isPlayoff
+        Layout.fillWidth: true
+        Layout.topMargin: 10
+        spacing: 2
+
+        Label { 
+            anchors.horizontalCenter: parent.horizontalCenter
+            text: (controller && controller.det) ? controller.det.seriesRound : ""
+            font.pixelSize: 11; font.bold: true; opacity: 0.6 
+        }
+
+        Row {
+            anchors.horizontalCenter: parent.horizontalCenter
+            spacing: 12
+            Label { 
+                anchors.verticalCenter: parent.verticalCenter
+                text: {
+                    if (!controller || !controller.det) return ""
+                    if (controller.det.seriesAwayPlayoffs > controller.det.seriesHomePlayoffs) return controller.det.away + " mène"
+                    if (controller.det.seriesHomePlayoffs > controller.det.seriesAwayPlayoffs) return controller.det.home + " mène"
+                    return "Égalité"
+                }
+                font.pixelSize: 13 
+            }
+            Label { 
+                anchors.verticalCenter: parent.verticalCenter
+                text: (controller && controller.det) ? (controller.det.seriesAwayPlayoffs + " – " + controller.det.seriesHomePlayoffs) : "0 – 0"
+                font.pixelSize: 20; font.bold: true 
+            }
+            Button { 
+                anchors.verticalCenter: parent.verticalCenter
+                text: "🏆"
+                flat: true; implicitWidth: 32; implicitHeight: 32
+                onClicked: if (controller) controller.openPlayoffBracket() 
             }
         }
     }

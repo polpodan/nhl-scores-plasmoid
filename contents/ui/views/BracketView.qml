@@ -11,8 +11,65 @@ Item {
     anchors.fill: parent
     visible: !!(controller && controller.nav.bracket)
 
-    readonly property var brkScores: (controller && controller.brk.scores) ? controller.brk.scores : ({})
+    // Accès direct aux données du contrôleur
+    readonly property var brkSeries: (controller && controller.brk.series) ? controller.brk.series : ({})
     readonly property int brkPulse: (controller && controller.brk.pulse) ? controller.brk.pulse : 0
+
+    // Composant interne pour une boîte de série (Style Plasma 6)
+    // On définit une fonction pour plus de réactivité
+    function getSeriesData(l) {
+        var dummy = brkPulse // Force la réévaluation quand pulse change
+        return brkSeries[l] || { top: "", bottom: "", topWins: 0, bottomWins: 0 }
+    }
+
+    component SeriesDelegate : Rectangle {
+        property string letter: ""
+        width: 160; height: 66; radius: 4
+        color: Qt.rgba(0,0,0,0.4)
+        border.color: Kirigami.Theme.textColor
+        border.width: 1
+        opacity: (getSeriesData(letter).top === "" && getSeriesData(letter).bottom === "") ? 0.2 : 1.0
+
+        ColumnLayout {
+            anchors.fill: parent
+            anchors.margins: 6
+            spacing: 2
+            
+            // Équipe du haut
+            RowLayout {
+                Components.TeamBadge { 
+                    code: getSeriesData(letter).top
+                    sz: 14; showScore: false; controller: bracketRoot.controller 
+                    visible: code !== ""
+                }
+                Label { text: "???"; visible: getSeriesData(letter).top === ""; font.pixelSize: 10; opacity: 0.5 }
+                Item { Layout.fillWidth: true }
+                Label {
+                    text: String(getSeriesData(letter).topWins)
+                    font.bold: true; font.pixelSize: 16
+                    color: getSeriesData(letter).topWins === 4 ? Kirigami.Theme.highlightColor : Kirigami.Theme.textColor
+                }
+            }
+            
+            Rectangle { Layout.fillWidth: true; height: 1; color: Kirigami.Theme.textColor; opacity: 0.1 }
+            
+            // Équipe du bas
+            RowLayout {
+                Components.TeamBadge { 
+                    code: getSeriesData(letter).bottom
+                    sz: 14; showScore: false; controller: bracketRoot.controller 
+                    visible: code !== ""
+                }
+                Label { text: "???"; visible: getSeriesData(letter).bottom === ""; font.pixelSize: 10; opacity: 0.5 }
+                Item { Layout.fillWidth: true }
+                Label {
+                    text: String(getSeriesData(letter).bottomWins)
+                    font.bold: true; font.pixelSize: 16
+                    color: getSeriesData(letter).bottomWins === 4 ? Kirigami.Theme.highlightColor : Kirigami.Theme.textColor
+                }
+            }
+        }
+    }
 
     ColumnLayout {
         anchors.fill: parent
@@ -44,151 +101,72 @@ Item {
 
             ColumnLayout {
                 width: parent.width
-                spacing: 20
-                Layout.margins: 10
+                spacing: 25
+                Layout.margins: 15
 
-                // ── CONFÉRENCE OUEST ──
-                Label { text: i18n("WESTERN CONFERENCE"); font.bold: true; opacity: 0.6; Layout.alignment: Qt.AlignHCenter }
+                // ── CONFÉRENCE EST (A, B, C, D) ──
+                Label { text: i18n("EASTERN CONFERENCE"); font.bold: true; opacity: 0.7; Layout.alignment: Qt.AlignHCenter }
                 
                 RowLayout {
                     Layout.alignment: Qt.AlignHCenter
-                    spacing: 10
+                    spacing: 20
+                    
                     ColumnLayout {
-                        spacing: 8
-                        Repeater {
-                            model: [
-                                { t1: "COL", t2: "LAK" },
-                                { t1: "DAL", t2: "MIN" },
-                                { t1: "VGK", t2: "UTA" },
-                                { t1: "EDM", t2: "ANA" }
-                            ]
-                            delegate: Rectangle {
-                                width: 160; height: 64; radius: 4
-                                color: Qt.rgba(0,0,0,0.4)
-                                border.color: Kirigami.Theme.textColor
-                                border.width: 1
-                                
-                                ColumnLayout {
-                                    anchors.fill: parent
-                                    anchors.margins: 6
-                                    spacing: 2
-                                    
-                                    RowLayout {
-                                        Components.TeamBadge { code: modelData.t1; sz: 14; showScore: false; controller: bracketRoot.controller }
-                                        Item { Layout.fillWidth: true }
-                                        Label {
-                                            text: {
-                                                var dummy = bracketRoot.brkPulse
-                                                var val = bracketRoot.brkScores[modelData.t1]
-                                                return (val !== undefined) ? String(val) : "0"
-                                            }
-                                            font.bold: true; font.pixelSize: 15
-                                        }
-                                    }
-                                    
-                                    Rectangle { Layout.fillWidth: true; height: 1; color: Kirigami.Theme.textColor; opacity: 0.1 }
-                                    
-                                    RowLayout {
-                                        Components.TeamBadge { code: modelData.t2; sz: 14; showScore: false; controller: bracketRoot.controller }
-                                        Item { Layout.fillWidth: true }
-                                        Label {
-                                            text: {
-                                                var dummy = bracketRoot.brkPulse
-                                                var val = bracketRoot.brkScores[modelData.t2]
-                                                return (val !== undefined) ? String(val) : "0"
-                                            }
-                                            font.bold: true; font.pixelSize: 15
-                                        }
-                                    }
-                                }
-                                TapHandler { onTapped: controller.openTeamHub(modelData.t1, 'bracket') }
-                            }
-                        }
-                    }
-                    ColumnLayout { 
-                        spacing: 40
-                        Rectangle { width: 160; height: 64; radius: 4; color: "transparent"; border.color: Kirigami.Theme.textColor; border.width: 1; opacity: 0.1 }
-                        Rectangle { width: 160; height: 64; radius: 4; color: "transparent"; border.color: Kirigami.Theme.textColor; border.width: 1; opacity: 0.1 }
-                    }
-                    ColumnLayout { 
-                        Rectangle { width: 160; height: 64; radius: 4; color: "transparent"; border.color: Kirigami.Theme.textColor; border.width: 1; opacity: 0.1 }
-                    }
-                }
-
-                Rectangle { Layout.fillWidth: true; height: 1; color: Kirigami.Theme.textColor; opacity: 0.1; Layout.margins: 10 }
-                Label { text: i18n("STANLEY CUP FINALS"); font.bold: true; font.pixelSize: 16; Layout.alignment: Qt.AlignHCenter; color: Kirigami.Theme.highlightColor }
-                Rectangle { Layout.alignment: Qt.AlignHCenter; width: 160; height: 64; radius: 4; color: "transparent"; border.color: Kirigami.Theme.textColor; border.width: 1; opacity: 0.1 }
-                Rectangle { Layout.fillWidth: true; height: 1; color: Kirigami.Theme.textColor; opacity: 0.1; Layout.margins: 10 }
-
-                // ── CONFÉRENCE EST ──
-                Label { text: i18n("EASTERN CONFERENCE"); font.bold: true; opacity: 0.6; Layout.alignment: Qt.AlignHCenter }
-                
-                RowLayout {
-                    Layout.alignment: Qt.AlignHCenter
-                    spacing: 10
-                    ColumnLayout { 
-                        Rectangle { width: 160; height: 64; radius: 4; color: "transparent"; border.color: Kirigami.Theme.textColor; border.width: 1; opacity: 0.1 }
-                    }
-                    ColumnLayout { 
-                        spacing: 40
-                        Rectangle { width: 160; height: 64; radius: 4; color: "transparent"; border.color: Kirigami.Theme.textColor; border.width: 1; opacity: 0.1 }
-                        Rectangle { width: 160; height: 64; radius: 4; color: "transparent"; border.color: Kirigami.Theme.textColor; border.width: 1; opacity: 0.1 }
+                        spacing: 12
+                        SeriesDelegate { letter: "A" }
+                        SeriesDelegate { letter: "B" }
+                        SeriesDelegate { letter: "C" }
+                        SeriesDelegate { letter: "D" }
                     }
                     
-                    // R1 Est (Buffalo, Tampa, Carolina, Pittsburgh)
                     ColumnLayout {
-                        spacing: 8
-                        Repeater {
-                            model: [
-                                { t1: "BUF", t2: "BOS" },
-                                { t1: "TBL", t2: "MTL" },
-                                { t1: "CAR", t2: "OTT" },
-                                { t1: "PIT", t2: "PHI" }
-                            ]
-                            delegate: Rectangle {
-                                width: 160; height: 64; radius: 4
-                                color: Qt.rgba(0,0,0,0.4)
-                                border.color: Kirigami.Theme.textColor
-                                border.width: 1
-                                
-                                ColumnLayout {
-                                    anchors.fill: parent
-                                    anchors.margins: 6
-                                    spacing: 2
-                                    
-                                    RowLayout {
-                                        Components.TeamBadge { code: modelData.t1; sz: 14; showScore: false; controller: bracketRoot.controller }
-                                        Item { Layout.fillWidth: true }
-                                        Label {
-                                            text: {
-                                                var dummy = bracketRoot.brkPulse
-                                                var val = bracketRoot.brkScores[modelData.t1]
-                                                return (val !== undefined) ? String(val) : "0"
-                                            }
-                                            font.bold: true; font.pixelSize: 15
-                                        }
-                                    }
-                                    
-                                    Rectangle { Layout.fillWidth: true; height: 1; color: Kirigami.Theme.textColor; opacity: 0.1 }
-                                    
-                                    RowLayout {
-                                        Components.TeamBadge { code: modelData.t2; sz: 14; showScore: false; controller: bracketRoot.controller }
-                                        Item { Layout.fillWidth: true }
-                                        Label {
-                                            text: {
-                                                var dummy = bracketRoot.brkPulse
-                                                var val = bracketRoot.brkScores[modelData.t2]
-                                                return (val !== undefined) ? String(val) : "0"
-                                            }
-                                            font.bold: true; font.pixelSize: 15
-                                        }
-                                    }
-                                }
-                                TapHandler { onTapped: controller.openTeamHub(modelData.t1, 'bracket') }
-                            }
-                        }
+                        spacing: 60
+                        SeriesDelegate { letter: "I" }
+                        SeriesDelegate { letter: "J" }
+                    }
+                    
+                    ColumnLayout {
+                        SeriesDelegate { letter: "M" }
                     }
                 }
+
+                // ── FINALE STANLEY CUP ──
+                Rectangle { Layout.fillWidth: true; height: 1; color: Kirigami.Theme.textColor; opacity: 0.1 }
+                ColumnLayout {
+                    Layout.alignment: Qt.AlignHCenter
+                    spacing: 8
+                    Label { text: i18n("STANLEY CUP FINALS"); font.bold: true; font.pixelSize: 16; color: Kirigami.Theme.highlightColor; Layout.alignment: Qt.AlignHCenter }
+                    SeriesDelegate { letter: "O"; Layout.alignment: Qt.AlignHCenter }
+                }
+                Rectangle { Layout.fillWidth: true; height: 1; color: Kirigami.Theme.textColor; opacity: 0.1 }
+
+                // ── CONFÉRENCE OUEST (E, F, G, H) ──
+                Label { text: i18n("WESTERN CONFERENCE"); font.bold: true; opacity: 0.7; Layout.alignment: Qt.AlignHCenter }
+                
+                RowLayout {
+                    Layout.alignment: Qt.AlignHCenter
+                    spacing: 20
+                    
+                    ColumnLayout {
+                        SeriesDelegate { letter: "N" }
+                    }
+
+                    ColumnLayout {
+                        spacing: 60
+                        SeriesDelegate { letter: "K" }
+                        SeriesDelegate { letter: "L" }
+                    }
+                    
+                    ColumnLayout {
+                        spacing: 12
+                        SeriesDelegate { letter: "E" }
+                        SeriesDelegate { letter: "F" }
+                        SeriesDelegate { letter: "G" }
+                        SeriesDelegate { letter: "H" }
+                    }
+                }
+                
+                Item { Layout.preferredHeight: 20 }
             }
         }
     }

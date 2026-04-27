@@ -59,7 +59,7 @@ ColumnLayout {
         Layout.fillWidth: true
         spacing: 12
 
-        // ── SECTION SÉRIES ÉLIMINATOIRES ──
+        // ── SECTION SÉRIES ÉLIMINATOIRES (H2H) ──
         ColumnLayout {
             visible: controller && controller.det && controller.det.isPlayoff
             Layout.fillWidth: true
@@ -67,26 +67,7 @@ ColumnLayout {
 
             Rectangle {
                 Layout.fillWidth: true; implicitHeight: 24; color: Kirigami.Theme.highlightColor; radius: 4; opacity: 0.2
-                Label { anchors.centerIn: parent; text: i18n("Playoff series"); font.pixelSize: 11; font.bold: true }
-            }
-
-            ColumnLayout {
-                Layout.alignment: Qt.AlignHCenter; spacing: 4
-                Label { Layout.alignment: Qt.AlignHCenter; text: controller.det.seriesRound; font.pixelSize: 12; font.bold: true; opacity: 0.8 }
-                RowLayout {
-                    Layout.alignment: Qt.AlignHCenter; spacing: 8
-                    Label { 
-                        text: {
-                            if (!controller || !controller.det) return ""
-                            if (controller.det.seriesAwayPlayoffs > controller.det.seriesHomePlayoffs) return controller.det.away + " mène"
-                            if (controller.det.seriesHomePlayoffs > controller.det.seriesAwayPlayoffs) return controller.det.home + " mène"
-                            return "Égalité"
-                        }
-                        font.pixelSize: 13 
-                    }
-                    Label { text: controller.det.seriesAwayPlayoffs + " – " + controller.det.seriesHomePlayoffs; font.pixelSize: 22; font.bold: true }
-                    Button { text: "🏆"; flat: true; onClicked: if (controller) controller.openPlayoffBracket() }
-                }
+                Label { anchors.centerIn: parent; text: i18n("Previous series games"); font.pixelSize: 11; font.bold: true }
             }
 
             // Liste des matchs de séries uniquement

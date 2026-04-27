@@ -201,7 +201,9 @@ function getLuminance(hex) {
     return 0.2126 * r + 0.7152 * g + 0.0722 * b;
 }
 
-function getContrastColor(hex) { 
+function getContrastColor(colorAttr) { 
+    if (!colorAttr) return "#ffffff";
+    var hex = colorAttr.toString();
     return getLuminance(hex) > 0.35 ? "#000000" : "#ffffff"; 
 }
 
@@ -238,9 +240,9 @@ function getTeamColorAdapted(teamCode, opponentCode, isAway, forText, bgColor) {
     var targetContrast = forText ? 4.5 : 2.0;
     var finalColor = primary;
 
-    // Cas spécifique Tampa / Toronto / Detroit sur fond clair : éviter le blanc
-    if (Lbg > 0.6 && (t === 'TBL' || t === 'TOR' || t === 'DET')) {
-        if (isAway) return primary; // On force la couleur sombre si le fond est clair
+    // PROTECTION : Sur fond clair, on interdit le blanc pour ces équipes (trop risqué pour la lisibilité)
+    if (Lbg > 0.4 && (t === 'TBL' || t === 'TOR' || t === 'DET')) {
+        return primary; 
     }
 
     if ((t === 'TOR' && o === 'TBL') || (t === 'TBL' && o === 'TOR')) {

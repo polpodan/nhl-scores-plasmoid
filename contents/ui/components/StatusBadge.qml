@@ -50,7 +50,7 @@ Rectangle {
             anchors.horizontalCenter: parent.horizontalCenter
             // En PP: on affiche "Période TempsMatch" (ex: 1st 12:34)
             text: isStandardPP ? (badgeRoot.line1 + " " + badgeRoot.line2) : badgeRoot.line1
-            color: Logic.getContrastColor(badgeRoot.color)
+            color: (badgeRoot.color && badgeRoot.color != "transparent" && badgeRoot.color != "#00000000") ? Logic.getContrastColor(badgeRoot.color) : Kirigami.Theme.textColor
             font.pixelSize: isStandardPP ? Math.max(8, badgeRoot.fontSize2 - 1) : badgeRoot.fontSize1
             font.bold: true
         }
@@ -66,7 +66,7 @@ Rectangle {
                 }
                 return badgeRoot.line2
             }
-            color: Logic.getContrastColor(badgeRoot.color)
+            color: (badgeRoot.color && badgeRoot.color != "transparent" && badgeRoot.color != "#00000000") ? Logic.getContrastColor(badgeRoot.color) : Kirigami.Theme.textColor
             font.pixelSize: isStandardPP ? (badgeRoot.fontSize1 - 1) : badgeRoot.fontSize2
             font.bold: true
             opacity: 0.95

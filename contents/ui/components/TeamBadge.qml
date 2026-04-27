@@ -47,9 +47,11 @@ Row {
             id: nameText
             anchors.centerIn: parent
             text: code
-            color: teamBadgeRoot.finalTextColor
-            font.pixelSize: Math.max(9, sz * 0.78)
+            // Utiliser Noir Pur (#000000) ou Blanc Pur (#ffffff) pour un contraste maximal
+            color: Logic.getContrastColor(teamRect.color)
+            font.pixelSize: Math.max(9, sz * 0.82)
             font.bold: true
+            font.weight: Font.Black
             font.family: "monospace"
         }
     }

@@ -194,11 +194,12 @@ PlasmoidItem {
     }
 
     readonly property QtObject brk: QtObject {
-        property bool   loading: false
-        property string error:   ""
-        property var    data:    null
-        property var    scores:  ({})
-        property int    pulse:   0
+        property bool loading: false
+        property string error: ""
+        property var data: null
+        property var scores: ({})
+        property var series: ({})
+        property int pulse: 0
     }
 
     readonly property QtObject srch: QtObject {
@@ -419,6 +420,15 @@ PlasmoidItem {
 
     Component.onCompleted: {
         Logic.initializeCache(Plasmoid.configuration)
+        
+        // 1. Restaurer le bracket depuis le cache immédiatement
+        try {
+            var cached = JSON.parse(Plasmoid.configuration.cacheData || "{}")
+            if (cached && cached.bracket) {
+                processBracketData(cached.bracket)
+            }
+        } catch(e) { }
+
         try {
             Plasmoid.setAction("refreshNow", i18n("Refresh now"), "view-refresh")
         } catch(e) {
@@ -426,6 +436,9 @@ PlasmoidItem {
         }
         updateFavoriteTeams()
         refresh()
+
+        // 2. Mettre à jour le bracket via le réseau en arrière-plan
+        fetchPlayoffBracket()
     }
 
     property alias todayGamesModel: todayGames
@@ -1559,33 +1572,59 @@ PlasmoidItem {
     }
 
     // ── Séries éliminatoires ────────────────────────────────────────
+    function processBracketData(data) {
+        if (!data || !data.series) return
+        var sMap = {}
+        var seriesMap = {}
+        data.series.forEach(function(s) {
+            var letter = s.seriesLetter
+            var info = {
+                top: s.topSeedTeam ? s.topSeedTeam.abbrev : "",
+                bottom: s.bottomSeedTeam ? s.bottomSeedTeam.abbrev : "",
+                topWins: s.topSeedWins || 0,
+                bottomWins: s.bottomSeedWins || 0,
+                round: s.playoffRound
+            }
+            seriesMap[letter] = info
+            if (info.top) sMap[info.top] = info.topWins
+            if (info.bottom) sMap[info.bottom] = info.bottomWins
+        })
+        brk.series = seriesMap
+        brk.scores = sMap
+        brk.data = data
+        brk.pulse++
+    }
+
     function fetchPlayoffBracket() {
-        brk.loading = true
+        // 1. CHARGEMENT DU CACHE : On commence par lire ce qu'on a en mémoire locale
+        if (!brk.data && Plasmoid.configuration.cacheData) {
+            try {
+                var cached = JSON.parse(Plasmoid.configuration.cacheData)
+                if (cached && cached.bracket) {
+                    processBracketData(cached.bracket)
+                }
+            } catch(e) { }
+        }
+
+        brk.loading = !brk.data // On ne montre le loader que si on n'a rien du tout
         brk.error   = ''
+
         Logic.ApiService.getPlayoffBracket(function(err, data, isOffline) {
-            // Si on a des données (cache ou réseau), on arrête d'afficher l'état de chargement
-            if (!err && data) brk.loading = false
-            
-            if (err) {
+            if (!err && data) {
+                brk.loading = false
+                processBracketData(data)
+
+                // 2. SAUVEGARDE DANS LE CACHE PERSISTANT
+                var cacheObj = {}
+                try { cacheObj = JSON.parse(Plasmoid.configuration.cacheData || "{}") } catch(e){}
+                cacheObj.bracket = data
+                Plasmoid.configuration.cacheData = JSON.stringify(cacheObj)
+            } else if (err && !brk.data) {
                 brk.error = String(err)
                 brk.loading = false
-            } else if (data && data.series) {
-                var sMap = {}
-                data.series.forEach(function(s) {
-                    if (s.topSeedTeam && s.topSeedTeam.abbrev) {
-                        sMap[s.topSeedTeam.abbrev] = s.topSeedWins || 0
-                    }
-                    if (s.bottomSeedTeam && s.bottomSeedTeam.abbrev) {
-                        sMap[s.bottomSeedTeam.abbrev] = s.bottomSeedWins || 0
-                    }
-                })
-                brk.scores = sMap
-                brk.data = data
-                brk.pulse++
             }
         })
     }
-
     // ── Ouvrir le hub d'équipe ──────────────────────────────────────
     function fetchTeamHub(teamCode, from) {
         hub.code    = teamCode

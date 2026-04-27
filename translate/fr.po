@@ -1087,6 +1087,9 @@ msgstr "CONFÉRENCE DE L'EST"
 msgid "STANLEY CUP FINALS"
 msgstr "FINALE DE LA COUPE STANLEY"
 
+msgid "Previous series games"
+msgstr "Matchs précédents de la série"
+
 msgid "🏆 STANLEY CUP PLAYOFFS 2026"
 msgstr "🏆 SÉRIES ÉLIMINATOIRES 2026"
 

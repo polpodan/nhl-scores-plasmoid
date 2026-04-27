@@ -12,10 +12,11 @@ All notable changes to this project will be documented in this file.
 - **Deceased Legend Detection:** For retired players over 95 years old or with a recorded death date, the interface now respectfully displays "Deceased" and their age at the time of passing instead of a live age.
 
 ### Improved
-- **Advanced Franchise Filtering:** Aligned the Franchise Leaders view with League Leaders; you can now filter historical records by position (Forwards, Defensemen, or Goalies) with 100% accurate results fetched directly from the NHL API.
-- **Visual Harmonization:** Re-centered and redesigned the Franchise Leaders header to perfectly match the main applet aesthetic.
+- **Advanced Franchise Filtering:** Aligned the Franchise Leaders view with League Leaders; Forwards, Defensemen, or Goalies filter now works with 100% accurate historical results.
+- **Visual Harmonization:** Re-centered and redesigned the Franchise Leaders header and the Playoff series status in the match hub for perfect aesthetic balance.
+- **Intelligent Hub Header:** For playoff games, the team's regular season record is now hidden to prioritize the series lead (e.g., "MTL leads 2-1 vs TBL"), providing a cleaner and more relevant interface.
+- **Dynamic Playoff Bracket:** Completely automated the bracket system. Defunct hardcoded team lists have been replaced by real-time API mapping, ensuring winners correctly advance to the next rounds and scores are updated instantly even for finished series (4-0).
 - **Streamlined Team Hub:** Removed redundant UI elements and consolidated the "Season Calendar" access to improve navigation flow.
-- **Optimized Scoring Logic:** Playoff series win counts are now calculated with strict game-type filtering, ensuring regular season matchups no longer interfere with playoff series results.
 
 ### Fixed
 - **API Format Change (2026):** Completely rewrote the bracket parser to support the new flat "series" array format introduced by the NHL API for the 2026 season.
