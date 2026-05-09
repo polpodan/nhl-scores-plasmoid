@@ -37,6 +37,7 @@ Item {
             
             // Équipe du haut
             RowLayout {
+                id: topRow
                 Components.TeamBadge { 
                     code: getSeriesData(letter).top
                     sz: 14; showScore: false; controller: bracketRoot.controller 
@@ -49,12 +50,21 @@ Item {
                     font.bold: true; font.pixelSize: 16
                     color: getSeriesData(letter).topWins === 4 ? Kirigami.Theme.highlightColor : Kirigami.Theme.textColor
                 }
+                TapHandler {
+                    onTapped: {
+                        var t = getSeriesData(letter).top
+                        if (t && controller) controller.openTeamHub(t, 'bracket')
+                    }
+                }
+                HoverHandler { id: h1; cursorShape: Qt.PointingHandCursor; enabled: getSeriesData(letter).top !== "" }
+                opacity: h1.hovered ? 1.0 : 0.85
             }
             
             Rectangle { Layout.fillWidth: true; height: 1; color: Kirigami.Theme.textColor; opacity: 0.1 }
             
             // Équipe du bas
             RowLayout {
+                id: bottomRow
                 Components.TeamBadge { 
                     code: getSeriesData(letter).bottom
                     sz: 14; showScore: false; controller: bracketRoot.controller 
@@ -67,6 +77,14 @@ Item {
                     font.bold: true; font.pixelSize: 16
                     color: getSeriesData(letter).bottomWins === 4 ? Kirigami.Theme.highlightColor : Kirigami.Theme.textColor
                 }
+                TapHandler {
+                    onTapped: {
+                        var t = getSeriesData(letter).bottom
+                        if (t && controller) controller.openTeamHub(t, 'bracket')
+                    }
+                }
+                HoverHandler { id: h2; cursorShape: Qt.PointingHandCursor; enabled: getSeriesData(letter).bottom !== "" }
+                opacity: h2.hovered ? 1.0 : 0.85
             }
         }
     }

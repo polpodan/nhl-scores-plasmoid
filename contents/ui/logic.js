@@ -269,9 +269,21 @@ function getTeamColorAdapted(teamCode, opponentCode, isAway, forText, bgColor) {
         }
     }
 
-    if (getContrast(getLuminance(finalColor), Lbg) < 1.4) {
+    // PROTECTION FINALE POUR LE TEXTE : On garantit un contraste de 4.5 minimum
+    var currentContrast = getContrast(getLuminance(finalColor), Lbg);
+    if (forText && currentContrast < 4.5) {
+        // Si fond clair (>0.5), on assombrit. Si fond sombre, on éclaircit.
+        var amount = (Lbg > 0.5) ? -15 : 15;
+        var safety = 0;
+        while (getContrast(getLuminance(finalColor), Lbg) < 4.5 && safety < 5) {
+            finalColor = shadeColor(finalColor, amount);
+            safety++;
+        }
+    } else if (currentContrast < 1.4) {
+        // Protection minimale pour les éléments graphiques non-texte
         finalColor = (Lbg > 0.5) ? shadeColor(finalColor, -40) : shadeColor(finalColor, 40);
     }
+
     return finalColor;
 }
 
