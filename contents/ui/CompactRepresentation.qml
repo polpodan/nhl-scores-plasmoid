@@ -313,12 +313,20 @@ Item {
                     }
                     Column {
                         anchors.centerIn: parent; visible: !vDelegateWrapper.isDateSep; spacing: 3
-                        Loader { sourceComponent: controller.teamColumnComponent; property string code: vDelegateWrapper.currentModel.away; property int score: vDelegateWrapper.currentModel.ag; property int sz: 14; property int iconH: controller.showLogos ? 22 : 0; property string gameId: String(vDelegateWrapper.currentModel.gameId || ''); property string teamSide: 'away'; property string gameStatus: vDelegateWrapper.currentModel.statusRole }
+                        opacity: (vDelegateWrapper.currentModel.statusRole === 'FINAL') ? 0.6 : 1.0
+                        
+                        Loader { 
+                            sourceComponent: controller.teamColumnComponent; anchors.horizontalCenter: parent.horizontalCenter
+                            property string code: vDelegateWrapper.currentModel.away; property int score: vDelegateWrapper.currentModel.ag; property int sz: 14; property int iconH: controller.showLogos ? 22 : 0; property string gameId: String(vDelegateWrapper.currentModel.gameId || ''); property string teamSide: 'away'; property string gameStatus: vDelegateWrapper.currentModel.statusRole 
+                        }
                         Loader {
-                            sourceComponent: controller.statusBadgeComponent
+                            sourceComponent: controller.statusBadgeComponent; anchors.horizontalCenter: parent.horizontalCenter
                             property string gameStatus: vDelegateWrapper.currentModel.statusRole; property string rawState: vDelegateWrapper.currentModel.rawState; property string periodType: vDelegateWrapper.currentModel.periodType; property int period: vDelegateWrapper.currentModel.period; property string liveRemain: vDelegateWrapper.currentModel.liveRemain; property var startMs: vDelegateWrapper.currentModel.start; property string awayTeam: vDelegateWrapper.currentModel.away; property string homeTeam: vDelegateWrapper.currentModel.home; property bool intermission: vDelegateWrapper.currentModel.inIntermission; property string intermissionRemain: vDelegateWrapper.currentModel.intermissionRemain || ""; property string situationCode: vDelegateWrapper.currentModel.situationCode || "1551"; property string penaltyTime: vDelegateWrapper.currentModel.penaltyTime || ""
                         }
-                        Loader { sourceComponent: controller.teamColumnComponent; property string code: vDelegateWrapper.currentModel.home; property int score: vDelegateWrapper.currentModel.hg; property int sz: 14; property int iconH: controller.showLogos ? 22 : 0; property string gameId: String(vDelegateWrapper.currentModel.gameId || ''); property string teamSide: 'home'; property string gameStatus: vDelegateWrapper.currentModel.statusRole }
+                        Loader { 
+                            sourceComponent: controller.teamColumnComponent; anchors.horizontalCenter: parent.horizontalCenter
+                            property string code: vDelegateWrapper.currentModel.home; property int score: vDelegateWrapper.currentModel.hg; property int sz: 14; property int iconH: controller.showLogos ? 22 : 0; property string gameId: String(vDelegateWrapper.currentModel.gameId || ''); property string teamSide: 'home'; property string gameStatus: vDelegateWrapper.currentModel.statusRole 
+                        }
                     }
                     MouseArea {
                         anchors.fill: parent

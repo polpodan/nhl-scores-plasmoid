@@ -2113,10 +2113,12 @@ PlasmoidItem {
 
     Component { id: teamColumn
         Components.TeamBadge {
+            anchors.horizontalCenter: parent.horizontalCenter
             code: parent.code; score: parent.score; sz: parent.sz
             gameId: parent.gameId; teamSide: parent.teamSide
             showScore: parent.gameStatus !== 'UPCOMING'
             blinkingGames: glob.blinkingGames; blinkOn: glob.blinkOn
+            controller: root
         }
     }
 
