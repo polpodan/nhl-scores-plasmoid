@@ -18,11 +18,11 @@ Item {
         readonly property bool forceInline: controller ? (!controller.isVertical && baseSz < 13.5) : false
     }
 
-    implicitWidth: (controller && controller.isVertical) ? 200 : hRow.implicitWidth + 8
+    implicitWidth: (controller && controller.isVertical) ? 200 : (emptyArea.visible ? emptyArea.width : hRow.implicitWidth + 8)
     implicitHeight: (controller && controller.isVertical) ? vCol.implicitHeight + 8 : 24
 
     Layout.preferredWidth: implicitWidth
-    Layout.minimumWidth: (controller && controller.isVertical) ? 0 : implicitWidth
+    Layout.minimumWidth: (controller && controller.isVertical) ? 0 : (emptyArea.visible ? 70 : 0)
     Layout.preferredHeight: implicitHeight
     Layout.minimumHeight: (controller && controller.isVertical) ? 0 : implicitHeight
     Layout.fillWidth: (controller && controller.isVertical)
@@ -35,13 +35,37 @@ Item {
         return (day < 10 ? "0" : "") + day + "/" + (month < 10 ? "0" : "") + month;
     }
 
-    Label {
-        id: emptyMsg
+    // Zone cliquable affichée quand il n'y a pas de match
+    MouseArea {
+        id: emptyArea
         anchors.centerIn: parent
+        width: 75 // Largeur fixe raisonnable pour éviter le débordement
+        height: parent.height
         visible: controller && controller.todayGamesModel && controller.todayGamesModel.count === 0
-        text: (controller && controller.glob.initialLoading) ? i18n("Loading…") : i18n("No games")
-        font.pixelSize: Math.max(9, dims.baseSz * 0.7)
-        opacity: 0.5
+        onClicked: if (controller) controller.expanded = !controller.expanded
+
+        Column {
+            anchors.centerIn: parent
+            width: parent.width
+            spacing: -1
+
+            Label {
+                anchors.horizontalCenter: parent.horizontalCenter
+                text: compactRoot.formatDate(new Date().getTime())
+                font.pixelSize: Math.max(9, dims.baseSz * 0.65)
+                font.bold: true
+                opacity: 0.7
+            }
+            Label {
+                anchors.horizontalCenter: parent.horizontalCenter
+                width: parent.width - 4
+                horizontalAlignment: Text.AlignHCenter
+                elide: Text.ElideRight
+                text: (controller && controller.glob.initialLoading) ? i18n("Loading…") : i18n("No games")
+                font.pixelSize: Math.max(8, dims.baseSz * 0.55)
+                opacity: 0.4
+            }
+        }
     }
 
     // Indicateur Hors-ligne
