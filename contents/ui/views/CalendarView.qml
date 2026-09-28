@@ -7,6 +7,16 @@ import "../logic.js" as Logic
 Item {
     id: calendarRoot
     property var controller
+    property bool updatingPeriod: false
+
+    function setCalendarPeriod(year, month) {
+        if (!controller) return
+        updatingPeriod = true
+        controller.cal.year = year
+        controller.cal.month = month
+        updatingPeriod = false
+        controller.fetchCalendarMonth(year, month)
+    }
 
     anchors.fill: parent
     visible: !!(controller && controller.nav.calendar)
@@ -24,11 +34,11 @@ Item {
         ignoreUnknownSignals: true
         
         function onYearChanged() {
-            if (controller.nav.calendar) 
+            if (controller.nav.calendar && !calendarRoot.updatingPeriod)
                 controller.fetchCalendarMonth(controller.cal.year, controller.cal.month)
         }
         function onMonthChanged() {
-            if (controller.nav.calendar) 
+            if (controller.nav.calendar && !calendarRoot.updatingPeriod)
                 controller.fetchCalendarMonth(controller.cal.year, controller.cal.month)
         }
     }
@@ -62,8 +72,10 @@ Item {
                 text: "‹"; flat: true
                 onClicked: {
                     if (!controller) return
-                    controller.cal.month--
-                    if (controller.cal.month < 0) { controller.cal.month = 11; controller.cal.year-- }
+                    var year = controller.cal.year
+                    var month = controller.cal.month - 1
+                    if (month < 0) { month = 11; year-- }
+                    calendarRoot.setCalendarPeriod(year, month)
                 }
             }
             Label {
@@ -96,8 +108,10 @@ Item {
                 text: "›"; flat: true
                 onClicked: {
                     if (!controller) return
-                    controller.cal.month++
-                    if (controller.cal.month > 11) { controller.cal.month = 0; controller.cal.year++ }
+                    var year = controller.cal.year
+                    var month = controller.cal.month + 1
+                    if (month > 11) { month = 0; year++ }
+                    calendarRoot.setCalendarPeriod(year, month)
                 }
             }
             Item { Layout.fillWidth: true }
@@ -105,8 +119,7 @@ Item {
                 text: i18n("Today"); flat: true; font.pixelSize: 11
                 onClicked: {
                     if (!controller) return
-                    controller.cal.year  = new Date().getFullYear()
-                    controller.cal.month = new Date().getMonth()
+                    calendarRoot.setCalendarPeriod(new Date().getFullYear(), new Date().getMonth())
                     yearCombo.currentIndex = 0
                 }
             }

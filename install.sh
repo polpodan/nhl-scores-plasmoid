@@ -46,19 +46,27 @@ echo "$MSG_LOGOS"
 DEST="contents/logos"
 mkdir -p "$DEST"
 
-# Check if we have the light and dark versions of a sample team (e.g., MTL)
-# and if we have at least 60 files (33 teams * 2 versions = 66)
-LOGO_COUNT=$(ls "$DEST"/*.svg 2>/dev/null | wc -l)
+download_logo() {
+    local team="$1" variant="$2"
+    local target="$DEST/${team}_${variant}.svg"
+    local temp="${target}.tmp.$$"
 
-if [ ! -f "$DEST/MTL_light.svg" ] || [ "$LOGO_COUNT" -lt 60 ]; then
-    for team in "${TEAMS[@]}"; do
-        if [ ! -f "$DEST/${team}_light.svg" ]; then
-            echo "  -> $team..."
-            curl -s "https://assets.nhle.com/logos/nhl/svg/${team}_light.svg" -o "$DEST/${team}_light.svg"
-            curl -s "https://assets.nhle.com/logos/nhl/svg/${team}_dark.svg" -o "$DEST/${team}_dark.svg"
-        fi
-    done
-fi
+    [ -s "$target" ] && return 0
+    if curl --fail --location --silent --show-error --retry 2 \
+        --connect-timeout 10 --max-time 30 \
+        "https://assets.nhle.com/logos/nhl/svg/${team}_${variant}.svg" \
+        --output "$temp" && [ -s "$temp" ]; then
+        mv "$temp" "$target"
+    else
+        rm -f "$temp"
+        echo "  ! Logo ${team}_${variant} indisponible; poursuite de l'installation."
+    fi
+}
+
+for team in "${TEAMS[@]}"; do
+    download_logo "$team" light
+    download_logo "$team" dark
+done
 
 # 2. Compilation des traductions
 echo "$MSG_COMPILE"

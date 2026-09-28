@@ -1,5 +1,6 @@
-// logic.js - Version 5.4.8 (COMPLETE RECOVERY - 2026-04-12)
+// logic.js - Version 6.2.0
 .pragma library
+.import "timezones.js" as TimeZones
 
 const teamColors = {
     'ANA': { p: '#F47A38', s: '#B9975B' },
@@ -87,6 +88,7 @@ const TEAM_HISTORY = {
 };
 
 let _cache = {};
+let _inFlightRequests = {};
 
 function getTeamFoundingYear(code) {
     return TEAM_FOUNDING_YEARS[String(code).toUpperCase()] || 1917;
@@ -112,6 +114,24 @@ let _configRef = null;
 function initializeCache(configObject) {
     _configRef = configObject;
     try { _cache = JSON.parse(_configRef.cacheData || "{}"); } catch(e) { _cache = {}; }
+
+    // Migrer le cache de bracket écrit directement dans cacheData avant 6.2.0.
+    if (_cache.bracket && !_cache.bracket.content) {
+        var seasonYear = new Date().getFullYear();
+        if (new Date().getMonth() > 8) seasonYear++;
+        _cache["playoff_bracket_" + seasonYear] = {
+            timestamp: new Date().getTime(),
+            content: _cache.bracket
+        };
+        delete _cache.bracket;
+        _configRef.cacheData = JSON.stringify(_cache);
+    }
+}
+
+function getCachedPlayoffBracket() {
+    var seasonYear = new Date().getFullYear();
+    if (new Date().getMonth() > 8) seasonYear++;
+    return getFromCache("playoff_bracket_" + seasonYear);
 }
 
 function saveToCache(key, data) {
@@ -137,6 +157,11 @@ function pruneCache(now) {
     for (let i = 0; i < keys.length; i++) {
         let k = keys[i];
         let entry = _cache[k];
+        // Les entrées mal formées ne doivent pas faire échouer le nettoyage.
+        if (!entry || typeof entry.timestamp !== "number" || !Object.prototype.hasOwnProperty.call(entry, "content")) {
+            delete _cache[k];
+            continue;
+        }
         let age = now - entry.timestamp;
 
         // Scores : expirent après 48h (172 800 000 ms)
@@ -346,24 +371,87 @@ function getDayViewTimeLabel(msUTC, homeTeam, mode) {
     return localTimeStr(msUTC);
 }
 
-function getTeamZone(code) { switch(String(code||'')){ case 'BOS': case 'BUF': case 'CAR': case 'CBJ': case 'DET': case 'FLA': case 'MTL': case 'NJD': case 'NYI': case 'NYR': case 'OTT': case 'PHI': case 'PIT': case 'TBL': case 'TOR': case 'WSH': return 'ET'; case 'CHI': case 'DAL': case 'MIN': case 'NSH': case 'STL': case 'WPG': return 'CT'; case 'COL': case 'CGY': case 'EDM': case 'UTA': return 'MT'; case 'ANA': case 'LAK': case 'SEA': case 'SJS': case 'VAN': case 'VGK': return 'PT'; default: return 'ET'; } }
-function zoneBaseOffsetHours(zone){ if(zone==='ET') return -5; if(zone==='CT') return -6; if(zone==='MT') return -7; if(zone==='PT') return -8; return -5; }
-function nthSundayOfMonth(year, month0, n){ var d = new Date(Date.UTC(year, month0, 1)); var dow = d.getUTCDay(); var firstSunday = 1 + ((7 - dow) % 7); return firstSunday + 7*(n-1); }
-function firstSundayNovember(year){ return nthSundayOfMonth(year, 10, 1); }
-function secondSundayMarch(year){ return nthSundayOfMonth(year, 2, 2); }
-function isDstDateLocalLike(year, month0, day, zone){ var dStart = secondSundayMarch(year); var dEnd = firstSundayNovember(year); if(month0>2 && month0<10) return true; if(month0<2 || month0>10) return false; if(month0===2) return day>=dStart; if(month0===10) return day<dEnd; return false; }
-function venueTimeStr(msUTC, homeTeam) { if(!msUTC || !homeTeam) return ""; var d = new Date(msUTC); var zone = getTeamZone(homeTeam); var baseOff = zoneBaseOffsetHours(zone); var isDst = isDstDateLocalLike(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), zone); var totalOff = baseOff + (isDst ? 1 : 0); var local = new Date(d.getTime() + totalOff * 3600000); var h = local.getUTCHours(); var m = local.getUTCMinutes(); return (h<10?'0':'')+h+':'+(m<10?'0':'')+m; }
+const TEAM_TIME_ZONES = {
+    // Clubs actuels
+    ANA: 'America/Los_Angeles', ARI: 'America/Phoenix', BOS: 'America/New_York',
+    BUF: 'America/Toronto', CAR: 'America/New_York', CBJ: 'America/New_York',
+    CGY: 'America/Edmonton', CHI: 'America/Chicago', COL: 'America/Denver',
+    DAL: 'America/Chicago', DET: 'America/Detroit', EDM: 'America/Edmonton',
+    FLA: 'America/New_York', LAK: 'America/Los_Angeles', MIN: 'America/Chicago',
+    MTL: 'America/Toronto', NJD: 'America/New_York', NSH: 'America/Chicago',
+    NYI: 'America/New_York', NYR: 'America/New_York', OTT: 'America/Toronto',
+    PHI: 'America/New_York', PIT: 'America/New_York', SEA: 'America/Los_Angeles',
+    SJS: 'America/Los_Angeles', STL: 'America/Chicago', TBL: 'America/New_York',
+    TOR: 'America/Toronto', UTA: 'America/Denver', VAN: 'America/Vancouver',
+    VGK: 'America/Los_Angeles', WPG: 'America/Winnipeg', WSH: 'America/New_York',
+    // Franchises historiques visibles dans les saisons anciennes
+    AFM: 'America/New_York', ATL: 'America/New_York', BRK: 'America/New_York',
+    CGS: 'America/Los_Angeles', CLE: 'America/New_York', CLR: 'America/Denver',
+    HAM: 'America/Toronto', HFD: 'America/New_York', KCS: 'America/Chicago',
+    MMR: 'America/Toronto', MNS: 'America/Chicago', NYA: 'America/New_York',
+    OAK: 'America/Los_Angeles', PHQ: 'America/New_York', PTP: 'America/New_York',
+    QUE: 'America/Toronto', SEN: 'America/Toronto', SLE: 'America/Chicago',
+    TAN: 'America/Toronto', TSP: 'America/Toronto', WIN: 'America/Winnipeg'
+};
+
+function getTeamTimeZone(code) {
+    return TEAM_TIME_ZONES[String(code || '').toUpperCase()] || 'America/New_York';
+}
+function venueTimeStr(msUTC, homeTeam) {
+    if (!msUTC || !homeTeam) return "";
+    var zoneId = getTeamTimeZone(homeTeam);
+    var offsetSeconds = TimeZones.offsetSecondsAtUtc(msUTC, zoneId);
+    var local = new Date(msUTC + offsetSeconds * 1000);
+    var h = local.getUTCHours();
+    var m = local.getUTCMinutes();
+    return (h < 10 ? '0' : '') + h + ':' + (m < 10 ? '0' : '') + m;
+}
 function localTimeStr(msUTC) { if(!msUTC) return ""; var d = new Date(msUTC); var h = d.getHours(); var m = d.getMinutes(); return (h<10?'0':'')+h+':'+(m<10?'0':'')+m; }
 
 function httpGet(url, cb) {
+    var activeRequest = _inFlightRequests[url];
+    if (activeRequest) {
+        activeRequest.callbacks.push(cb);
+        return;
+    }
+
+    activeRequest = { callbacks: [cb] };
+    _inFlightRequests[url] = activeRequest;
     var xhr = new XMLHttpRequest();
+    var completed = false;
+    function finish(err, data) {
+        if (completed) return;
+        completed = true;
+        delete _inFlightRequests[url];
+        var callbacks = activeRequest.callbacks.slice(0);
+        for (var i = 0; i < callbacks.length; i++) {
+            try {
+                callbacks[i](err, data);
+            } catch (e) {
+                console.error("API response callback failed for " + url + ": " + e);
+            }
+        }
+    }
     xhr.onreadystatechange = function() {
         if (xhr.readyState === XMLHttpRequest.DONE) {
-            if (xhr.status === 200) { try { var res = JSON.parse(xhr.responseText); cb(null, res); } catch(e) { cb(e, null); } }
-            else { cb(new Error("HTTP " + xhr.status), null); }
+            if (xhr.status >= 200 && xhr.status < 300) {
+                try { finish(null, JSON.parse(xhr.responseText)); }
+                catch(e) { finish(e, null); }
+            } else {
+                finish(new Error("HTTP " + xhr.status), null);
+            }
         }
     };
-    xhr.open("GET", url); xhr.send();
+    xhr.timeout = 20000;
+    xhr.ontimeout = function() { finish(new Error("Request timed out"), null); };
+    xhr.onerror = function() { finish(new Error("Network error"), null); };
+    xhr.onabort = function() { finish(new Error("Request aborted"), null); };
+    try {
+        xhr.open("GET", url);
+        xhr.send();
+    } catch(e) {
+        finish(e, null);
+    }
 }
 
 const ApiService = {
@@ -395,7 +483,7 @@ const ApiService = {
         if (new Date().getMonth() > 8) year++;
         var cacheKey = "playoff_bracket_" + year;
         
-        httpGet(this.BASE_URL + "/playoff-bracket/" + year + "?_=" + new Date().getTime(), function(err, data) {
+        httpGet(this.BASE_URL + "/playoff-bracket/" + year, function(err, data) {
             if (err) {
                 var cached = getFromCache(cacheKey);
                 if (cached) cb(null, cached, true);

@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## [6.2.0] - 2026-09-28
+
+### Fixed
+- Unified playoff bracket persistence with the shared cache and migrated brackets saved by earlier versions.
+- Logo installation now checks light and dark variants independently, retries downloads, and avoids keeping failed responses.
+- Fixed venue time conversion at the exact daylight saving transitions and added a timeout for stalled API requests.
+- Added bundled IANA tzdata 2026d transitions for current and historical club cities (1900–2100), including current Alberta and British Columbia rules, plus Manitoba’s announced permanent daylight time from 2026.
+- Ignored late responses from searches, player selections, team schedules, and match details after the selection changes.
+- Coalesced concurrent requests for the same API URL so multiple views share one network response.
+- Ignored stale leaderboard and team-stat responses after filters, teams, or seasons change; handled failed leaderboard requests without leaving loading indicators active.
+- Prevented late calendar responses from replacing the counts for the month currently displayed.
+- Removed checked-in temporary JavaScript snapshots from the packaged UI directory.
+- Updated the README version badge to match the applet metadata.
+
 ## [6.1.0] - 2026-04-18
 
 ### Added

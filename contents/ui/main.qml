@@ -117,6 +117,7 @@ PlasmoidItem {
     readonly property QtObject flead: QtObject {
         property bool loading: false
         property string error: ""
+        property int requestGeneration: 0
         property string team: ""
         property var points: []
         property var goals: []
@@ -164,6 +165,7 @@ PlasmoidItem {
     readonly property QtObject lead: QtObject {
         property bool   loading: false
         property string error:   ""
+        property int    requestGeneration: 0
         property var    points:  []
         property var    goals:   []
         property var    assists: []
@@ -191,6 +193,7 @@ PlasmoidItem {
         property bool   loading: false
         property string error:   ""
         property var    data:    null
+        property int    requestGeneration: 0
     }
 
     readonly property QtObject brk: QtObject {
@@ -207,6 +210,7 @@ PlasmoidItem {
         property string error:   ""
         property string query:   ""
         property var    results: []
+        property int    requestGeneration: 0
     }
 
     readonly property QtObject hub: QtObject {
@@ -240,10 +244,12 @@ PlasmoidItem {
         property int    month:   new Date().getMonth()
         property var    counts:  ({})
         property bool   loading: false
+        property int    requestGeneration: 0
     }
 
     readonly property QtObject det: QtObject {
         property int    gameId:   0
+        property int    requestGeneration: 0
         property string away:     ''
         property string home:     ''
         property int    ag:       0
@@ -394,10 +400,12 @@ PlasmoidItem {
         property var    gamesMap:  ({})
         property bool   loading:   false
         property string error:     ''
+        property int    scheduleGeneration: 0
         property var    skaters:   []
         property var    goalies:   []
         property bool   statsLoading: false
         property string statsError:   ''
+        property int    statsGeneration: 0
         property string season: {
             var now = new Date()
             var y = now.getFullYear()
@@ -421,13 +429,9 @@ PlasmoidItem {
     Component.onCompleted: {
         Logic.initializeCache(Plasmoid.configuration)
         
-        // 1. Restaurer le bracket depuis le cache immédiatement
-        try {
-            var cached = JSON.parse(Plasmoid.configuration.cacheData || "{}")
-            if (cached && cached.bracket) {
-                processBracketData(cached.bracket)
-            }
-        } catch(e) { }
+        // Restaurer le bracket depuis le cache commun immédiatement.
+        var cachedBracket = Logic.getCachedPlayoffBracket()
+        if (cachedBracket) processBracketData(cachedBracket)
 
         try {
             Plasmoid.setAction("refreshNow", i18n("Refresh now"), "view-refresh")
@@ -1256,9 +1260,10 @@ PlasmoidItem {
     }
 
     // ── Affrontements saison entre 2 équipes ─────────────────────────
-    function fetchH2H(away, home) {
+    function fetchH2H(away, home, gameId) {
         det.h2hGames = []
         Logic.ApiService.getTeamSchedule(away, function(err, data) {
+                if (det.gameId !== gameId || det.away !== away || det.home !== home) return
                 if (err || !data) return
                 var games = data.games || []
                 var h2h = []
@@ -1364,7 +1369,16 @@ PlasmoidItem {
 
     // ── Calendrier — nombre de matchs par jour ───────────────────────
     function fetchCalendarMonth(year, month) {
+        // Normaliser le mois (des changements de mois peuvent traverser l'année).
+        var normalizedDate = new Date(year, month, 1)
+        year = normalizedDate.getFullYear()
+        month = normalizedDate.getMonth()
+
+        // Une réponse d'une demande précédente ne doit pas remplacer le mois actuel.
+        cal.requestGeneration++
+        var requestGeneration = cal.requestGeneration
         cal.loading = true
+        cal.counts = ({})
         var counts = {}
         var pending = 0
         var daysInMonth = new Date(year, month + 1, 0).getDate()
@@ -1378,7 +1392,7 @@ PlasmoidItem {
         pending = fetchDates.length
         function done() {
             pending--
-            if (pending <= 0) {
+            if (pending <= 0 && requestGeneration === cal.requestGeneration) {
                 cal.loading = false
                 cal.counts = counts
             }
@@ -1409,6 +1423,8 @@ PlasmoidItem {
 
     // ── Recherche de joueurs ─────────────────────────────────────────
     function openSearch() {
+        srch.requestGeneration++
+        srch.loading = false
         nav.search    = true
         srch.results = []
         srch.error   = ''
@@ -1423,11 +1439,18 @@ PlasmoidItem {
     }
 
     function fetchSearch(query) {
-        if (!query || query.length < 2) return
+        srch.requestGeneration++
+        var requestGeneration = srch.requestGeneration
+        if (!query || query.length < 2) {
+            srch.loading = false
+            srch.results = []
+            return
+        }
         srch.loading = true
         srch.error   = ''
         srch.results = []
         Logic.ApiService.searchPlayers(query, function(err, data) {
+            if (requestGeneration !== srch.requestGeneration) return
             srch.loading = false
             if (err) { srch.error = String(err); return }
             
@@ -1455,10 +1478,22 @@ PlasmoidItem {
     }
 
     function fetchLeadersFiltered(fF, fD, fG, fR) {
+        lead.requestGeneration++
+        var requestGeneration = lead.requestGeneration
         lead.loading = true
         lead.error   = ''
+        lead.points = []; lead.goals = []; lead.assists = []; lead.pim = []
+        lead.wins = []; lead.sho = []; lead.gaa = []; lead.svp = []
         let pending = 2
-        function done() { pending--; if (pending <= 0) lead.loading = false }
+        function isCurrentRequest() { return requestGeneration === lead.requestGeneration }
+        function setRequestError(err) {
+            if (isCurrentRequest() && err && !lead.error) lead.error = String(err)
+        }
+        function done() {
+            if (!isCurrentRequest()) return
+            pending--
+            if (pending <= 0) lead.loading = false
+        }
 
         var anyPos = fF || fD || fG  // filtre de position actif
         // Recrues : endpoint séparé ci-dessous
@@ -1492,25 +1527,49 @@ PlasmoidItem {
         var loadGoalies = !fF && !fD || fG  // charger gardiens sauf si F ou D seul
 
         let skaterPending = loadSkaters ? 4 : 0
-        function skaterDone() { skaterPending--; if (skaterPending <= 0) done() }
+        function skaterDone() {
+            if (!isCurrentRequest()) return
+            skaterPending--
+            if (skaterPending <= 0) done()
+        }
 
         if (loadSkaters) {
             Logic.ApiService.getSkaterLeaders(limit, fR, "points", lead.season, lead.seasonType, function(err, data) {
-                if (err) { lead.error = String(err) }
-                var pts = Logic.parseLeaders(data.points || [], "points")
-                lead.points = applyFilter(pts, false)
+                if (!isCurrentRequest()) return
+                if (err || !data) {
+                    setRequestError(err || new Error("No points data returned"))
+                    lead.points = []
+                } else {
+                    try { lead.points = applyFilter(Logic.parseLeaders(data.points || [], "points"), false) }
+                    catch (e) { setRequestError(e); lead.points = [] }
+                }
                 skaterDone()
             })
             Logic.ApiService.getSkaterLeaders(limit, fR, "goals", lead.season, lead.seasonType, function(err, data) {
-                if (!err) lead.goals = applyFilter(Logic.parseLeaders(data.goals || [], "goals"), false)
+                if (!isCurrentRequest()) return
+                if (err || !data) { setRequestError(err || new Error("No goals data returned")); lead.goals = [] }
+                else {
+                    try { lead.goals = applyFilter(Logic.parseLeaders(data.goals || [], "goals"), false) }
+                    catch (e) { setRequestError(e); lead.goals = [] }
+                }
                 skaterDone()
             })
             Logic.ApiService.getSkaterLeaders(limit, fR, "assists", lead.season, lead.seasonType, function(err, data) {
-                if (!err) lead.assists = applyFilter(Logic.parseLeaders(data.assists || [], "assists"), false)
+                if (!isCurrentRequest()) return
+                if (err || !data) { setRequestError(err || new Error("No assists data returned")); lead.assists = [] }
+                else {
+                    try { lead.assists = applyFilter(Logic.parseLeaders(data.assists || [], "assists"), false) }
+                    catch (e) { setRequestError(e); lead.assists = [] }
+                }
                 skaterDone()
             })
             Logic.ApiService.getSkaterLeaders(limit, fR, "penaltyMins", lead.season, lead.seasonType, function(err, data) {
-                if (!err) lead.pim = applyFilter(Logic.parseLeaders(data.penaltyMins || [], "penaltyMins"), false)
+                if (!isCurrentRequest()) return
+                if (err || !data) { setRequestError(err || new Error("No penalty data returned")); lead.pim = [] }
+                else {
+                    try { lead.pim = applyFilter(Logic.parseLeaders(data.penaltyMins || [], "penaltyMins"), false) }
+                    catch (e) { setRequestError(e); lead.pim = [] }
+                }
                 skaterDone()
             })
         } else {
@@ -1521,11 +1580,22 @@ PlasmoidItem {
 
         if (loadGoalies) {
             Logic.ApiService.getGoalieLeaders(limit, fR, "wins,shutouts,goalsAgainstAverage,savePctg", lead.season, lead.seasonType, function(err, data) {
-                if (err) { done(); return }
-                lead.wins = applyFilter(Logic.parseLeaders(data.wins || [], "wins"), true)
-                lead.sho  = applyFilter(Logic.parseLeaders(data.shutouts || [], "shutouts"), true)
-                lead.gaa = applyFilter(Logic.parseLeaders(data.goalsAgainstAverage || [], "gaa"), true)
-                lead.svp = applyFilter(Logic.parseLeaders(data.savePctg || [], "savePctg"), true)
+                if (!isCurrentRequest()) return
+                if (err || !data) {
+                    setRequestError(err || new Error("No goalie data returned"))
+                    lead.wins = []; lead.sho = []; lead.gaa = []; lead.svp = []
+                    done()
+                    return
+                }
+                try {
+                    lead.wins = applyFilter(Logic.parseLeaders(data.wins || [], "wins"), true)
+                    lead.sho  = applyFilter(Logic.parseLeaders(data.shutouts || [], "shutouts"), true)
+                    lead.gaa  = applyFilter(Logic.parseLeaders(data.goalsAgainstAverage || [], "gaa"), true)
+                    lead.svp  = applyFilter(Logic.parseLeaders(data.savePctg || [], "savePctg"), true)
+                } catch (e) {
+                    setRequestError(e)
+                    lead.wins = []; lead.sho = []; lead.gaa = []; lead.svp = []
+                }
                 done()
             })
         } else {
@@ -1538,10 +1608,13 @@ PlasmoidItem {
     // ── Fiche joueur ─────────────────────────────────────────────────
     function fetchPlayer(playerId) {
         if (!playerId) return
+        ply.requestGeneration++
+        var requestGeneration = ply.requestGeneration
         ply.loading = true
         ply.error   = ''
         ply.data    = null
         Logic.ApiService.getPlayerLanding(playerId, function(err, data) {
+            if (requestGeneration !== ply.requestGeneration) return
             ply.loading = false
             if (err) { ply.error = String(err); return }
             ply.data = data
@@ -1596,14 +1669,10 @@ PlasmoidItem {
     }
 
     function fetchPlayoffBracket() {
-        // 1. CHARGEMENT DU CACHE : On commence par lire ce qu'on a en mémoire locale
-        if (!brk.data && Plasmoid.configuration.cacheData) {
-            try {
-                var cached = JSON.parse(Plasmoid.configuration.cacheData)
-                if (cached && cached.bracket) {
-                    processBracketData(cached.bracket)
-                }
-            } catch(e) { }
+        // Charger d'abord le cache commun pour afficher le dernier bracket connu.
+        if (!brk.data) {
+            var cachedBracket = Logic.getCachedPlayoffBracket()
+            if (cachedBracket) processBracketData(cachedBracket)
         }
 
         brk.loading = !brk.data // On ne montre le loader que si on n'a rien du tout
@@ -1614,11 +1683,6 @@ PlasmoidItem {
                 brk.loading = false
                 processBracketData(data)
 
-                // 2. SAUVEGARDE DANS LE CACHE PERSISTANT
-                var cacheObj = {}
-                try { cacheObj = JSON.parse(Plasmoid.configuration.cacheData || "{}") } catch(e){}
-                cacheObj.bracket = data
-                Plasmoid.configuration.cacheData = JSON.stringify(cacheObj)
             } else if (err && !brk.data) {
                 brk.error = String(err)
                 brk.loading = false
@@ -2202,9 +2266,16 @@ PlasmoidItem {
 
     function fetchFranchiseLeaders(teamCode) {
         if (!teamCode) return
+        flead.requestGeneration++
+        var requestGeneration = flead.requestGeneration
         flead.team = teamCode
         flead.loading = true
         flead.error = ""
+
+        function isCurrentRequest() { return requestGeneration === flead.requestGeneration }
+        function setRequestError(err) {
+            if (isCurrentRequest() && err && !flead.error) flead.error = String(err)
+        }
         
         // Reset
         flead.points = []; flead.goals = []; flead.assists = [];
@@ -2224,6 +2295,7 @@ PlasmoidItem {
         var pending = (loadSkaters ? 4 : 0) + (loadGoalies ? 3 : 0)
         
         function done() { 
+            if (!isCurrentRequest()) return
             pending--
             if (pending <= 0) {
                 var applyActive = function(list) {
@@ -2241,22 +2313,34 @@ PlasmoidItem {
         if (loadSkaters) {
             // 0. Active IDs (Skaters)
             Logic.ApiService.getFranchiseLeaders(teamCode, "points", 100, true, st, false, pos, function(err, data) {
-                if (!err && data && data.data) data.data.forEach(function(l) { activeIds[l.playerId] = true })
+                if (isCurrentRequest()) {
+                    if (err) setRequestError(err)
+                    else if (data && data.data) data.data.forEach(function(l) { activeIds[l.playerId] = true })
+                }
                 done()
             })
             // 1. Points
             Logic.ApiService.getFranchiseLeaders(teamCode, "points", limit, false, st, false, pos, function(err, data) {
-                if (!err && data && data.data) flead.points = data.data.map(function(l) { return { id: l.playerId, name: l.skaterFullName, value: l.points, pos: l.positionCode } })
+                if (isCurrentRequest()) {
+                    if (err) { setRequestError(err); flead.points = [] }
+                    else if (data && data.data) flead.points = data.data.map(function(l) { return { id: l.playerId, name: l.skaterFullName, value: l.points, pos: l.positionCode } })
+                }
                 done()
             })
             // 2. Goals
             Logic.ApiService.getFranchiseLeaders(teamCode, "goals", limit, false, st, false, pos, function(err, data) {
-                if (!err && data && data.data) flead.goals = data.data.map(function(l) { return { id: l.playerId, name: l.skaterFullName, value: l.goals, pos: l.positionCode } })
+                if (isCurrentRequest()) {
+                    if (err) { setRequestError(err); flead.goals = [] }
+                    else if (data && data.data) flead.goals = data.data.map(function(l) { return { id: l.playerId, name: l.skaterFullName, value: l.goals, pos: l.positionCode } })
+                }
                 done()
             })
             // 3. Assists
             Logic.ApiService.getFranchiseLeaders(teamCode, "assists", limit, false, st, false, pos, function(err, data) {
-                if (!err && data && data.data) flead.assists = data.data.map(function(l) { return { id: l.playerId, name: l.skaterFullName, value: l.assists, pos: l.positionCode } })
+                if (isCurrentRequest()) {
+                    if (err) { setRequestError(err); flead.assists = [] }
+                    else if (data && data.data) flead.assists = data.data.map(function(l) { return { id: l.playerId, name: l.skaterFullName, value: l.assists, pos: l.positionCode } })
+                }
                 done()
             })
         }
@@ -2264,24 +2348,36 @@ PlasmoidItem {
         if (loadGoalies) {
             // 0. Active IDs (Goalies)
             Logic.ApiService.getFranchiseLeaders(teamCode, "wins", 100, true, st, true, "", function(err, data) {
-                if (!err && data && data.data) data.data.forEach(function(l) { activeIds[l.playerId] = true })
+                if (isCurrentRequest()) {
+                    if (err) setRequestError(err)
+                    else if (data && data.data) data.data.forEach(function(l) { activeIds[l.playerId] = true })
+                }
                 done()
             })
             // 1. Wins
             Logic.ApiService.getFranchiseLeaders(teamCode, "wins", limit, false, st, true, "", function(err, data) {
-                if (!err && data && data.data) flead.wins = data.data.map(function(l) { return { id: l.playerId, name: l.goalieFullName, value: l.wins } })
+                if (isCurrentRequest()) {
+                    if (err) { setRequestError(err); flead.wins = [] }
+                    else if (data && data.data) flead.wins = data.data.map(function(l) { return { id: l.playerId, name: l.goalieFullName, value: l.wins } })
+                }
                 done()
             })
             // 2. Blanchissages
             Logic.ApiService.getFranchiseLeaders(teamCode, "shutouts", limit, false, st, true, "", function(err, data) {
-                if (!err && data && data.data) flead.sho = data.data.map(function(l) { return { id: l.playerId, name: l.goalieFullName, value: l.shutouts } })
+                if (isCurrentRequest()) {
+                    if (err) { setRequestError(err); flead.sho = [] }
+                    else if (data && data.data) flead.sho = data.data.map(function(l) { return { id: l.playerId, name: l.goalieFullName, value: l.shutouts } })
+                }
                 done()
             })
         }
     }
 
     function fetchSchedule(team) {
+        sch.scheduleGeneration++
+        var scheduleGeneration = sch.scheduleGeneration
         Logic.ApiService.getTeamSchedule(team, function(err, data) {
+            if (scheduleGeneration !== sch.scheduleGeneration) return
             sch.loading = false
             if (err) { sch.error = String(err); return }
             try {
@@ -2352,6 +2448,8 @@ PlasmoidItem {
     }
 
     function fetchTeamStats(team) {
+        sch.statsGeneration++
+        var statsGeneration = sch.statsGeneration
         sch.statsLoading = true
         sch.statsError   = ''
         
@@ -2360,6 +2458,7 @@ PlasmoidItem {
         
         // Endpoint stats équipe saison/type choisis
         Logic.ApiService.getTeamStats(apiCode, sch.season, sch.seasonType, function(err, data) {
+            if (statsGeneration !== sch.statsGeneration) return
             sch.statsLoading = false
             if (err) { sch.statsError = String(err); return }
             try {
@@ -2442,7 +2541,7 @@ PlasmoidItem {
             det.intermRemain = intermRemain || ""
             det.sitCode = sitCode || '1551'
             det.view    = 'goals'
-            fetchH2H(away, home)
+            fetchH2H(away, home, gid)
             
             root.popupRef.visible = true
             return
@@ -2467,7 +2566,7 @@ PlasmoidItem {
         det.penalties     = []
         det.playerMap    = {}
         det.view          = 'goals'
-        fetchH2H(away, home)
+        fetchH2H(away, home, gid)
         det.gameId  = gid
         det.away    = away
         det.home    = home
@@ -2526,12 +2625,20 @@ PlasmoidItem {
         if (det.gameId === gid && det.status === 'FINAL' && det.goals.length > 0 && !det.loading) {
             return
         }
+        det.requestGeneration++
+        var requestGeneration = det.requestGeneration
         det.loading = true
         var done = 0
-        function tryDone() { done++; if (done >= 3) det.loading = false }
+        function isCurrentRequest() { return requestGeneration === det.requestGeneration }
+        function tryDone() {
+            if (!isCurrentRequest()) return
+            done++
+            if (done >= 3) det.loading = false
+        }
 
         // right-rail → stats de comparaison (preview)
         Logic.ApiService.getGameRightRail(gid, function(err, d) {
+            if (!isCurrentRequest()) return
             if (!err && d) {
                 // 1. Stats de saison
                 if (d.teamSeasonStats) {
@@ -2614,6 +2721,7 @@ PlasmoidItem {
 
         // landing → buts
         Logic.ApiService.getGameLanding(gid, function(err, d) {
+            if (!isCurrentRequest()) return
             if (!err) {
                 try {
                     // Mise à jour du score et statut si disponible
@@ -2841,6 +2949,7 @@ PlasmoidItem {
 
         // boxscore → stats d'équipe
         Logic.ApiService.getGameBoxscore(gid, function(err, d) {
+            if (!isCurrentRequest()) return
             if (!err) {
                 try {
                     var st = {}
