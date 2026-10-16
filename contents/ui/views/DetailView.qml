@@ -155,6 +155,16 @@ ScrollView {
                     HoverHandler { cursorShape: Qt.PointingHandCursor }
                     TapHandler { onTapped: controller.det.view = 'penalties' }
                 }
+                Label { text: "·"; font.pixelSize: 14; opacity: 0.3 }
+                Label {
+                    text: i18n("Boxscore")
+                    font.bold: controller.det.view === 'boxscore'
+                    font.pixelSize: 14
+                    color: controller.det.view === 'boxscore' ? Kirigami.Theme.textColor : Kirigami.Theme.disabledTextColor
+                    opacity: font.bold ? 1.0 : 0.45
+                    HoverHandler { cursorShape: Qt.PointingHandCursor }
+                    TapHandler { onTapped: controller.det.view = 'boxscore' }
+                }
                 Label { text: "·"; font.pixelSize: 14; opacity: 0.3; visible: controller && controller.det.threeStars.length > 0 }
                 Label {
                     visible: controller && controller.det.threeStars.length > 0
@@ -176,6 +186,12 @@ ScrollView {
 
             Detail.PenaltiesList {
                 visible: controller && controller.det.view === 'penalties' && !controller.det.loading
+                controller: detailRoot.controller
+            }
+
+            Detail.BoxscoreList {
+                visible: controller && controller.det.view === 'boxscore' && !controller.det.loading
+                Layout.fillWidth: true
                 controller: detailRoot.controller
             }
 

@@ -360,6 +360,14 @@ msgstr ""
 msgid "Player"
 msgstr ""
 
+#: ../contents/ui/views/DetailView.qml
+msgid "Boxscore"
+msgstr ""
+
+#: ../contents/ui/views/detail/BoxscoreList.qml
+msgid "No player stats available yet."
+msgstr ""
+
 #: ../contents/ui/views/ScheduleView.qml:261
 msgid "B"
 msgstr ""
@@ -736,6 +744,50 @@ msgstr ""
 
 #: ../contents/ui/configDisplay.qml:240
 msgid "Compact desktop mode (favorite team only)"
+msgstr ""
+
+#: ../contents/ui/configDisplay.qml
+msgid "Desktop orientation:"
+msgstr ""
+
+#: ../contents/ui/configDisplay.qml
+msgid "Desktop card size:"
+msgstr ""
+
+#: ../contents/ui/configDisplay.qml
+msgid "Desktop logo/badge size:"
+msgstr ""
+
+#: ../contents/ui/configDisplay.qml
+msgid "Vertical"
+msgstr ""
+
+#: ../contents/ui/configDisplay.qml
+msgid "Horizontal"
+msgstr ""
+
+#: ../contents/ui/configDisplay.qml
+msgid "Desktop font size:"
+msgstr ""
+
+#: ../contents/ui/configDisplay.qml
+msgid "pixels"
+msgstr ""
+
+#: ../contents/ui/configDisplay.qml
+msgid "Desktop font family:"
+msgstr ""
+
+#: ../contents/ui/configDisplay.qml
+msgid "System default"
+msgstr ""
+
+#: ../contents/ui/configDisplay.qml
+msgid "Choose font…"
+msgstr ""
+
+#: ../contents/ui/configDisplay.qml
+msgid "Use system default"
 msgstr ""
 
 #: ../contents/ui/configDisplay.qml:247

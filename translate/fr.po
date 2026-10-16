@@ -360,6 +360,14 @@ msgstr "Aucun match"
 msgid "Player"
 msgstr "Joueur"
 
+#: ../contents/ui/views/DetailView.qml
+msgid "Boxscore"
+msgstr "Feuille de pointage"
+
+#: ../contents/ui/views/detail/BoxscoreList.qml
+msgid "No player stats available yet."
+msgstr "Les statistiques des joueurs ne sont pas encore disponibles."
+
 #: ../contents/ui/views/ScheduleView.qml:261
 msgid "B"
 msgstr "B"
@@ -744,6 +752,50 @@ msgstr "Bureau :"
 #: ../contents/ui/configDisplay.qml:240
 msgid "Compact desktop mode (favorite team only)"
 msgstr "Mode bureau compact (équipe favorite seulement)"
+
+#: ../contents/ui/configDisplay.qml
+msgid "Desktop orientation:"
+msgstr "Orientation du mode bureau :"
+
+#: ../contents/ui/configDisplay.qml
+msgid "Vertical"
+msgstr "Verticale"
+
+#: ../contents/ui/configDisplay.qml
+msgid "Horizontal"
+msgstr "Horizontale"
+
+#: ../contents/ui/configDisplay.qml
+msgid "Desktop font size:"
+msgstr "Taille de police du mode bureau :"
+
+#: ../contents/ui/configDisplay.qml
+msgid "Desktop card size:"
+msgstr "Taille des cartes du mode bureau :"
+
+#: ../contents/ui/configDisplay.qml
+msgid "Desktop logo/badge size:"
+msgstr "Taille des logos/pastilles du mode bureau :"
+
+#: ../contents/ui/configDisplay.qml
+msgid "pixels"
+msgstr "pixels"
+
+#: ../contents/ui/configDisplay.qml
+msgid "Desktop font family:"
+msgstr "Police du mode bureau :"
+
+#: ../contents/ui/configDisplay.qml
+msgid "System default"
+msgstr "Police système par défaut"
+
+#: ../contents/ui/configDisplay.qml
+msgid "Choose font…"
+msgstr "Choisir une police…"
+
+#: ../contents/ui/configDisplay.qml
+msgid "Use system default"
+msgstr "Utiliser la police système"
 
 #: ../contents/ui/configDisplay.qml:247
 msgid "Score layout:"

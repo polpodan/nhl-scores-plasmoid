@@ -45,6 +45,21 @@
     <entry name="showCompactDesktop" type="Bool">
       <default>false</default>
     </entry>
+    <entry name="desktopOrientation" type="String">
+      <default>vertical</default>
+    </entry>
+    <entry name="desktopCardScale" type="Int">
+      <default>100</default>
+    </entry>
+    <entry name="desktopBadgeScale" type="Int">
+      <default>100</default>
+    </entry>
+    <entry name="desktopFontSize" type="Int">
+      <default>12</default>
+    </entry>
+    <entry name="desktopFontFamily" type="String">
+      <default></default>
+    </entry>
 
     <entry name="liveColor" type="String">
       <default>#d90429</default>

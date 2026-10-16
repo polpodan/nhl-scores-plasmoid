@@ -4,7 +4,16 @@ All notable changes to this project will be documented in this file.
 
 ## [6.2.0] - 2026-09-28
 
+### Added
+- Added a live and post-game player boxscore view with skater and goalie stats, reusing the existing boxscore API response.
+- Added desktop mode controls for horizontal or vertical game cards, font size, and font family.
+- Added a desktop card-size control that adjusts card width in horizontal mode and row height in vertical mode.
+- Added an independent desktop logo and team badge size control for both desktop orientations.
+- Grouped horizontal desktop game cards beneath a shared date header to reduce wasted width.
+- Replaced eager loading of every installed font family in the display settings with an on-demand font dialog.
+
 ### Fixed
+- Switched the configuration pages to the Plasma 6 KCM root components required by Plasma.
 - Unified playoff bracket persistence with the shared cache and migrated brackets saved by earlier versions.
 - Logo installation now checks light and dark variants independently, retries downloads, and avoids keeping failed responses.
 - Fixed venue time conversion at the exact daylight saving transitions and added a timeout for stalled API requests.

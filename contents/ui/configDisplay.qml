@@ -1,16 +1,15 @@
 import QtQuick 2.15
 import QtQuick.Layouts 1.15
 import QtQuick.Controls 2.15 as QQC2
+import QtQuick.Dialogs as QtDialogs
 import org.kde.kirigami 2.20 as Kirigami
 import org.kde.kquickcontrols 2.0 as KQControls
 import org.kde.plasma.plasmoid 2.0
 import org.kde.plasma.core 2.0 as PlasmaCore
+import org.kde.kcmutils as KCM
 
-Item {
+KCM.SimpleKCM {
     id: page
-    implicitWidth: 600
-    implicitHeight: 450
-    property string title: ""
 
     readonly property bool isVertical: Plasmoid.formFactor === PlasmaCore.Types.Vertical
     readonly property bool isDesktop: Plasmoid.formFactor === PlasmaCore.Types.Planar
@@ -68,6 +67,16 @@ Item {
     property bool cfg_notificationsAllTeamsDefault
     property bool cfg_showCompactDesktop
     property bool cfg_showCompactDesktopDefault
+    property string cfg_desktopOrientation
+    property string cfg_desktopOrientationDefault
+    property int cfg_desktopCardScale
+    property int cfg_desktopCardScaleDefault
+    property int cfg_desktopBadgeScale
+    property int cfg_desktopBadgeScaleDefault
+    property int cfg_desktopFontSize
+    property int cfg_desktopFontSizeDefault
+    property string cfg_desktopFontFamily
+    property string cfg_desktopFontFamilyDefault
     property int cfg_leadersLimit
     property int cfg_leadersLimitDefault
     property int cfg_franchiseLeadersLimit
@@ -79,8 +88,6 @@ Item {
     function valueFromIndex(i) { return (i === 1) ? 'inline' : 'stack' }
 
     Kirigami.FormLayout {
-        anchors.fill: parent
-
         Kirigami.Separator {
             Kirigami.FormData.isSection: true
             Kirigami.FormData.label: i18n("Status badge colors")
@@ -241,6 +248,101 @@ Item {
             checked: page.cfg_showCompactDesktop
             onToggled: page.cfg_showCompactDesktop = checked
             visible: page.isDesktop
+        }
+        QQC2.ComboBox {
+            Kirigami.FormData.label: i18n("Desktop orientation:")
+            model: [i18n("Vertical"), i18n("Horizontal")]
+            currentIndex: page.cfg_desktopOrientation === "horizontal" ? 1 : 0
+            visible: page.isDesktop && !page.cfg_showCompactDesktop
+            onActivated: page.cfg_desktopOrientation = currentIndex === 1 ? "horizontal" : "vertical"
+        }
+        RowLayout {
+            Kirigami.FormData.label: i18n("Desktop card size:")
+            visible: page.isDesktop && !page.cfg_showCompactDesktop
+            QQC2.Slider {
+                id: desktopCardScaleSlider
+                from: 70
+                to: 130
+                stepSize: 5
+                snapMode: QQC2.Slider.SnapAlways
+                value: page.cfg_desktopCardScale || 100
+                property bool ready: false
+                Component.onCompleted: ready = true
+                onValueChanged: if (ready) page.cfg_desktopCardScale = Math.round(value)
+                Layout.fillWidth: true
+            }
+            QQC2.Label {
+                text: Math.round(desktopCardScaleSlider.value) + "%"
+                Layout.preferredWidth: 42
+                horizontalAlignment: Text.AlignRight
+            }
+        }
+        RowLayout {
+            Kirigami.FormData.label: i18n("Desktop logo/badge size:")
+            visible: page.isDesktop && !page.cfg_showCompactDesktop
+            QQC2.Slider {
+                id: desktopBadgeScaleSlider
+                from: 60
+                to: 160
+                stepSize: 5
+                snapMode: QQC2.Slider.SnapAlways
+                value: page.cfg_desktopBadgeScale || 100
+                property bool ready: false
+                Component.onCompleted: ready = true
+                onValueChanged: if (ready) page.cfg_desktopBadgeScale = Math.round(value)
+                Layout.fillWidth: true
+            }
+            QQC2.Label {
+                text: Math.round(desktopBadgeScaleSlider.value) + "%"
+                Layout.preferredWidth: 42
+                horizontalAlignment: Text.AlignRight
+            }
+        }
+        RowLayout {
+            Kirigami.FormData.label: i18n("Desktop font size:")
+            visible: page.isDesktop
+            QQC2.SpinBox {
+                from: 8
+                to: 24
+                value: page.cfg_desktopFontSize || 12
+                onValueModified: page.cfg_desktopFontSize = value
+            }
+            QQC2.Label { text: i18n("pixels"); opacity: 0.6 }
+        }
+        RowLayout {
+            Kirigami.FormData.label: i18n("Desktop font family:")
+            visible: page.isDesktop
+
+            QQC2.Label {
+                text: page.cfg_desktopFontFamily || i18n("System default")
+                elide: Text.ElideRight
+                Layout.fillWidth: true
+            }
+
+            QQC2.Button {
+                text: i18n("Choose font…")
+                onClicked: desktopFontDialog.open()
+            }
+
+            QQC2.Button {
+                icon.name: "edit-undo"
+                flat: true
+                enabled: page.cfg_desktopFontFamily !== ""
+                onClicked: page.cfg_desktopFontFamily = ""
+                QQC2.ToolTip.text: i18n("Use system default")
+                QQC2.ToolTip.visible: hovered
+            }
+        }
+
+        QtDialogs.FontDialog {
+            id: desktopFontDialog
+            title: i18n("Desktop font family:")
+            onVisibleChanged: {
+                if (visible && page.cfg_desktopFontFamily !== "") {
+                    selectedFont = Qt.font({ family: page.cfg_desktopFontFamily })
+                }
+            }
+            onAccepted: page.cfg_desktopFontFamily = selectedFont.family
         }
 
         QQC2.ComboBox {

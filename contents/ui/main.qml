@@ -265,6 +265,8 @@ PlasmoidItem {
         property string penaltyBoxHome: '[]'
         property var    goals:    []
         property var    stats:    ({})
+        property var    boxscoreAway: ({})
+        property var    boxscoreHome: ({})
         property var    threeStars: []
         property var    penalties:  []
         property var    teamComparison: []
@@ -569,6 +571,11 @@ PlasmoidItem {
     }
 
     property bool showCompactDesktop: Plasmoid.configuration.showCompactDesktop
+    property string desktopOrientation: Plasmoid.configuration.desktopOrientation || 'vertical'
+    property int desktopCardScale: Math.max(70, Math.min(130, Number(Plasmoid.configuration.desktopCardScale || 100)))
+    property int desktopBadgeScale: Math.max(60, Math.min(160, Number(Plasmoid.configuration.desktopBadgeScale || 100)))
+    property int desktopFontSize: Plasmoid.configuration.desktopFontSize || 12
+    property string desktopFontFamily: Plasmoid.configuration.desktopFontFamily || ''
     property var popupRef: null
     property bool notificationsAllTeams: Plasmoid.configuration.notificationsAllTeams || false
     property bool enableNotifications: (Plasmoid.configuration.enableNotifications !== false)
@@ -2158,6 +2165,9 @@ PlasmoidItem {
     Component { id: statusBadge
         Components.StatusBadge {
             controller: root
+            fontSize1: parent.fontSize1 || root.styles.badge.fontSize
+            fontSize2: parent.fontSize2 || root.styles.badge.smallFontSize
+            fontFamily: parent.fontFamily || ""
             line1: root.badgeLine1(parent.gameStatus, parent.rawState,
                                    parent.periodType, parent.period,
                                    parent.liveRemain, parent.startMs,
@@ -2581,6 +2591,8 @@ PlasmoidItem {
         det.intermRemain = intermRemain || ""
         det.goals   = []
         det.stats   = ({})
+        det.boxscoreAway = ({})
+        det.boxscoreHome = ({})
         det.venue = ''; det.seriesAway = 0; det.seriesHome = 0; det.seriesTotal = false; det.h2hGames = []
         det.awayRecord = ({}); det.homeRecord = ({})
         det.awayLeaders = []; det.homeLeaders = []
@@ -2628,6 +2640,8 @@ PlasmoidItem {
         det.requestGeneration++
         var requestGeneration = det.requestGeneration
         det.loading = true
+        det.boxscoreAway = ({})
+        det.boxscoreHome = ({})
         var done = 0
         function isCurrentRequest() { return requestGeneration === det.requestGeneration }
         function tryDone() {
@@ -2962,6 +2976,8 @@ PlasmoidItem {
                         st[row.category || ''] = { away: row.awayValue !== undefined ? row.awayValue : '—', home: row.homeValue !== undefined ? row.homeValue : '—' }
                     }
                     var pg = d.playerByGameStats || {}
+                    det.boxscoreAway = pg.awayTeam || ({})
+                    det.boxscoreHome = pg.homeTeam || ({})
                     var pmap = {}
                     function indexTeamPlayers(team, abbrev) {
                         var all = (team.forwards||[]).concat(team.defense||[]).concat(team.goalies||[])
@@ -3006,10 +3022,10 @@ PlasmoidItem {
     Timer {
         id: detailRefreshTimer
         interval: 20000
-        running: nav.detail && det.status === 'LIVE'
+        running: (nav.detail || (popupRef && popupRef.visible)) && det.status === 'LIVE'
         repeat: true
         onTriggered: {
-            if (nav.detail) {
+            if (nav.detail || (popupRef && popupRef.visible)) {
                 // Mettre à jour le score depuis le modèle si le match est toujours là
                 for (let i = 0; i < todayGames.count; i++) {
                     let g = todayGames.get(i)
@@ -3087,9 +3103,9 @@ PlasmoidItem {
 
     fullRepresentation: Item {
         id: fullRoot
-        implicitWidth:  root.isDesktop ? 440 : 440
-        implicitHeight: root.isDesktop ? 520 : 520
-        Layout.minimumWidth: root.showCompactDesktop ? 160 : 400
+        implicitWidth: root.isDesktop && root.desktopOrientation === "horizontal" ? 700 : 440
+        implicitHeight: root.isDesktop && root.desktopOrientation === "horizontal" ? 380 : 520
+        Layout.minimumWidth: root.showCompactDesktop ? 160 : (root.desktopOrientation === "horizontal" ? 420 : 400)
         Layout.minimumHeight: root.showCompactDesktop ? 60 : 300
         Layout.fillWidth:  root.isDesktop
         Layout.fillHeight: root.isDesktop

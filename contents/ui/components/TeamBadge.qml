@@ -12,7 +12,9 @@ Row {
     property string opponentCode: ''
     property int    score:    0
     property int    sz:       14
+    property int    scoreFontSize: 0
     property int    iconH:    0
+    property string fontFamily: "monospace"
     property string gameId:   ''
     property string teamSide: '' // 'away' ou 'home'
     property bool   showScore: true
@@ -52,7 +54,7 @@ Row {
             font.pixelSize: Math.max(9, sz * 0.82)
             font.bold: true
             font.weight: Font.Black
-            font.family: "monospace"
+            font.family: teamBadgeRoot.fontFamily
         }
     }
     
@@ -81,8 +83,9 @@ Row {
         anchors.verticalCenter: parent.verticalCenter
         visible: showScore
         text: String(score)
-        font.pixelSize: Math.max(11, sz * 1.05)
+        font.pixelSize: scoreFontSize > 0 ? scoreFontSize : Math.max(11, sz * 1.05)
         font.bold: true
+        font.family: teamBadgeRoot.fontFamily
         color: Kirigami.Theme.textColor
         opacity: {
             var b = blinkingGames[String(gameId)]
